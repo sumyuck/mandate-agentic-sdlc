@@ -22,13 +22,31 @@ namespace Mandate.Core.Execution;
 /// <param name="Context">The context the stage is entitled to read.</param>
 /// <param name="Inputs">Artifacts produced upstream that this stage may build on.</param>
 /// <param name="Actor">The identity this execution acts under, recorded on everything it produces.</param>
+/// <param name="Workspace">
+/// A read-only view of the tree the run is building. A stage that reviews code, scans it, or
+/// extends it has to be able to read it; only the engine writes.
+/// </param>
 public sealed record StageExecution(
     RunId RunId,
     WorkflowNode Node,
     int Attempt,
     RunContext Context,
     ImmutableArray<Artifact> Inputs,
-    Actor Actor);
+    Actor Actor,
+    IWorkspaceReader Workspace)
+{
+    /// <summary>An execution with no workspace, for tests that do not exercise the tree.</summary>
+    public StageExecution(
+        RunId runId,
+        WorkflowNode node,
+        int attempt,
+        RunContext context,
+        ImmutableArray<Artifact> inputs,
+        Actor actor)
+        : this(runId, node, attempt, context, inputs, actor, IWorkspaceReader.Empty)
+    {
+    }
+}
 
 /// <summary>What a stage agent produced.</summary>
 /// <param name="Succeeded">Whether the stage completed its work.</param>

@@ -16,6 +16,17 @@ public static class WorkflowContextKeys
     /// <summary>The run's identifier.</summary>
     public const string RunId = "run.id";
 
+    /// <summary>
+    /// The requirement as the requester wrote it, verbatim.
+    /// </summary>
+    /// <remarks>
+    /// Seeded as a fact rather than reached for through the engine, because a stage agent
+    /// is given a scoped view of the context and nothing else. Without this the intake
+    /// stage — whose entire job is to record what was asked for — would have no way to see
+    /// what was asked for.
+    /// </remarks>
+    public const string Request = "run.request";
+
     /// <summary>Which scenario the run is: <c>greenfield</c>, <c>brownfield</c> or <c>ambiguous</c>.</summary>
     public const string Scenario = "run.scenario";
 
@@ -35,7 +46,7 @@ public static class WorkflowContextKeys
 
     /// <summary>Every key the engine guarantees is present.</summary>
     public static ImmutableHashSet<string> EngineProvided { get; } =
-        [RunId, Scenario, Workflow, InitiatedBy, HasExistingCode, Amendment];
+        [RunId, Request, Scenario, Workflow, InitiatedBy, HasExistingCode, Amendment];
 
     /// <summary>
     /// The node id the engine attributes run-level facts to.

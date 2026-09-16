@@ -27,12 +27,22 @@ public static class BuiltInGateEvaluators
             satisfied: value => value.Trim() == "0",
             explain: value => value.Trim() == "0" ? "no failures." : "failures outstanding."),
 
+        // 'security.secrets-found' is a boolean, as its name reads: the count of findings
+        // is 'security.findings'. This gate previously compared it to the string "0", which
+        // the scripted agent happened to emit — so the gate passed for the wrong reason and
+        // would have rejected the word "false". Fail-closed on a value it cannot read, but
+        // say which of the two failures it is: "there are secrets" and "I could not tell"
+        // call for different actions from whoever reads the log.
         new ContextEvidenceGateEvaluator(
             kind: "no-secrets-committed",
             describes: "The security scan found no credential material in the change.",
             keySelector: _ => "security.secrets-found",
-            satisfied: value => value.Trim() == "0",
-            explain: value => value.Trim() == "0" ? "none found." : "secrets present."),
+            satisfied: IsFalse,
+            explain: value =>
+                IsFalse(value) ? "none found."
+                : IsTrue(value) ? "secrets present."
+                : $"the scan recorded '{value.Trim()}', which is not true or false — its "
+                  + "result could not be read, so the gate fails closed."),
 
         new ContextEvidenceGateEvaluator(
             kind: "workspace-builds",
@@ -64,4 +74,7 @@ public static class BuiltInGateEvaluators
 
     private static bool IsTrue(string value) =>
         bool.TryParse(value.Trim(), out bool parsed) && parsed;
+
+    private static bool IsFalse(string value) =>
+        bool.TryParse(value.Trim(), out bool parsed) && !parsed;
 }

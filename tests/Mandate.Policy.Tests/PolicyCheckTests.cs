@@ -1,4 +1,5 @@
 using Mandate.Core.Artifacts;
+using Mandate.Core.Execution;
 using Mandate.Core.Identifiers;
 using Mandate.Core.Policies;
 using Mandate.Core.Runs;
@@ -330,6 +331,8 @@ public sealed class PolicyCheckTests
     private sealed class AbsentWorkspaceStub : Core.Execution.IRunWorkspace
     {
         public string Root => string.Empty;
+
+        public IWorkspaceReader Reader => IWorkspaceReader.Empty;
 
         public Task<Core.Execution.WorkspaceCommit?> CommitAsync(
             NodeId nodeId, int attempt,

@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using System.ComponentModel;
 using Mandate.Core.Events;
+using Mandate.Core.Execution;
 using Mandate.Core.Identifiers;
 using Mandate.Core.Policies;
 using Mandate.Core.Runs;
@@ -213,6 +214,8 @@ internal sealed class CheckPolicyCommand : AsyncCommand<CheckPolicyCommand.Setti
     private sealed class AbsentWorkspace : Core.Execution.IRunWorkspace
     {
         public string Root => string.Empty;
+
+        public IWorkspaceReader Reader => IWorkspaceReader.Empty;
 
         public Task<Core.Execution.WorkspaceCommit?> CommitAsync(
             NodeId nodeId, int attempt,

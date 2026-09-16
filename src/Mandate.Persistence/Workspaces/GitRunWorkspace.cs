@@ -55,6 +55,9 @@ public sealed class GitRunWorkspace : IRunWorkspace, IDisposable
     /// <inheritdoc />
     public string Root { get; }
 
+    /// <inheritdoc />
+    public IWorkspaceReader Reader => field ??= new FileWorkspaceReader(Root);
+
     /// <summary>The run this workspace belongs to.</summary>
     public RunId RunId { get; }
 

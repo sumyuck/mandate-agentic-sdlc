@@ -58,6 +58,11 @@ public sealed record LlmLayer(
 /// <param name="Budget">The spend ceiling, or <see langword="null"/> for none.</param>
 /// <param name="Refresh">Re-ask calls that are already recorded.</param>
 /// <param name="ApiKey">An explicit key, or <see langword="null"/> to read the environment.</param>
+/// <param name="StubResponder">
+/// What the stub should answer with. Supplied by the caller rather than built in, because
+/// what a useful stub answer looks like depends on who is asking — the agents know their
+/// own output contract, and this project must not know about theirs.
+/// </param>
 public sealed record LlmOptions(
     LlmMode Mode = LlmMode.Replay,
     string PromptDirectory = PromptLibrary.DefaultDirectory,
@@ -65,7 +70,8 @@ public sealed record LlmOptions(
     string PricingPath = ModelPriceBook.DefaultPath,
     LlmBudget? Budget = null,
     bool Refresh = false,
-    string? ApiKey = null);
+    string? ApiKey = null,
+    Func<LlmRequest, string>? StubResponder = null);
 
 /// <summary>
 /// Assembles the model layer from a mode.
@@ -105,7 +111,7 @@ public static class LlmComposition
             LlmMode.Live => LiveClient(options),
             LlmMode.Record => RecordingClient(options, cassettes, clock),
             LlmMode.Replay => (new ReplayLlmClient(cassettes), (IDisposable?)null),
-            LlmMode.Stub => (new StubLlmClient(), (IDisposable?)null),
+            LlmMode.Stub => (new StubLlmClient(options.StubResponder), (IDisposable?)null),
             _ => throw new ArgumentOutOfRangeException(
                 nameof(options), options.Mode, "Not a model layer mode."),
         };

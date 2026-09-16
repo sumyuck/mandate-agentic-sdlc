@@ -43,6 +43,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mandate.Observability.Tests
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mandate.Llm.Tests", "tests\Mandate.Llm.Tests\Mandate.Llm.Tests.csproj", "{BF95E43D-F18F-4482-8FB7-745299F1DCB6}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mandate.Agents.Tests", "tests\Mandate.Agents.Tests\Mandate.Agents.Tests.csproj", "{FB983272-30BB-4CFA-B2BC-8B9B847184CF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -269,6 +271,18 @@ Global
 		{BF95E43D-F18F-4482-8FB7-745299F1DCB6}.Release|x64.Build.0 = Release|Any CPU
 		{BF95E43D-F18F-4482-8FB7-745299F1DCB6}.Release|x86.ActiveCfg = Release|Any CPU
 		{BF95E43D-F18F-4482-8FB7-745299F1DCB6}.Release|x86.Build.0 = Release|Any CPU
+		{FB983272-30BB-4CFA-B2BC-8B9B847184CF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FB983272-30BB-4CFA-B2BC-8B9B847184CF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FB983272-30BB-4CFA-B2BC-8B9B847184CF}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{FB983272-30BB-4CFA-B2BC-8B9B847184CF}.Debug|x64.Build.0 = Debug|Any CPU
+		{FB983272-30BB-4CFA-B2BC-8B9B847184CF}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{FB983272-30BB-4CFA-B2BC-8B9B847184CF}.Debug|x86.Build.0 = Debug|Any CPU
+		{FB983272-30BB-4CFA-B2BC-8B9B847184CF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FB983272-30BB-4CFA-B2BC-8B9B847184CF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FB983272-30BB-4CFA-B2BC-8B9B847184CF}.Release|x64.ActiveCfg = Release|Any CPU
+		{FB983272-30BB-4CFA-B2BC-8B9B847184CF}.Release|x64.Build.0 = Release|Any CPU
+		{FB983272-30BB-4CFA-B2BC-8B9B847184CF}.Release|x86.ActiveCfg = Release|Any CPU
+		{FB983272-30BB-4CFA-B2BC-8B9B847184CF}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -292,5 +306,6 @@ Global
 		{28752F20-9436-458B-A809-52827A4E3EAD} = {E1BA0EAD-7FCC-4D0B-9C12-E708A5344E09}
 		{81784E26-0684-4C1D-A89B-308FA3521884} = {E1BA0EAD-7FCC-4D0B-9C12-E708A5344E09}
 		{BF95E43D-F18F-4482-8FB7-745299F1DCB6} = {E1BA0EAD-7FCC-4D0B-9C12-E708A5344E09}
+		{FB983272-30BB-4CFA-B2BC-8B9B847184CF} = {E1BA0EAD-7FCC-4D0B-9C12-E708A5344E09}
 	EndGlobalSection
 EndGlobal

@@ -1,13 +1,19 @@
 using System.Collections.Immutable;
 using System.ComponentModel;
 using System.Globalization;
+using Mandate.Agents.Model;
 using Mandate.Agents.Scripted;
 using Mandate.Core.Events;
 using Mandate.Core.Execution;
 using Mandate.Core.Identifiers;
+using Mandate.Core.Llm;
 using Mandate.Core.Runs;
 using Mandate.Core.Time;
 using Mandate.Core.Workflow;
+using Mandate.Llm;
+using Mandate.Llm.Clients;
+using Mandate.Llm.Pricing;
+using Mandate.Llm.Prompts;
 using Mandate.Orchestrator.Compensation;
 using Mandate.Orchestrator.Execution;
 using Mandate.Orchestrator.Gates;
@@ -31,7 +37,7 @@ namespace Mandate.Cli.Commands;
 /// </remarks>
 internal sealed class RunCommand : AsyncCommand<RunCommand.Settings>
 {
-    internal sealed class Settings : CommandSettings
+    internal sealed class Settings : LlmSettings
     {
         [CommandArgument(0, "<request>")]
         [Description("The requirement to execute, as the requester would write it.")]
@@ -86,12 +92,46 @@ internal sealed class RunCommand : AsyncCommand<RunCommand.Settings>
             "Make the named agent fail every attempt, to exercise retry, fallback and rollback.")]
         public string? FailAgent { get; init; }
 
-        public override ValidationResult Validate() =>
-            Enum.TryParse(Scenario, ignoreCase: true, out ScenarioKind parsed)
-            && parsed != ScenarioKind.Unknown
-                ? ValidationResult.Success()
-                : ValidationResult.Error(
+        [CommandOption("--agents")]
+        [Description(
+            "scripted or model. Scripted agents exercise the engine deterministically; "
+            + "model agents do the engineering work.")]
+        // Scripted by default until the scenario cassettes are recorded, at which point
+        // 'model' becomes the default and the shipped demo replays real model output
+        // offline. Leaving it at 'scripted' now keeps every command in this repository
+        // working; leaving it here afterwards would hide the model layer behind a flag.
+        public string Agents { get; init; } = "scripted";
+
+        [CommandOption("--budget-usd")]
+        [Description(
+            "Ceiling on what this run may spend on models. Defaults to $5. Ignored by "
+            + "scripted agents, which spend nothing.")]
+        public decimal BudgetUsd { get; init; } = 5m;
+
+        /// <summary>Whether this run uses model-backed agents.</summary>
+        public bool UsesModels =>
+            string.Equals(Agents, "model", StringComparison.OrdinalIgnoreCase);
+
+        public override ValidationResult Validate()
+        {
+            if (!Enum.TryParse(Scenario, ignoreCase: true, out ScenarioKind parsed)
+                || parsed == ScenarioKind.Unknown)
+            {
+                return ValidationResult.Error(
                     $"'{Scenario}' is not a scenario. Expected greenfield, brownfield or ambiguous.");
+            }
+
+            if (!UsesModels
+                && !string.Equals(Agents, "scripted", StringComparison.OrdinalIgnoreCase))
+            {
+                return ValidationResult.Error(
+                    $"'{Agents}' is not an agent kind. Expected scripted or model.");
+            }
+
+            // The model mode is only meaningful with model agents, but an unusable value is
+            // worth refusing either way rather than being silently ignored.
+            return base.Validate();
+        }
     }
 
     protected override async Task<int> ExecuteAsync(
@@ -162,21 +202,37 @@ internal sealed class RunCommand : AsyncCommand<RunCommand.Settings>
             return ExitCode.BadInput;
         }
 
+        Dictionary<string, ScriptedBehaviour> behaviours = new(StringComparer.Ordinal);
+
+        if (settings.FailAgent is { } failing)
+        {
+            behaviours[failing] = ScriptedBehaviour.AlwaysFails($"Injected failure in '{failing}'.");
+        }
+
+        // Composed before the engine so a missing prompt, an unreadable price list or an
+        // absent API key is reported before a run id is minted and a workspace created. A
+        // run that dies at its first stage for want of configuration leaves debris behind.
+        AgentComposition.Result composed = AgentComposition.Build(
+            graph, settings, settings.UsesModels, settings.BudgetUsd, clock, behaviours);
+
+        if (!composed.Succeeded)
+        {
+            AnsiConsole.MarkupLine(
+                $"[red]agents unavailable[/] {composed.Problem!.EscapeMarkup()}");
+
+            return ExitCode.BadInput;
+        }
+
+        LlmLayer? models = composed.Models;
+        using LlmLayer? modelLifetime = models;
+
         WorkflowEngine engine;
 
         try
         {
-            Dictionary<string, ScriptedBehaviour> behaviours = new(StringComparer.Ordinal);
-
-            if (settings.FailAgent is { } failing)
-            {
-                behaviours[failing] = ScriptedBehaviour.AlwaysFails(
-                    $"Injected failure in '{failing}'.");
-            }
-
             engine = new WorkflowEngine(
                 graph,
-                ScriptedAgents.CoveringGraph(graph, behaviours),
+                composed.Registry!,
                 BuiltInGateEvaluators.CreateRegistry(),
                 journal,
                 clock,
@@ -188,7 +244,9 @@ internal sealed class RunCommand : AsyncCommand<RunCommand.Settings>
                 policyEngine);
         }
         catch (Exception exception) when (
-            exception is EngineConfigurationException or ArgumentOutOfRangeException)
+            exception is EngineConfigurationException
+                or ArgumentOutOfRangeException
+                or AgentCompositionException)
         {
             AnsiConsole.MarkupLine($"[red]engine not configured[/] {exception.Message.EscapeMarkup()}");
             return ExitCode.BadInput;
@@ -201,6 +259,10 @@ internal sealed class RunCommand : AsyncCommand<RunCommand.Settings>
         AnsiConsole.MarkupLine(
             $"[grey]{graph.Definition.Identity.EscapeMarkup()} · {scenario.ToString().ToLowerInvariant()} · "
             + $"existing code: {hasExistingCode} · max concurrency {settings.MaxConcurrency}[/]");
+
+        AnsiConsole.MarkupLine(models is null
+            ? "[grey]agents: scripted — the engine is exercised, the engineering judgment is not[/]"
+            : $"[grey]agents: model · {models.Description.EscapeMarkup()}[/]");
 
         RunOutcome outcome;
 
@@ -233,6 +295,19 @@ internal sealed class RunCommand : AsyncCommand<RunCommand.Settings>
         }
 
         WriteAudit(runId, events);
+
+        if (models?.Budget is { } budget)
+        {
+            LlmSpend spend = budget.Spend;
+
+            AnsiConsole.MarkupLine(
+                $"[grey]models: {spend.Summary.EscapeMarkup()}"
+                + (models.Mode == LlmMode.Live || models.Mode == LlmMode.Record
+                    ? string.Empty
+                    : " (recorded cost — nothing was spent on this execution)")
+                + "[/]");
+        }
+
         WriteOutcome(outcome);
 
         AnsiConsole.MarkupLine(

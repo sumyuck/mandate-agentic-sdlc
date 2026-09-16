@@ -1,12 +1,12 @@
 using System.Collections.Immutable;
 using System.ComponentModel;
-using Mandate.Agents.Scripted;
 using Mandate.Core.Events;
 using Mandate.Core.Execution;
 using Mandate.Core.Identifiers;
 using Mandate.Core.Runs;
 using Mandate.Core.Time;
 using Mandate.Core.Workflow;
+using Mandate.Llm;
 using Mandate.Orchestrator.Compensation;
 using Mandate.Orchestrator.Execution;
 using Mandate.Orchestrator.Gates;
@@ -29,8 +29,12 @@ namespace Mandate.Cli.Commands;
 /// </remarks>
 internal sealed class ResumeCommand : AsyncCommand<ResumeCommand.Settings>
 {
-    internal sealed class Settings : StoreSettings
+    internal sealed class Settings : LlmSettings
     {
+        [CommandOption("--store")]
+        [Description("Path to the run store. Defaults to .mandate/runs.db.")]
+        public string Store { get; init; } = SqliteRunJournal.DefaultPath;
+
         [CommandArgument(0, "<runId>")]
         [Description("The run to continue.")]
         public string RunId { get; init; } = string.Empty;
@@ -54,6 +58,26 @@ internal sealed class ResumeCommand : AsyncCommand<ResumeCommand.Settings>
         [CommandOption("-c|--max-concurrency")]
         [Description("How many stages may execute at once. Defaults to 4.")]
         public int MaxConcurrency { get; init; } = EngineOptions.Default.MaxConcurrency;
+
+        [CommandOption("--agents")]
+        [Description(
+            "scripted or model. Must match what the run was started with, or its second "
+            + "half is executed by a different system than its first.")]
+        public string Agents { get; init; } = "scripted";
+
+        [CommandOption("--budget-usd")]
+        [Description("Ceiling on what the remainder of this run may spend. Defaults to $5.")]
+        public decimal BudgetUsd { get; init; } = 5m;
+
+        /// <summary>Whether this resume uses model-backed agents.</summary>
+        public bool UsesModels =>
+            string.Equals(Agents, "model", StringComparison.OrdinalIgnoreCase);
+
+        public override ValidationResult Validate() =>
+            UsesModels || string.Equals(Agents, "scripted", StringComparison.OrdinalIgnoreCase)
+                ? base.Validate()
+                : ValidationResult.Error(
+                    $"'{Agents}' is not an agent kind. Expected scripted or model.");
     }
 
     protected override async Task<int> ExecuteAsync(
@@ -131,9 +155,22 @@ internal sealed class ResumeCommand : AsyncCommand<ResumeCommand.Settings>
             return ExitCode.BadInput;
         }
 
+        AgentComposition.Result composed = AgentComposition.Build(
+            graph, settings, settings.UsesModels, settings.BudgetUsd, SystemClock.Instance);
+
+        if (!composed.Succeeded)
+        {
+            AnsiConsole.MarkupLine(
+                $"[red]agents unavailable[/] {composed.Problem!.EscapeMarkup()}");
+
+            return ExitCode.BadInput;
+        }
+
+        using LlmLayer? models = composed.Models;
+
         WorkflowEngine engine = new(
             graph,
-            ScriptedAgents.CoveringGraph(graph),
+            composed.Registry!,
             BuiltInGateEvaluators.CreateRegistry(),
             journal,
             SystemClock.Instance,
@@ -145,6 +182,10 @@ internal sealed class ResumeCommand : AsyncCommand<ResumeCommand.Settings>
             policyEngine);
 
         AnsiConsole.Write(new Rule($"[bold]resuming {runId.Value.EscapeMarkup()}[/]").LeftJustified());
+
+        AnsiConsole.MarkupLine(models is null
+            ? "[grey]agents: scripted[/]"
+            : $"[grey]agents: model · {models.Description.EscapeMarkup()}[/]");
 
         RunOutcome outcome = await engine
             .ResumeAsync(runId, events, cancellationToken)

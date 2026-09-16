@@ -148,6 +148,17 @@ dotnet run --project src/Mandate.Cli -- llm prompts     # the versioned prompts,
 dotnet run --project src/Mandate.Cli -- llm check       # replay a recorded exchange, offline
 ```
 
+Run the lifecycle with model-backed agents, offline and with no key:
+
+```bash
+make run-model LLM=stub
+```
+
+Each of the eleven agents is a versioned prompt plus a declaration in the workflow, not a
+class — see [ADR-0014](docs/adr/0014-agents-are-prompts-not-classes.md). What the workflow
+declares a stage produces is enforced against what the model actually returns, in both
+directions.
+
 To call a provider for real, set `ANTHROPIC_API_KEY` and add `--llm live` (or `--llm record`
 to keep the exchange). Spend is capped and every call is an audited event — see
 [ADR-0013](docs/adr/0013-model-spend-as-a-governed-budget.md).

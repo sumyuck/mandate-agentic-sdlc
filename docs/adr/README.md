@@ -23,6 +23,7 @@ is made rather than reconstructed afterwards.
 | [0011](0011-incremental-replanning.md) | Re-planning is incremental and lazy, and withdraws the approvals it invalidates | Accepted |
 | [0012](0012-metrics-derived-not-recorded.md) | Reliability metrics are derived from the log, never recorded alongside it | Accepted |
 | [0013](0013-model-spend-as-a-governed-budget.md) | Model spend is a governed budget that refuses calls, and every call is an audited event | Accepted |
+| [0014](0014-agents-are-prompts-not-classes.md) | An agent is a prompt and a workflow declaration, not a class; the declaration is enforced against the model | Accepted |
 
 Enforcement: ADR-0001, 0002, 0003 and 0008 are asserted by
 [`DependencyRuleTests`](../../tests/Mandate.Orchestrator.Tests/Architecture/DependencyRuleTests.cs),

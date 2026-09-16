@@ -937,7 +937,8 @@ internal sealed class RunExecution(
             attempt,
             _state.Context.ScopedTo(ContextScopeFor(node)),
             InputsFor(node),
-            actor);
+            actor,
+            _workspace.Reader);
 
         try
         {
@@ -1474,6 +1475,7 @@ internal sealed class RunExecution(
         (string Key, string Value)[] facts =
         [
             (WorkflowContextKeys.RunId, request.Id.Value),
+            (WorkflowContextKeys.Request, request.Request),
             (WorkflowContextKeys.Scenario, request.Scenario.ToString().ToLowerInvariant()),
             (WorkflowContextKeys.Workflow, graph.Definition.Identity),
             (WorkflowContextKeys.InitiatedBy, request.InitiatedBy.Value),

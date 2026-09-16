@@ -145,6 +145,8 @@ internal sealed class ScratchWorkspace : IRunWorkspace, IDisposable
 
     public string Root { get; }
 
+    public IWorkspaceReader Reader => IWorkspaceReader.Empty;
+
     public bool IsClean { get; set; }
 
     public void Write(string relativePath, string content)

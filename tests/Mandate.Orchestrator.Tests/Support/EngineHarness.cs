@@ -223,6 +223,8 @@ internal sealed class NullWorkspaces : IRunWorkspaceFactory
     {
         public string Root => string.Empty;
 
+        public IWorkspaceReader Reader => IWorkspaceReader.Empty;
+
         public Task<WorkspaceCommit?> CommitAsync(
             NodeId nodeId, int attempt, IReadOnlyCollection<WorkspaceFile> files,
             string message, CancellationToken cancellationToken) =>

@@ -24,7 +24,7 @@ internal static class ScriptedEvidence
             ["review.findings"] = "2",
             ["review.highest-severity"] = "low",
             ["security.findings"] = "0",
-            ["security.secrets-found"] = "0",
+            ["security.secrets-found"] = "false",
             ["implementation.builds"] = "true",
             ["implementation.files-changed"] = "7",
             ["impact.blast-radius"] = "3",

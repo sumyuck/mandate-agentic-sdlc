@@ -27,6 +27,8 @@ internal sealed class NoWorkspaceFactory : IRunWorkspaceFactory
     {
         public string Root => string.Empty;
 
+        public IWorkspaceReader Reader => IWorkspaceReader.Empty;
+
         public Task<WorkspaceCommit?> CommitAsync(
             NodeId nodeId,
             int attempt,

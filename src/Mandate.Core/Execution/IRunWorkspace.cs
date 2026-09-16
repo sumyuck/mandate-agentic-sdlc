@@ -87,6 +87,12 @@ public interface IRunWorkspace
     /// <summary>Absolute path to the working tree.</summary>
     string Root { get; }
 
+    /// <summary>
+    /// A read-only view of the tree, handed to stages so they can read what they are
+    /// working on without being able to write it.
+    /// </summary>
+    IWorkspaceReader Reader { get; }
+
     /// <summary>Commits a node's proposed files as that node's contribution.</summary>
     /// <returns>The commit, or <see langword="null"/> when the node changed nothing.</returns>
     Task<WorkspaceCommit?> CommitAsync(

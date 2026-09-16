@@ -9,7 +9,7 @@ SHELL := /bin/bash
 DOTNET ?= dotnet
 CLI := $(DOTNET) run --project src/Mandate.Cli --
 
-.PHONY: help doctor restore build test format lint info workflow diagram run runs audit policy metrics report llm prompts clean verify
+.PHONY: help doctor restore build test format lint info workflow diagram run run-model runs audit policy metrics report llm prompts clean verify
 
 help: ## Show available targets
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -55,8 +55,15 @@ REQUEST ?= Build a URL shortener with create and redirect APIs
 # Set FAIL=<agent-id> to inject a failure and watch retry, fallback and rollback.
 FAIL ?=
 
-run: ## Execute the lifecycle (SCENARIO=greenfield|brownfield|ambiguous, FAIL=<agent>)
-	@$(CLI) run "$(REQUEST)" --scenario $(SCENARIO) $(if $(FAIL),--fail $(FAIL),)
+# Exit code 3 means the run parked for a human decision, which is the lifecycle working as
+# designed rather than a failed target. Only 0 and 3 are success here; 1 and 2 still fail.
+RUN_OK = || { status=$$?; [ $$status -eq 3 ] || exit $$status; }
+
+run: ## Execute the lifecycle with scripted agents (SCENARIO=..., FAIL=<agent>)
+	@$(CLI) run "$(REQUEST)" --scenario $(SCENARIO) $(if $(FAIL),--fail $(FAIL),) $(RUN_OK)
+
+run-model: ## Execute the lifecycle with model-backed agents (LLM=stub|replay|record|live)
+	@$(CLI) run "$(REQUEST)" --scenario $(SCENARIO) --agents model --llm $(LLM) $(RUN_OK)
 
 runs: ## List recorded runs
 	@$(CLI) runs list

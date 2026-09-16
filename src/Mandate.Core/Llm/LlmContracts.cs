@@ -6,6 +6,41 @@ using Mandate.Core.Serialization;
 
 namespace Mandate.Core.Llm;
 
+/// <summary>
+/// How much reasoning a stage is allowed to do before answering.
+/// </summary>
+/// <remarks>
+/// A governed property, not a tuning knob. On models that reason adaptively the thinking
+/// counts against the same output ceiling as the answer, so a stage given a hard problem
+/// and a modest ceiling can spend the entire budget thinking and return nothing at all —
+/// which is exactly what the first live implementation run did: 48,000 output tokens, zero
+/// characters of answer. Declaring effort per prompt makes that a property of the stage's
+/// specification, reviewable in the same diff as the instructions it goes with.
+/// </remarks>
+public enum LlmEffort
+{
+    /// <summary>Not stated. The provider's default applies.</summary>
+    Unspecified = 0,
+
+    /// <summary>Do not reason before answering.</summary>
+    None = 1,
+
+    /// <summary>Minimal reasoning.</summary>
+    Low = 2,
+
+    /// <summary>Moderate reasoning.</summary>
+    Medium = 3,
+
+    /// <summary>The provider's usual default.</summary>
+    High = 4,
+
+    /// <summary>More than usual, for the hardest stages.</summary>
+    Xhigh = 5,
+
+    /// <summary>As much as the model will do.</summary>
+    Max = 6,
+}
+
 /// <summary>Who authored a turn in a model conversation.</summary>
 public enum LlmRole
 {
@@ -63,13 +98,15 @@ public sealed record LlmMessage(LlmRole Role, string Text)
 /// <param name="System">The system prompt.</param>
 /// <param name="Messages">The conversation, oldest first.</param>
 /// <param name="MaxOutputTokens">The output ceiling for this call.</param>
+/// <param name="Effort">How much reasoning the stage is allowed before answering.</param>
 public sealed record LlmRequest(
     string PromptId,
     string PromptVersion,
     string Model,
     string System,
     ImmutableArray<LlmMessage> Messages,
-    int MaxOutputTokens)
+    int MaxOutputTokens,
+    LlmEffort Effort)
 {
     /// <summary>Builds a validated request.</summary>
     public static LlmRequest Create(
@@ -78,7 +115,8 @@ public sealed record LlmRequest(
         string model,
         string system,
         IEnumerable<LlmMessage> messages,
-        int maxOutputTokens)
+        int maxOutputTokens,
+        LlmEffort effort = LlmEffort.Unspecified)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(promptId);
         ArgumentException.ThrowIfNullOrWhiteSpace(promptVersion);
@@ -100,7 +138,7 @@ public sealed record LlmRequest(
         }
 
         return new LlmRequest(
-            promptId, promptVersion, model, system, turns, maxOutputTokens);
+            promptId, promptVersion, model, system, turns, maxOutputTokens, effort);
     }
 
     /// <summary>
@@ -174,6 +212,19 @@ public sealed record LlmResponse(
     LlmUsage Usage,
     LlmResponseSource Source)
 {
+    /// <summary>
+    /// Whether the model produced no answer at all.
+    /// </summary>
+    /// <remarks>
+    /// Distinct from truncation, and the distinction is not academic. A model that reasons
+    /// adaptively spends thinking tokens from the same ceiling as its answer, so on a hard
+    /// task it can exhaust the budget before writing a word. "The answer was cut short" and
+    /// "there was never an answer" call for different fixes — more room versus less
+    /// reasoning — and reporting the second as the first sends whoever reads it the wrong way.
+    /// </remarks>
+    [JsonIgnore]
+    public bool IsEmpty => string.IsNullOrWhiteSpace(Text);
+
     /// <summary>
     /// Whether the model ran out of room before it finished.
     /// </summary>

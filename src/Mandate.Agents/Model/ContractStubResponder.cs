@@ -63,7 +63,7 @@ public static partial class ContractStubResponder
             string kind = kinds[index];
 
             json.Append("{\"kind\":").Append(Quote(kind))
-                .Append(",\"path\":").Append(PathFor(kind, request.PromptId) is { } path ? Quote(path) : "null")
+                .Append(",\"path\":").Append(Quote(PathFor(kind, request.PromptId)))
                 .Append(",\"content\":").Append(Quote(ContentFor(kind, request)))
                 .Append('}');
         }
@@ -121,7 +121,7 @@ public static partial class ContractStubResponder
     /// like a real one and the workspace, commit and rollback machinery is genuinely
     /// exercised rather than skipped for want of files.
     /// </remarks>
-    private static string? PathFor(string kind, string promptId) => kind switch
+    private static string PathFor(string kind, string promptId) => kind switch
     {
         "request" => "docs/request.md",
         "requirement-spec" => "docs/requirements.md",
@@ -135,9 +135,9 @@ public static partial class ContractStubResponder
         "test-suite" => $"tests/{promptId}.Tests.cs",
         "documentation" => "README.md",
 
-        // Reports, requests and assumptions are evidence about the run rather than part of
-        // the software. They live in the audit log and the export, not in the source tree.
-        _ => null,
+        // Records about the run still go into the tree, under their own directory. A
+        // document with nowhere to live is content the run hashed and then discarded.
+        _ => $"docs/mandate/{kind}.md",
     };
 
     private static string ContentFor(string kind, LlmRequest request)

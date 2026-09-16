@@ -34,7 +34,9 @@ public sealed partial class PromptTemplate
         string version,
         string description,
         ImmutableArray<string> inputs,
+        ImmutableArray<string> verbatim,
         int maxOutputTokens,
+        LlmEffort effort,
         string system,
         string user,
         string sourcePath)
@@ -43,7 +45,9 @@ public sealed partial class PromptTemplate
         Version = version;
         Description = description;
         Inputs = inputs;
+        Verbatim = verbatim;
         MaxOutputTokens = maxOutputTokens;
+        Effort = effort;
         SourcePath = sourcePath;
         _system = system;
         _user = user;
@@ -51,7 +55,7 @@ public sealed partial class PromptTemplate
         Fingerprint = Sha256Hash.OfUtf8(
             string.Create(
                 CultureInfo.InvariantCulture,
-                $"{id}\n{version}\n{maxOutputTokens}\n{system}\n--- user ---\n{user}"));
+                $"{id}\n{version}\n{maxOutputTokens}\n{effort}\n{system}\n--- user ---\n{user}"));
     }
 
     /// <summary>The prompt's stable name, matching the first part of its file name.</summary>
@@ -66,8 +70,20 @@ public sealed partial class PromptTemplate
     /// <summary>The inputs the prompt requires, in declaration order.</summary>
     public ImmutableArray<string> Inputs { get; }
 
+    /// <summary>
+    /// Inputs exempt from the repeatability scan, because they carry upstream content.
+    /// </summary>
+    /// <remarks>
+    /// Declared in the prompt file so the exemption is visible to whoever reviews the
+    /// prompt, rather than buried in a list of special-cased names in C#.
+    /// </remarks>
+    public ImmutableArray<string> Verbatim { get; }
+
     /// <summary>The output ceiling this prompt's answers need.</summary>
     public int MaxOutputTokens { get; }
+
+    /// <summary>How much reasoning this stage is allowed before answering.</summary>
+    public LlmEffort Effort { get; }
 
     /// <summary>Where the prompt was loaded from.</summary>
     public string SourcePath { get; }
@@ -126,8 +142,8 @@ public sealed partial class PromptTemplate
         }
 
         return new PromptTemplate(
-            matter.Id, matter.Version, matter.Description, declared,
-            matter.MaxOutputTokens, system, user, path);
+            matter.Id, matter.Version, matter.Description, declared, matter.Verbatim,
+            matter.MaxOutputTokens, matter.Effort, system, user, path);
     }
 
     /// <summary>
@@ -162,7 +178,10 @@ public sealed partial class PromptTemplate
                     + string.Join(", ", Inputs));
             }
 
-            RefuseUnrepeatableValue(supplied, values[supplied]);
+            if (!Verbatim.Contains(supplied, StringComparer.Ordinal))
+            {
+                RefuseUnrepeatableValue(supplied, values[supplied]);
+            }
         }
 
         return LlmRequest.Create(
@@ -171,18 +190,29 @@ public sealed partial class PromptTemplate
             model,
             Substitute(_system, values),
             [LlmMessage.User(Substitute(_user, values))],
-            MaxOutputTokens);
+            MaxOutputTokens,
+            Effort);
     }
 
     /// <summary>
     /// Refuses a value that would make the same question look like a different one.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// Replay works because a prompt is a pure function of the requirement and of what
     /// upstream stages produced. Put a run id or a wall-clock timestamp into a prompt and
     /// every run asks a question no cassette has ever seen: replay degrades to "always a
     /// miss", and it surfaces as a broken demo rather than as a mistake where it was made.
     /// So it is refused where it is made.
+    /// </para>
+    /// <para>
+    /// This scans what the <em>caller</em> injects, which is why an input carrying upstream
+    /// content can declare itself <c>verbatim</c> and opt out. A design document quite
+    /// properly contains dates — the first real run tripped on an ISO timestamp in an
+    /// example <c>expiresAt</c> value — and refusing that would be refusing the stage's
+    /// actual input. Content produced upstream is fixed once recorded; it is the engine
+    /// interpolating the current time that would make a prompt unrepeatable.
+    /// </para>
     /// </remarks>
     private void RefuseUnrepeatableValue(string input, string value)
     {

@@ -7,6 +7,11 @@
 #
 # A model absent from this file is not priced. The system reports its cost as unknown
 # rather than as zero — see docs/adr/0013-model-spend-as-a-governed-budget.md.
+#
+# `supports-effort` records whether the model accepts a reasoning-effort setting. It is a
+# property of the model, not of the prompt: a prompt declares how hard its stage should
+# think, and the same prompt may run on a model that has no such control. Sending it
+# anyway is a 400 — which is how this entry came to exist.
 
 as-of: 2026-09-16
 source: https://platform.claude.com/docs/en/about-claude/pricing
@@ -20,12 +25,14 @@ models:
     output-per-mtok: 10.00
     cache-read-per-mtok: 0.20
     cache-write-per-mtok: 2.50
+    supports-effort: true
 
   claude-haiku-4-5:
     input-per-mtok: 1.00
     output-per-mtok: 5.00
     cache-read-per-mtok: 0.10
     cache-write-per-mtok: 1.25
+    supports-effort: false
 
   # The dated snapshot behind the `claude-haiku-4-5` alias. The provider reports the
   # resolved id on the response, and it is the resolved id that gets costed, so both
@@ -35,3 +42,4 @@ models:
     output-per-mtok: 5.00
     cache-read-per-mtok: 0.10
     cache-write-per-mtok: 1.25
+    supports-effort: false

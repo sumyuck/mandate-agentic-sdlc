@@ -79,6 +79,11 @@ public sealed class AnthropicLlmClient : ILlmClient, IDisposable
                     Content = message.Text,
                 }),
             ],
+
+            // Thinking and effort are init-only, so they are set here rather than adjusted
+            // afterwards. Unspecified leaves both absent and the provider's default applies.
+            Thinking = ThinkingConfig(request.Effort),
+            OutputConfig = EffortConfig(request.Effort),
         };
 
         Message message;
@@ -130,6 +135,41 @@ public sealed class AnthropicLlmClient : ILlmClient, IDisposable
 
     /// <inheritdoc />
     public void Dispose() => _client.Dispose();
+
+    /// <summary>
+    /// Applies the stage's declared reasoning effort.
+    /// </summary>
+    /// <remarks>
+    /// On models that reason adaptively, thinking is charged against the same ceiling as
+    /// the answer. Left unconfigured, a hard stage can spend its whole budget reasoning and
+    /// return no text at all. Effort is how a prompt says how much of its ceiling it is
+    /// willing to spend that way; <see cref="LlmEffort.None"/> turns reasoning off outright,
+    /// which suits a stage transcribing an already-approved design.
+    /// </remarks>
+    /// <summary>Reasoning off, or the provider's default.</summary>
+    private static ThinkingConfigParam? ThinkingConfig(LlmEffort effort)
+    {
+        if (effort != LlmEffort.None)
+        {
+            return null;
+        }
+
+        ThinkingConfigDisabled disabled = new();
+        return disabled;
+    }
+
+    private static OutputConfig? EffortConfig(LlmEffort effort) => effort switch
+    {
+        LlmEffort.Low => new OutputConfig { Effort = Effort.Low },
+        LlmEffort.Medium => new OutputConfig { Effort = Effort.Medium },
+        LlmEffort.High => new OutputConfig { Effort = Effort.High },
+        LlmEffort.Xhigh => new OutputConfig { Effort = Effort.Xhigh },
+        LlmEffort.Max => new OutputConfig { Effort = Effort.Max },
+
+        // Unspecified leaves the provider's default in place; None is expressed by
+        // disabling thinking rather than by an effort level.
+        _ => null,
+    };
 
     private static string ModelOf(Message message, LlmRequest request)
     {

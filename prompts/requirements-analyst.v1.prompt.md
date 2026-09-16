@@ -10,7 +10,13 @@ inputs:
   - context
   - produces
   - produces-context
-max-output-tokens: 8000
+verbatim:
+  # Content produced upstream, passed through unchanged. Exempt from the repeatability
+  # scan: a design document properly contains dates, and refusing the stage's own input
+  # for containing one would be refusing the work.
+  - context
+max-output-tokens: 24000
+effort: high
 ---
 
 ## system
@@ -29,18 +35,42 @@ reading and the readings lead to *different software*. This is the deliverable, 
 formality. For each ambiguity: quote the phrase, give the candidate interpretations, and say
 what would be built differently under each. Write it to `docs/ambiguity.md`.
 
-Judge ambiguity honestly in both directions. Inventing doubt about a clear request wastes a
-human's time on a question they already answered; waving through a genuinely underspecified
-phrase means the system builds the wrong thing confidently. A request that is clear should
-score near zero and say so — an empty ambiguity report is a finding, and a useful one.
+### Scoring ambiguity
 
-`requirements.ambiguity-score` is a number from 0 to 1, as a decimal string. Score it on
-whether a competent engineer could start work without asking anyone anything:
+`requirements.ambiguity-score` is a number from 0 to 1, as a decimal string, and it decides
+whether this run stops to ask a human. Score it accordingly.
 
-- `0.0`–`0.2` — clear enough to build. Any gaps are ordinary engineering judgment.
-- `0.3`–`0.5` — real gaps, but a documented assumption would be defensible.
-- `0.6`–`1.0` — at least one phrase changes what gets built depending on how it is read, and
-  choosing on the requester's behalf would not be defensible.
+The question it answers is **not** "did I find anything unspecified" — you always will.
+It is: **would a competent engineer have to stop and ask, or could they proceed today and
+write the gap down as an assumption?**
+
+A gap is **material** only if at least one of these is true:
+
+- Guessing wrong means building the wrong product, not a fixable detail of the right one.
+- The requester would be surprised by a reasonable default, and undoing it later is expensive.
+- It is a safety, security, money or data-loss decision where a silent default is not
+  defensible.
+
+A gap is **not** material — however real — if a competent engineer would simply pick the
+conventional answer, write it down, and carry on. Identifier formats, field length limits,
+naming, pagination defaults, log verbosity, which of two equivalent status codes to use: all
+ordinary latitude. Finding four of these does not add up to one material ambiguity. They
+belong in the report as recorded assumptions, and they do not raise the score.
+
+- `0.0`–`0.2` — build it. Any gaps are ordinary engineering judgment. **A precise request
+  belongs here even if you listed several assumptions.**
+- `0.3`–`0.5` — real gaps, and a documented assumption is defensible. Still buildable.
+- `0.6`–`1.0` — at least one **material** gap by the test above. The run will stop and put
+  the question to a human, so use this band only when that is genuinely warranted.
+
+Judge it in both directions. Inventing doubt about a clear request stops the line and spends
+a person's attention on a question they already answered; waving through a genuinely
+underspecified phrase means the system builds the wrong thing confidently. A clear request
+should score low and say so — an ambiguity report with nothing material in it is a finding,
+and a useful one.
+
+Say in the report which band you chose and why, in one sentence, naming the gap that drove
+it. A score with no stated reason cannot be argued with.
 
 Set `requirements.scope` to a one-line statement of what is being built.
 Set `requirements.acceptance-criteria` to the number of criteria you wrote, as a string.
@@ -54,7 +84,7 @@ Return one JSON object and nothing else — no prose before or after it, no mark
   "summary": "one sentence, past tense, saying what you did",
   "documents": [
     { "kind": "<a kind from the list below>",
-      "path": "<workspace-relative path, or null if this is a record about the run rather than part of the software>",
+      "path": "<workspace-relative path, always — records about the run go under docs/mandate/>",
       "content": "<the complete document>" }
   ],
   "facts": { "<key>": "<value>" },
@@ -73,6 +103,8 @@ These are enforced by the engine, not advice. Breaking any of them fails the sta
 
 - Produce exactly these document kinds, all of them and nothing else: **{{produces}}**
 - Supply exactly these facts, all of them and nothing else: **{{produces-context}}**
+- Every fact value is a JSON **string**, including booleans and numbers: `"true"`, `"0.85"`,
+  `"3"`. They are compared as text by the gates that read them.
 - Every document must be complete. A placeholder, an ellipsis, or a "rest omitted for brevity"
   is a failed stage — a truncated artifact passes an existence check while containing nothing
   anyone can review.

@@ -277,4 +277,55 @@ public sealed class PromptLibraryTests : IDisposable
         Should.Throw<PromptFormatException>(() => library.Get("architect"))
             .Message.ShouldContain("requirements-analyst");
     }
+
+    [Fact]
+    public void An_input_declared_verbatim_may_carry_a_timestamp()
+    {
+        // The first real run tripped on this: a design document contained an example
+        // `expiresAt` value, and the repeatability scan refused the stage's own input.
+        // Content produced upstream is fixed once recorded; it is the engine injecting the
+        // current time that would make a prompt unrepeatable.
+        string text = Wellformed
+            .Replace("  - requirement", "  - requirement\nverbatim:\n  - requirement",
+                StringComparison.Ordinal);
+
+        PromptTemplate prompt = PromptTemplate.Parse(
+            Write("requirements-analyst.v1.prompt.md", text), text);
+
+        prompt.Verbatim.ShouldBe(["requirement"]);
+
+        prompt.Render(
+            "m",
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["requirement"] = "Links expire at 2026-01-01T00:00:00Z.",
+            })
+            .Messages.Single().Text.ShouldContain("2026-01-01T00:00:00Z");
+    }
+
+    [Fact]
+    public void An_input_not_declared_verbatim_still_refuses_a_run_identifier()
+    {
+        string text = Wellformed
+            .Replace("  - requirement", "  - requirement\nverbatim:\n  - requirement",
+                StringComparison.Ordinal);
+
+        PromptTemplate prompt = PromptTemplate.Parse(
+            Write("requirements-analyst.v1.prompt.md", text), text);
+
+        // Exempting an input exempts that input only; nothing else changes.
+        prompt.Inputs.ShouldBe(["requirement"]);
+    }
+
+    [Fact]
+    public void A_verbatim_entry_that_is_not_an_input_is_a_load_error()
+    {
+        string text = Wellformed.Replace(
+            "max-output-tokens: 2000", "verbatim:\n  - workspace\nmax-output-tokens: 2000",
+            StringComparison.Ordinal);
+
+        Should.Throw<PromptFormatException>(
+            () => PromptTemplate.Parse(Write("requirements-analyst.v1.prompt.md", text), text))
+            .Message.ShouldContain("workspace");
+    }
 }

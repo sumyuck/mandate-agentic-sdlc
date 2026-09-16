@@ -120,6 +120,15 @@ public sealed class ModelStageAgent : IStageAgent
         try
         {
             request = _prompt.Render(node.Model, InputsFor(execution));
+
+            // Effort is declared by the prompt but supported by the model, and the two are
+            // chosen independently — a stage can be pointed at a smaller model without its
+            // instructions changing. Dropped rather than sent and refused: the reasoning
+            // level is a preference, and the smaller model simply has no dial for it.
+            if (request.Effort != LlmEffort.Unspecified && !_prices.SupportsEffort(node.Model))
+            {
+                request = request with { Effort = LlmEffort.Unspecified };
+            }
         }
         catch (PromptRenderException exception)
         {
@@ -144,6 +153,22 @@ public sealed class ModelStageAgent : IStageAgent
         // billed; a cost figure that only counted useful answers would understate every run
         // that had to try twice.
         ImmutableArray<ModelCall> calls = [call];
+
+        // Checked before truncation, because the two have different fixes and the empty
+        // case is the more surprising one. A model that reasons adaptively spends thinking
+        // tokens from the same ceiling as its answer; on a hard stage it can exhaust the
+        // whole budget and return nothing. The first live implementation run did exactly
+        // that — 48,000 output tokens, not one character of answer — and reporting it as
+        // "raise the ceiling" would have sent the next person the wrong way.
+        if (response.IsEmpty)
+        {
+            return StageResult.Failed(
+                $"The model returned no answer at all, having spent "
+                + $"{response.Usage.OutputTokens} output token(s). On a model that reasons "
+                + $"before answering, that budget went to reasoning. Lower 'effort' or raise "
+                + $"'max-output-tokens' in {_prompt.Identity}.",
+                modelCalls: calls);
+        }
 
         if (response.WasTruncated)
         {
@@ -251,14 +276,26 @@ public sealed class ModelStageAgent : IStageAgent
         foreach (AgentDocument document in answer.Documents)
         {
             ArtifactKind kind = ParseKind(document.Kind);
-            string name = document.Path ?? $"{node.Id}/{document.Kind}.md";
 
-            if (document.Path is { } path && !WorkspaceFile.IsSafeRelativePath(path))
+            // Every document needs somewhere to live. Without a path the content is hashed
+            // into the audit log and kept nowhere, so the one artifact a reviewer most
+            // wants to read — the review, the security report — is the one the run cannot
+            // show them. Found the hard way on the first live run.
+            if (document.Path is not { } path)
+            {
+                throw new AgentResponseException(
+                    $"The '{document.Kind}' document has no path. Every document is written "
+                    + "into the tree; records about the run belong under 'docs/mandate/'.");
+            }
+
+            if (!WorkspaceFile.IsSafeRelativePath(path))
             {
                 throw new AgentResponseException(
                     $"'{path}' is not a path this stage may write. Absolute paths, parent "
                     + "traversal and the git directory are refused.");
             }
+
+            string name = path;
 
             artifacts.Add(Artifact.FromContent(
                 kind,
@@ -270,10 +307,7 @@ public sealed class ModelStageAgent : IStageAgent
                 now,
                 derivedFrom));
 
-            if (document.Path is { } target)
-            {
-                files.Add(new WorkspaceFile(target, document.Content));
-            }
+            files.Add(new WorkspaceFile(path, document.Content));
         }
 
         ImmutableArray<WorkspaceFile> proposed = files.ToImmutable();

@@ -205,4 +205,91 @@ public sealed class AgentResponseParserTests
             """)
             .Decisions.Single().Confidence.ShouldBe(1d);
     }
+
+    [Theory]
+    [InlineData("true", "true")]
+    [InlineData("false", "false")]
+    [InlineData("0.85", "0.85")]
+    [InlineData("3", "3")]
+    [InlineData("\"true\"", "true")]
+    public void A_fact_written_as_a_bare_json_value_is_read_as_text(string written, string expected)
+    {
+        // A real model did this on the first live call: it wrote `"intake.recorded": true`
+        // rather than `"true"`. It means the same thing, and spending a retry to be told
+        // the same thing again would be a waste of a prompt.
+        AgentResponse answer = AgentResponseParser.Parse($$"""
+            {
+              "documents": [ { "kind": "request", "content": "r" } ],
+              "facts": { "some.key": {{written}} }
+            }
+            """);
+
+        answer.Facts["some.key"].ShouldBe(expected);
+    }
+
+    [Fact]
+    public void A_fact_that_is_an_object_is_refused_rather_than_flattened()
+    {
+        // Gates compare facts as scalars. Collapsing a structure into text would produce a
+        // value that silently never matches anything.
+        Should.Throw<AgentResponseException>(() => AgentResponseParser.Parse("""
+            {
+              "documents": [ { "kind": "request", "content": "r" } ],
+              "facts": { "some.key": { "nested": 1 } }
+            }
+            """))
+            .Message.ShouldContain("must be a string");
+    }
+
+    [Fact]
+    public void A_raw_newline_inside_a_string_is_repaired_rather_than_rejected()
+    {
+        // The most common way a real answer is invalid. One stray newline in eighty
+        // kilobytes of C# would otherwise throw the whole implementation away and spend
+        // another prompt getting the same thing back.
+        string broken =
+            "{ \"documents\": [ { \"kind\": \"source-patch\", \"path\": \"src/A.cs\", "
+            + "\"content\": \"line one\nline two\" } ], \"facts\": {} }";
+
+        AgentResponse answer = AgentResponseParser.Parse(broken);
+
+        answer.Documents.Single().Content.ShouldBe("line one\nline two");
+    }
+
+    [Fact]
+    public void A_correctly_escaped_document_is_left_exactly_as_it_was()
+    {
+        // The repair is only safe because it cannot touch a valid document: inside a JSON
+        // string a raw control character is always a syntax error to begin with.
+        const string valid = """
+            { "documents": [ { "kind": "source-patch", "path": "src/A.cs",
+              "content": "line one\nline two\ttabbed" } ], "facts": {} }
+            """;
+
+        AgentResponseParser.EscapeRawControlCharacters(valid).ShouldBe(valid);
+        AgentResponseParser.Parse(valid).Documents.Single().Content
+            .ShouldBe("line one\nline two\ttabbed");
+    }
+
+    [Fact]
+    public void A_backslash_escape_is_not_disturbed_by_the_repair()
+    {
+        // C# regular expressions are full of backslashes, and the repair walks the same
+        // string state machine the extractor does. An escaped quote must not be mistaken
+        // for the end of the string.
+        const string withEscapes = """
+            { "documents": [ { "kind": "source-patch", "path": "src/A.cs",
+              "content": "var re = new Regex(\"\\\\d+\");" } ], "facts": {} }
+            """;
+
+        AgentResponseParser.Parse(withEscapes).Documents.Single().Content
+            .ShouldBe("var re = new Regex(\"\\\\d+\");");
+    }
+
+    [Fact]
+    public void A_missing_brace_is_still_refused_because_repairing_it_would_mean_inventing_content()
+    {
+        Should.Throw<AgentResponseException>(() => AgentResponseParser.Parse(
+            """{ "documents": [ { "kind": "request", "content": "half" } """));
+    }
 }

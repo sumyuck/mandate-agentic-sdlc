@@ -43,7 +43,8 @@ public sealed class VerifiedFactTests
           "summary": "Wrote tests.",
           "documents": [
             { "kind": "test-suite", "path": "tests/Service.Tests/LinksTests.cs", "content": "// tests" },
-            { "kind": "test-report", "path": null, "content": "Covered the happy path." }
+            { "kind": "test-report", "path": "docs/mandate/test-report.md",
+              "content": "Covered the happy path." }
           ],
           "facts": { "test.coverage": "{{coverage}}", "test.failures": "{{failures}}" },
           "decisions": []

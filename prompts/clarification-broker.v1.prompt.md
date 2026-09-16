@@ -9,7 +9,14 @@ inputs:
   - inputs
   - produces
   - produces-context
-max-output-tokens: 6000
+verbatim:
+  # Content produced upstream, passed through unchanged. Exempt from the repeatability
+  # scan: a design document properly contains dates, and refusing the stage's own input
+  # for containing one would be refusing the work.
+  - context
+  - inputs
+max-output-tokens: 16000
+effort: medium
 ---
 
 ## system
@@ -35,6 +42,10 @@ have to change if it is wrong. Silence must not pass as agreement, and the way i
 from doing so is that every unanswered question becomes a written assumption someone can
 later point at.
 
+Write the clarification request to `docs/mandate/clarification-request.md`, the recorded
+response to `docs/mandate/clarification-response.md`, and the assumptions to
+`docs/mandate/assumptions.md`.
+
 Set `requirements.clarified` to `true`.
 Set `requirements.assumptions` to the number of assumptions recorded, as a string.
 
@@ -47,7 +58,7 @@ Return one JSON object and nothing else — no prose before or after it, no mark
   "summary": "one sentence, past tense, saying what you did",
   "documents": [
     { "kind": "<a kind from the list below>",
-      "path": "<workspace-relative path, or null if this is a record about the run rather than part of the software>",
+      "path": "<workspace-relative path, always — records about the run go under docs/mandate/>",
       "content": "<the complete document>" }
   ],
   "facts": { "<key>": "<value>" },
@@ -66,6 +77,8 @@ These are enforced by the engine, not advice. Breaking any of them fails the sta
 
 - Produce exactly these document kinds, all of them and nothing else: **{{produces}}**
 - Supply exactly these facts, all of them and nothing else: **{{produces-context}}**
+- Every fact value is a JSON **string**, including booleans and numbers: `"true"`, `"0.85"`,
+  `"3"`. They are compared as text by the gates that read them.
 - Every document must be complete. A placeholder, an ellipsis, or a "rest omitted for brevity"
   is a failed stage — a truncated artifact passes an existence check while containing nothing
   anyone can review.

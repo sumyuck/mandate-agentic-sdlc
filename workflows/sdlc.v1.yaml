@@ -498,6 +498,17 @@ edges:
     kind: loop-back
     on: failure
 
+  # A review finding above the ceiling returns the change to implementation, for the same
+  # reason a failing test does: the stage did its job and reported that the code is not fit,
+  # so the code is redone rather than the review repeated in the hope of a softer answer.
+  # Added after the first live run, where the reviewer found a real id-collision bug and the
+  # run could only fail — a lifecycle that can act on a failing test but not on a critical
+  # review finding is treating one form of evidence as more actionable than the other.
+  - from: code-review
+    to: implement
+    kind: loop-back
+    on: failure
+
   # Fan-in: the synchronising barrier before any release decision.
   - from: test
     to: release-readiness

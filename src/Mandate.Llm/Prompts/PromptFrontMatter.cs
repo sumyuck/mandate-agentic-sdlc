@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using Mandate.Core.Llm;
 using YamlDotNet.Core;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
@@ -16,13 +17,19 @@ namespace Mandate.Llm.Prompts;
 /// <param name="Version">The version, in the form <c>v1</c>.</param>
 /// <param name="Description">What the prompt is for.</param>
 /// <param name="Inputs">The placeholders the body is allowed to use.</param>
+/// <param name="Verbatim">
+/// Inputs that carry content produced upstream, exempt from the repeatability scan.
+/// </param>
 /// <param name="MaxOutputTokens">The output ceiling answers to this prompt need.</param>
+/// <param name="Effort">How much reasoning this stage is allowed before answering.</param>
 internal sealed record PromptFrontMatter(
     string Id,
     string Version,
     string Description,
     ImmutableArray<string> Inputs,
-    int MaxOutputTokens)
+    ImmutableArray<string> Verbatim,
+    int MaxOutputTokens,
+    LlmEffort Effort)
 {
     private const string Fence = "---";
 
@@ -84,7 +91,11 @@ internal sealed record PromptFrontMatter(
 
         public List<string>? Inputs { get; set; }
 
+        public List<string>? Verbatim { get; set; }
+
         public int MaxOutputTokens { get; set; }
+
+        public string? Effort { get; set; }
 
         public PromptFrontMatter Validate(string path)
         {
@@ -130,7 +141,31 @@ internal sealed record PromptFrontMatter(
                 throw new PromptFormatException($"{path}: an input is declared twice.");
             }
 
-            return new PromptFrontMatter(id, version, description, inputs, MaxOutputTokens);
+            ImmutableArray<string> verbatim = [.. Verbatim ?? []];
+
+            foreach (string exempt in verbatim)
+            {
+                if (!inputs.Contains(exempt, StringComparer.Ordinal))
+                {
+                    throw new PromptFormatException(
+                        $"{path}: '{exempt}' is listed under 'verbatim' but is not an input "
+                        + "of this prompt.");
+                }
+            }
+
+            LlmEffort effort = LlmEffort.Unspecified;
+
+            if (!string.IsNullOrWhiteSpace(Effort)
+                && (!Enum.TryParse(Effort.Trim(), ignoreCase: true, out effort)
+                    || effort == LlmEffort.Unspecified))
+            {
+                throw new PromptFormatException(
+                    $"{path}: '{Effort}' is not a reasoning effort. Expected none, low, "
+                    + "medium, high, xhigh or max.");
+            }
+
+            return new PromptFrontMatter(
+                id, version, description, inputs, verbatim, MaxOutputTokens, effort);
         }
 
         private static string Require(string path, string? value, string field) =>

@@ -289,6 +289,27 @@ public sealed class ModelStageAgentTests
         sent[0].Fingerprint.ShouldBe(sent[1].Fingerprint);
     }
 
+    [Fact]
+    public async Task A_document_with_no_path_fails_the_stage()
+    {
+        // Content with nowhere to live is hashed into the audit log and kept nowhere, so
+        // the one artifact a reviewer most wants to read is the one the run cannot show
+        // them. Found on the first live run, when the critical review finding existed only
+        // inside a cassette.
+        StageResult result = await RunAsync("intake", "intake", """
+            {
+              "summary": "Recorded.",
+              "documents": [ { "kind": "request", "path": null, "content": "r" } ],
+              "facts": { "intake.recorded": "true" },
+              "decisions": []
+            }
+            """);
+
+        result.Succeeded.ShouldBeFalse();
+        result.Failure!.ShouldContain("no path");
+        result.Failure!.ShouldContain("docs/mandate/");
+    }
+
     private sealed class ScriptedLlmClient(
         Func<LlmRequest, string> responder, string stopReason = "end_turn") : ILlmClient
     {

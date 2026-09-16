@@ -23,7 +23,7 @@ public sealed class LlmRequestTests
         // value, every cassette ever recorded stops matching — and this test is the only
         // thing that would say so before a demo did.
         Requests.A().Fingerprint.Hex.ShouldBe(
-            "23e3be3d059eb983c8006d7dc88ceede34caf118fa7a3ddb57e3c5fb047f0e42");
+            "d85461782ddb0b40540e7e3ab2e68618707c9bcda323ddcbc73bd5eb75a4b90a");
     }
 
     [Theory]

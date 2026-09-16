@@ -9,7 +9,8 @@ inputs:
   - existing-code
   - produces
   - produces-context
-max-output-tokens: 2000
+max-output-tokens: 4000
+effort: none
 ---
 
 ## system
@@ -36,7 +37,7 @@ Return one JSON object and nothing else — no prose before or after it, no mark
   "summary": "one sentence, past tense, saying what you did",
   "documents": [
     { "kind": "<a kind from the list below>",
-      "path": "<workspace-relative path, or null if this is a record about the run rather than part of the software>",
+      "path": "<workspace-relative path, always — records about the run go under docs/mandate/>",
       "content": "<the complete document>" }
   ],
   "facts": { "<key>": "<value>" },
@@ -55,6 +56,8 @@ These are enforced by the engine, not advice. Breaking any of them fails the sta
 
 - Produce exactly these document kinds, all of them and nothing else: **{{produces}}**
 - Supply exactly these facts, all of them and nothing else: **{{produces-context}}**
+- Every fact value is a JSON **string**, including booleans and numbers: `"true"`, `"0.85"`,
+  `"3"`. They are compared as text by the gates that read them.
 - Every document must be complete. A placeholder, an ellipsis, or a "rest omitted for brevity"
   is a failed stage — a truncated artifact passes an existence check while containing nothing
   anyone can review.

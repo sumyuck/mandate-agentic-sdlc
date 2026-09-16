@@ -12,11 +12,17 @@ namespace Mandate.Llm.Pricing;
 /// <param name="OutputPerMillion">Generated output.</param>
 /// <param name="CacheReadPerMillion">Input served from a prompt cache.</param>
 /// <param name="CacheWritePerMillion">Input written to a prompt cache.</param>
+/// <param name="SupportsEffort">
+/// Whether the model accepts a reasoning-effort setting. A property of the model rather
+/// than of the prompt: the same prompt may run on a model that has no such control, and
+/// sending it anyway is a 400.
+/// </param>
 public sealed record ModelPrice(
     decimal InputPerMillion,
     decimal OutputPerMillion,
     decimal CacheReadPerMillion,
-    decimal CacheWritePerMillion)
+    decimal CacheWritePerMillion,
+    bool SupportsEffort)
 {
     /// <summary>What a given usage costs, in billionths of a dollar.</summary>
     /// <remarks>
@@ -118,6 +124,14 @@ public sealed class ModelPriceBook
         return document.Validate(path);
     }
 
+    /// <summary>Whether a model accepts a reasoning-effort setting.</summary>
+    /// <remarks>
+    /// Unknown models are assumed not to, which fails safe: omitting the setting costs a
+    /// default level of reasoning, whereas sending it to a model that has no such control
+    /// fails the call outright.
+    /// </remarks>
+    public bool SupportsEffort(string model) => For(model)?.SupportsEffort ?? false;
+
     /// <summary>The price of a model, or <see langword="null"/> when it is not priced.</summary>
     public ModelPrice? For(string model)
     {
@@ -180,6 +194,8 @@ public sealed class ModelPriceBook
 
         public decimal CacheWritePerMtok { get; set; } = -1m;
 
+        public bool SupportsEffort { get; set; }
+
         public ModelPrice Validate(string path, string model)
         {
             Require(path, model, "input-per-mtok", InputPerMtok);
@@ -188,7 +204,8 @@ public sealed class ModelPriceBook
             Require(path, model, "cache-write-per-mtok", CacheWritePerMtok);
 
             return new ModelPrice(
-                InputPerMtok, OutputPerMtok, CacheReadPerMtok, CacheWritePerMtok);
+                InputPerMtok, OutputPerMtok, CacheReadPerMtok, CacheWritePerMtok,
+                SupportsEffort);
         }
 
         private static void Require(string path, string model, string field, decimal value)

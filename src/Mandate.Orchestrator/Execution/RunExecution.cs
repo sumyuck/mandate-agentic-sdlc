@@ -1695,6 +1695,24 @@ internal sealed class RunExecution(
                 Join(notes) + ". The work is complete and preserved; approve to continue.");
         }
 
+        ImmutableArray<NodeId> rolledBack =
+        [
+            .. nodes.Where(node => node.State == NodeState.RolledBack).Select(node => node.Id),
+        ];
+
+        if (!rolledBack.IsEmpty)
+        {
+            // A rollback is a conclusion, not a stall. The node's fallback was to compensate,
+            // the compensation ran, and the run ended there — deliberately. Resuming must not
+            // quietly re-run the stage whose effects a human can see were undone; whoever
+            // decides the work should be attempted again starts a run that says so.
+            return (
+                RunStatus.RolledBack,
+                $"The run ended in rollback: {Name(rolledBack)} was undone and the tree "
+                + "returned to its prior state. A rolled-back run is not resumed — start a "
+                + "new run once the cause is addressed.");
+        }
+
         ImmutableArray<NodeId> unsettled =
         [
             .. nodes

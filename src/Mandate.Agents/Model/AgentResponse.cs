@@ -1,4 +1,6 @@
 using System.Collections.Immutable;
+using System.Globalization;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Mandate.Core.Serialization;
@@ -86,6 +88,8 @@ public static class AgentResponseParser
         string json = ExtractJsonObject(text)
             ?? throw new AgentResponseException(
                 "The answer contained no JSON object. " + Excerpt(text));
+
+        json = EscapeRawControlCharacters(json);
 
         Payload? payload;
 
@@ -182,6 +186,90 @@ public static class AgentResponseParser
         return null;
     }
 
+    /// <summary>
+    /// Escapes control characters that appear raw inside a JSON string literal.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The single most common way a model's answer is invalid here, and the repair is
+    /// provably safe: inside a JSON string a raw newline or tab is <em>always</em> a syntax
+    /// error, so escaping one can only rescue a broken document — it can never change the
+    /// meaning of a valid one. Every stage in this system returns source code inside JSON,
+    /// and one stray newline in eighty kilobytes of C# would otherwise throw the whole
+    /// answer away and spend another prompt getting the same thing back.
+    /// </para>
+    /// <para>
+    /// Deliberately narrow. Nothing else is repaired: a missing brace or a bad escape
+    /// sequence is a genuinely ambiguous document, and guessing at the author's intent
+    /// would mean committing invented content to a repository.
+    /// </para>
+    /// </remarks>
+    public static string EscapeRawControlCharacters(string json)
+    {
+        ArgumentNullException.ThrowIfNull(json);
+
+        StringBuilder repaired = new(json.Length);
+        bool inString = false;
+        bool escaped = false;
+
+        foreach (char character in json)
+        {
+            if (escaped)
+            {
+                repaired.Append(character);
+                escaped = false;
+                continue;
+            }
+
+            if (inString)
+            {
+                switch (character)
+                {
+                    case '\\':
+                        repaired.Append(character);
+                        escaped = true;
+                        continue;
+
+                    case '"':
+                        repaired.Append(character);
+                        inString = false;
+                        continue;
+
+                    case '\n':
+                        repaired.Append("\\n");
+                        continue;
+
+                    case '\r':
+                        repaired.Append("\\r");
+                        continue;
+
+                    case '\t':
+                        repaired.Append("\\t");
+                        continue;
+
+                    default:
+                        if (char.IsControl(character))
+                        {
+                            repaired.Append(CultureInfo.InvariantCulture, $"\\u{(int)character:x4}");
+                            continue;
+                        }
+
+                        repaired.Append(character);
+                        continue;
+                }
+            }
+
+            if (character == '"')
+            {
+                inString = true;
+            }
+
+            repaired.Append(character);
+        }
+
+        return repaired.ToString();
+    }
+
     private static string Excerpt(string text) =>
         "First 200 characters: " + (text.Length <= 200 ? text : text[..200] + "…");
 
@@ -207,15 +295,42 @@ public static class AgentResponseParser
 
         public List<DocumentPayload>? Documents { get; set; }
 
-        public Dictionary<string, string>? Facts { get; set; }
+        public Dictionary<string, JsonElement>? Facts { get; set; }
 
         public List<DecisionPayload>? Decisions { get; set; }
+
+        /// <summary>
+        /// A fact value as text, whatever JSON type the model chose to write it in.
+        /// </summary>
+        /// <remarks>
+        /// Context facts are strings by design — a guard compares them as text and the
+        /// audit log stores them as text. A model writing <c>true</c> rather than
+        /// <c>"true"</c> means exactly the same thing, and failing the stage over the
+        /// quotation marks would spend a retry to be told the same thing again. Booleans
+        /// are lower-cased and numbers rendered invariantly so a gate comparing them does
+        /// not have to care which form arrived.
+        /// </remarks>
+        private static string AsText(JsonElement value) => value.ValueKind switch
+        {
+            JsonValueKind.String => value.GetString() ?? string.Empty,
+            JsonValueKind.True => "true",
+            JsonValueKind.False => "false",
+            JsonValueKind.Null or JsonValueKind.Undefined => string.Empty,
+            JsonValueKind.Number => value.GetRawText(),
+
+            // An object or an array is not a fact. A gate compares facts as scalars, so
+            // collapsing a structure into text here would produce a value that silently
+            // never matches anything.
+            _ => throw new AgentResponseException(
+                $"A context fact must be a string, a number or a boolean. Received "
+                + $"{value.ValueKind.ToString().ToLowerInvariant()}: {Excerpt(value.GetRawText())}"),
+        };
 
         public AgentResponse Validate() => new(
             string.IsNullOrWhiteSpace(Summary) ? "(no summary)" : Summary.Trim(),
             [.. (Documents ?? []).Select(document => document.Validate())],
             (Facts ?? []).ToImmutableDictionary(
-                pair => pair.Key, pair => pair.Value ?? string.Empty, StringComparer.Ordinal),
+                pair => pair.Key, pair => AsText(pair.Value), StringComparer.Ordinal),
             [.. (Decisions ?? []).Select(decision => decision.Validate())]);
     }
 

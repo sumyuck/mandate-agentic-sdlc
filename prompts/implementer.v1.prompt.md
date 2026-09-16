@@ -10,7 +10,15 @@ inputs:
   - inputs
   - produces
   - produces-context
-max-output-tokens: 24000
+verbatim:
+  # Content produced upstream, passed through unchanged. Exempt from the repeatability
+  # scan: a design document properly contains dates, and refusing the stage's own input
+  # for containing one would be refusing the work.
+  - context
+  - workspace
+  - inputs
+max-output-tokens: 64000
+effort: low
 ---
 
 ## system
@@ -34,6 +42,16 @@ run's git workspace as this stage's commit, so:
 Use only the .NET base class library and packages already referenced in the workspace. Adding
 a dependency is a change-control decision that is not yours to make at this stage.
 
+Keep it compact. This is a small service, and your whole answer has to fit in one response:
+prefer a handful of substantial files over a scatter of tiny ones, skip the interface that
+has exactly one implementation, and do not write ceremony the design did not ask for. Aim
+well under 800 lines in total. Running out of room part-way through fails the stage and
+throws away everything you wrote, so a complete compact implementation beats an elegant
+half of one.
+
+Do not narrate. Do not write out your reasoning before the JSON — there is no room for it,
+and a `<think>` block in the answer is output spent on something the engine discards.
+
 Every file you write is one `source-patch` document, with `path` set to its workspace-relative
 location.
 
@@ -52,7 +70,7 @@ Return one JSON object and nothing else — no prose before or after it, no mark
   "summary": "one sentence, past tense, saying what you did",
   "documents": [
     { "kind": "<a kind from the list below>",
-      "path": "<workspace-relative path, or null if this is a record about the run rather than part of the software>",
+      "path": "<workspace-relative path, always — records about the run go under docs/mandate/>",
       "content": "<the complete document>" }
   ],
   "facts": { "<key>": "<value>" },
@@ -71,6 +89,8 @@ These are enforced by the engine, not advice. Breaking any of them fails the sta
 
 - Produce exactly these document kinds, all of them and nothing else: **{{produces}}**
 - Supply exactly these facts, all of them and nothing else: **{{produces-context}}**
+- Every fact value is a JSON **string**, including booleans and numbers: `"true"`, `"0.85"`,
+  `"3"`. They are compared as text by the gates that read them.
 - Every document must be complete. A placeholder, an ellipsis, or a "rest omitted for brevity"
   is a failed stage — a truncated artifact passes an existence check while containing nothing
   anyone can review.

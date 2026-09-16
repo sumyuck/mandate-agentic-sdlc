@@ -9,7 +9,14 @@ inputs:
   - inputs
   - produces
   - produces-context
-max-output-tokens: 10000
+verbatim:
+  # Content produced upstream, passed through unchanged. Exempt from the repeatability
+  # scan: a design document properly contains dates, and refusing the stage's own input
+  # for containing one would be refusing the work.
+  - context
+  - inputs
+max-output-tokens: 20000
+effort: medium
 ---
 
 ## system
@@ -32,8 +39,8 @@ reassurance.
 read from the run context. Where a figure is not available to you, write that it is not
 available rather than estimating one.
 
-Both are records about the run rather than part of the software, so give both a `path` of
-`null`.
+Write the checklist to `docs/mandate/release-checklist.md` and the metrics report to
+`docs/mandate/metrics-report.md`.
 
 Set `release.decision` to `go` or `no-go`. Recommend `no-go` when the evidence does not
 support release. A release manager who never says no is not adding a control, and the
@@ -48,7 +55,7 @@ Return one JSON object and nothing else — no prose before or after it, no mark
   "summary": "one sentence, past tense, saying what you did",
   "documents": [
     { "kind": "<a kind from the list below>",
-      "path": "<workspace-relative path, or null if this is a record about the run rather than part of the software>",
+      "path": "<workspace-relative path, always — records about the run go under docs/mandate/>",
       "content": "<the complete document>" }
   ],
   "facts": { "<key>": "<value>" },
@@ -67,6 +74,8 @@ These are enforced by the engine, not advice. Breaking any of them fails the sta
 
 - Produce exactly these document kinds, all of them and nothing else: **{{produces}}**
 - Supply exactly these facts, all of them and nothing else: **{{produces-context}}**
+- Every fact value is a JSON **string**, including booleans and numbers: `"true"`, `"0.85"`,
+  `"3"`. They are compared as text by the gates that read them.
 - Every document must be complete. A placeholder, an ellipsis, or a "rest omitted for brevity"
   is a failed stage — a truncated artifact passes an existence check while containing nothing
   anyone can review.

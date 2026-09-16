@@ -1,0 +1,25 @@
+<Project>
+
+  <!-- Inherit every root-level convention, then relax only what tests legitimately need. -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove($(MSBuildThisFile), $(MSBuildThisFileDirectory)..))" />
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <!--
+      Test names are sentences, not identifiers: `Version_is_resolved_...` reads as a
+      specification in the runner output. CA1707 (no underscores) is an API-design rule
+      and does not apply to test projects. Relaxed here only, never in src/.
+    -->
+    <NoWarn>$(NoWarn);CA1707</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+    <Using Include="Shouldly" />
+  </ItemGroup>
+
+</Project>

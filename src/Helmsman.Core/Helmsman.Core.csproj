@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- TargetFramework, nullability, analyzers and warnings-as-errors: Directory.Build.props -->
+
+</Project>

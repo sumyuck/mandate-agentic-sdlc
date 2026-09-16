@@ -1,0 +1,46 @@
+<Project>
+
+  <!--
+    Central build configuration for the whole solution.
+
+    Target framework is declared in ONE place. .NET 8 is the current LTS release and the
+    version enterprise platforms standardise on, so it is what we target and what
+    global.json pins the SDK to. No project declares its own TargetFramework, which makes
+    a future retarget a one-line change here. See docs/adr/0002.
+  -->
+  <PropertyGroup>
+    <HelmsmanTargetFramework>net8.0</HelmsmanTargetFramework>
+    <TargetFramework>$(HelmsmanTargetFramework)</TargetFramework>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <!-- Quality gates enforced by the compiler, not by convention. -->
+  <PropertyGroup>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningsNotAsErrors></WarningsNotAsErrors>
+  </PropertyGroup>
+
+  <!-- Reproducible builds: identical inputs must produce identical outputs. -->
+  <PropertyGroup>
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <Authors>Muskan Jain</Authors>
+    <Product>Helmsman</Product>
+    <Company>Helmsman</Company>
+    <VersionPrefix>0.1.0</VersionPrefix>
+  </PropertyGroup>
+
+</Project>

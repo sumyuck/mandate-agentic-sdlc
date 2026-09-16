@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk"><!-- TargetFramework, nullability, analyzers and warnings-as-errors: Directory.Build.props -->
+
+
+  <ItemGroup>
+    <ProjectReference Include="..\Helmsman.Core\Helmsman.Core.csproj" />
+  </ItemGroup>
+</Project>

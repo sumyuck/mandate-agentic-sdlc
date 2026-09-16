@@ -1,0 +1,42 @@
+# ---- Source material ----
+# Deliberately NOT committed: the assignment brief is client-internal material.
+*.pdf
+*.docx
+
+# ---- .NET ----
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+artifacts/
+*.user
+*.suo
+project.lock.json
+TestResults/
+coverage*.xml
+coverage*.json
+*.coverage
+*.trx
+
+# ---- Helmsman runtime state ----
+# Durable run state + per-run git workspaces are machine-local.
+# Curated run EVIDENCE is committed under runs/ instead.
+.helmsman/
+!runs/**
+
+# ---- Secrets ----
+.env
+.env.*
+!.env.example
+appsettings.Local.json
+*.pfx
+*.key
+
+# ---- Tooling / OS ----
+.vs/
+.vscode/*
+!.vscode/launch.json
+!.vscode/tasks.json
+.idea/
+.DS_Store
+node_modules/

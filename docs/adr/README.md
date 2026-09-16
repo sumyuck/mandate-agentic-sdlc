@@ -19,6 +19,7 @@ is made rather than reconstructed afterwards.
 | [0007](0007-llm-record-replay.md) | LLM access sits behind a port with record/replay, so the submission runs offline | Accepted |
 | [0008](0008-restricted-guard-grammar.md) | Conditional paths use a closed predicate grammar, not an expression evaluator | Accepted |
 | [0009](0009-agents-propose-the-engine-applies.md) | Agents propose file changes; the engine applies them, and rollback reverts | Accepted |
+| [0010](0010-policy-as-data-waivers-on-the-record.md) | Policy is declarative data, and a waiver overrides without silencing | Accepted |
 
 Enforcement: ADR-0001, 0002, 0003 and 0008 are asserted by
 [`DependencyRuleTests`](../../tests/Mandate.Orchestrator.Tests/Architecture/DependencyRuleTests.cs),

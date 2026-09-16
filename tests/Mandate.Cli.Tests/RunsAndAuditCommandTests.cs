@@ -20,7 +20,8 @@ public sealed partial class RunsAndAuditCommandTests
             "run", "Build a URL shortener", "--scenario", scenario,
             "--workflow", ShippedWorkflow, "--store", workspace.Store, "--as", "tester",
             "--workspace-root", workspace.Path_("workspaces"),
-            "--template", Path.Combine(RepositoryRoot.Path, "templates", "service"));
+            "--template", Path.Combine(RepositoryRoot.Path, "templates", "service"),
+            "--policies", Path.Combine(RepositoryRoot.Path, "workflows", "policies"));
 
         Match match = RunIdPattern().Match(result.Plain);
         match.Success.ShouldBeTrue($"no run id in: {result.Plain}");

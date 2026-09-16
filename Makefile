@@ -9,7 +9,7 @@ SHELL := /bin/bash
 DOTNET ?= dotnet
 CLI := $(DOTNET) run --project src/Mandate.Cli --
 
-.PHONY: help doctor restore build test format lint info workflow diagram run runs audit clean verify
+.PHONY: help doctor restore build test format lint info workflow diagram run runs audit policy clean verify
 
 help: ## Show available targets
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -63,6 +63,9 @@ runs: ## List recorded runs
 
 audit: ## Verify that no recorded run's audit log has been altered
 	@$(CLI) audit verify
+
+policy: ## List the security, compliance and change-control rules
+	@$(CLI) policy list
 
 diagram: ## Regenerate the lifecycle diagram from the workflow definition
 	@$(CLI) workflow render -o docs/diagrams/sdlc.v1.mmd

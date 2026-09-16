@@ -13,12 +13,15 @@ public sealed partial class ApprovalCommandTests
 
     private static string Template => Path.Combine(RepositoryRoot.Path, "templates", "service");
 
+    private static string Policies => Path.Combine(RepositoryRoot.Path, "workflows", "policies");
+
     private static string Seed(TemporaryWorkspace workspace, string initiatedBy = "muskan")
     {
         CliResult result = CliHarness.Run(
             "run", "Build a URL shortener", "--scenario", "greenfield",
             "--workflow", ShippedWorkflow, "--store", workspace.Store, "--as", initiatedBy,
-            "--workspace-root", workspace.Path_("workspaces"), "--template", Template);
+            "--workspace-root", workspace.Path_("workspaces"), "--template", Template,
+            "--policies", Policies);
 
         Match match = RunIdPattern().Match(result.Plain);
         match.Success.ShouldBeTrue($"no run id in: {result.Plain}");
@@ -34,7 +37,8 @@ public sealed partial class ApprovalCommandTests
     private static CliResult Resume(TemporaryWorkspace workspace, string runId) =>
         CliHarness.Run(
             "resume", runId, "--workflow", ShippedWorkflow, "--store", workspace.Store,
-            "--workspace-root", workspace.Path_("workspaces"), "--template", Template);
+            "--workspace-root", workspace.Path_("workspaces"), "--template", Template,
+            "--policies", Policies);
 
     [Fact]
     public void An_approval_is_recorded_and_points_at_the_next_step()

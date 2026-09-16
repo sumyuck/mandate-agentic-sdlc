@@ -1,6 +1,7 @@
 using System.Globalization;
 using Mandate.Core.Execution;
 using Mandate.Core.Identifiers;
+using Mandate.Core.Policies;
 using Mandate.Core.Workflow;
 
 namespace Mandate.Orchestrator.Gates;
@@ -106,6 +107,70 @@ public sealed class ContextEvidenceGateEvaluator(
 
         return ValueTask.FromResult(new GateConditionVerdict(
             evaluation.Condition, satisfied(value), $"{key} = '{value}': {explain(value)}"));
+    }
+}
+
+/// <summary>
+/// Passes when the named policy pack has no outstanding blocking violation.
+/// </summary>
+/// <remarks>
+/// Waived violations do not block, but they are still reported: a waiver is an override on
+/// the record, not a way of making a rule stop applying. A pack that was not evaluated fails
+/// closed, because "nothing checked it" and "it came back clean" must never look the same.
+/// </remarks>
+public sealed class PolicyCleanGateEvaluator : IGateEvaluator
+{
+    /// <inheritdoc />
+    public string Kind => "policy-clean";
+
+    /// <inheritdoc />
+    public string Describes => "Every rule in the named policy pack evaluates clean.";
+
+    /// <inheritdoc />
+    public ValueTask<GateConditionVerdict> EvaluateAsync(
+        GateEvaluation evaluation, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(evaluation);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        string pack = evaluation.Condition.Expression.Trim();
+
+        if (string.IsNullOrEmpty(pack))
+        {
+            return ValueTask.FromResult(new GateConditionVerdict(
+                evaluation.Condition, false, "No policy pack was named. Fails closed."));
+        }
+
+        if (evaluation.Policies is null
+            || !evaluation.Policies.TryGetValue(pack, out PolicyEvaluation? result))
+        {
+            return ValueTask.FromResult(new GateConditionVerdict(
+                evaluation.Condition,
+                false,
+                $"The policy pack '{pack}' was not evaluated, so it cannot be said to be "
+                + "clean. Fails closed."));
+        }
+
+        if (result.IsClean)
+        {
+            IEnumerable<string> waived = result.Waived.Select(verdict => verdict.Rule.Id);
+
+            return ValueTask.FromResult(new GateConditionVerdict(
+                evaluation.Condition,
+                true,
+                result.Summary
+                + (waived.Any()
+                    ? $" Waived on the record: {string.Join(", ", waived)}."
+                    : string.Empty)));
+        }
+
+        IEnumerable<string> blocking = result.Blocking.Select(
+            verdict => $"{verdict.Rule.Id} ({verdict.Explanation})");
+
+        return ValueTask.FromResult(new GateConditionVerdict(
+            evaluation.Condition,
+            false,
+            result.Summary + " Outstanding: " + string.Join("; ", blocking)));
     }
 }
 

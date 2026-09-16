@@ -85,6 +85,17 @@ public interface IRunView
     /// </remarks>
     ImmutableDictionary<string, Actor> DeniedApprovals { get; }
 
+    /// <summary>
+    /// Policy violations a human has allowed through, by rule id.
+    /// </summary>
+    /// <remarks>
+    /// A waiver is an override on the record, not a way of making a rule stop applying: the
+    /// violation is still evaluated and still reported, it simply no longer blocks. That
+    /// distinction is what makes the audit trail able to answer "what did we knowingly let
+    /// through, and who said so?".
+    /// </remarks>
+    ImmutableDictionary<string, Policies.PolicyWaiver> Waivers { get; }
+
     /// <summary>The current state of a node.</summary>
     NodeState StateOf(NodeId nodeId);
 
@@ -115,11 +126,21 @@ public static class RunViewExtensions
 /// <param name="Position">Entry or exit.</param>
 /// <param name="Condition">The specific condition to judge.</param>
 /// <param name="Run">Read-only view of the run's accumulated evidence.</param>
+/// <param name="Policies">
+/// Policy packs already evaluated for this gate, by pack name.
+/// </param>
+/// <remarks>
+/// Policy results are computed by the engine and handed in, rather than fetched by the
+/// evaluator. The engine has to record the evaluation as an audit event either way, and
+/// letting the evaluator trigger its own would mean the gate's verdict and the recorded
+/// evidence could come from two different evaluations.
+/// </remarks>
 public sealed record GateEvaluation(
     WorkflowNode Node,
     GatePosition Position,
     GateCondition Condition,
-    IRunView Run);
+    IRunView Run,
+    ImmutableDictionary<string, Policies.PolicyEvaluation>? Policies = null);
 
 /// <summary>
 /// Judges one kind of gate condition.

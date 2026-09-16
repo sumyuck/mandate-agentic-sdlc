@@ -91,6 +91,22 @@ public sealed record FallbackSelectedPayload(string Strategy, string Reason);
 /// <summary>Payload of the compensation events.</summary>
 public sealed record CompensationPayload(string Action, bool Undone, string Detail);
 
+/// <summary>Payload of the policy evaluation event.</summary>
+public sealed record PolicyEvaluatedPayload(
+    string Pack, bool Clean, ImmutableArray<PolicyVerdictPayload> Verdicts);
+
+/// <summary>One rule's verdict, as recorded.</summary>
+public sealed record PolicyVerdictPayload(
+    string RuleId,
+    string Category,
+    string Severity,
+    bool Satisfied,
+    bool Waived,
+    string Explanation);
+
+/// <summary>Payload of the policy violation and waiver events.</summary>
+public sealed record PolicyWaiverPayload(string RuleId, string Pack, string Reason);
+
 /// <summary>Payload of the safe-stop events.</summary>
 public sealed record SafeStopPayload(string RequestedBy, int NodesCancelled, string Detail);
 

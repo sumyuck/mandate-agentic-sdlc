@@ -1,0 +1,34 @@
+# ---------------------------------------------------------------------------------------------
+# Security.
+#
+# Two rules, deliberately few. Both scan the evidence itself rather than the description of it,
+# because a stage can describe its output accurately and still leave something beside it that
+# nobody described.
+# ---------------------------------------------------------------------------------------------
+
+name: security
+version: v1
+description: >-
+  Whether the run produced anything unsafe, and whether its own record can be trusted.
+
+rules:
+  - id: SEC-001
+    category: security
+    severity: blocking
+    statement: No committed file in the run workspace matches a known credential pattern.
+    rationale: >-
+      A committed secret is the one mistake that cannot be undone by reverting, because the
+      value is disclosed the moment it is written down. Pattern matching finds the obvious
+      cases and will not find a secret that does not look like one: this is a net with a known
+      mesh size, not a proof.
+    check: no-secrets-in-workspace
+
+  - id: SEC-002
+    category: security
+    severity: blocking
+    statement: The run's recorded log verifies against its hash chain.
+    rationale: >-
+      Every other rule here reads the run's own record. If that record can no longer be shown
+      to be unaltered then none of the other verdicts mean anything, so this is the rule to
+      read first when something else is in question.
+    check: audit-chain-intact

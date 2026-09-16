@@ -43,6 +43,10 @@ internal sealed class ResumeCommand : AsyncCommand<ResumeCommand.Settings>
         [Description("Where run workspaces live. Defaults to .mandate/workspaces.")]
         public string WorkspaceRoot { get; init; } = GitRunWorkspaceFactory.DefaultRoot;
 
+        [CommandOption("--policies")]
+        [Description("Directory holding the policy packs. Defaults to workflows/policies.")]
+        public string Policies { get; init; } = PolicyComposition.DefaultDirectory;
+
         [CommandOption("--template")]
         [Description("Tree new workspaces are seeded from. Defaults to templates/service.")]
         public string Template { get; init; } = GitRunWorkspaceFactory.DefaultTemplate;
@@ -107,6 +111,26 @@ internal sealed class ResumeCommand : AsyncCommand<ResumeCommand.Settings>
             return ExitCode.Success;
         }
 
+        // Policies are required only if the lifecycle actually gates on one. A workflow with
+        // no policy gate should not be blocked by the absence of packs it never consults.
+        bool needsPolicies = graph.Nodes.Any(node =>
+            node.EntryGate.Concat(node.ExitGate).Any(condition =>
+                string.Equals(condition.Kind, "policy-clean", StringComparison.Ordinal)));
+
+        Policy.PolicyEngine? policyEngine =
+            PolicyComposition.TryBuild(settings.Policies, journal, out string? policyProblem);
+
+        if (policyEngine is null && needsPolicies)
+        {
+            AnsiConsole.MarkupLine(
+                $"[red]cannot load policies[/] {policyProblem!.EscapeMarkup()}");
+            AnsiConsole.MarkupLine(
+                "[grey]this lifecycle gates on a policy pack, so it cannot run without one — "
+                + "run from the repository root, or pass --policies[/]");
+
+            return ExitCode.BadInput;
+        }
+
         WorkflowEngine engine = new(
             graph,
             ScriptedAgents.CoveringGraph(graph),
@@ -117,7 +141,8 @@ internal sealed class ResumeCommand : AsyncCommand<ResumeCommand.Settings>
             CompensationRegistry.BuiltIn(),
             new GitRunWorkspaceFactory(settings.WorkspaceRoot, settings.Template),
             RealDelay.Instance,
-            new FileSafeStopMonitor(FileSafeStopMonitor.DefaultDirectory));
+            new FileSafeStopMonitor(FileSafeStopMonitor.DefaultDirectory),
+            policyEngine);
 
         AnsiConsole.Write(new Rule($"[bold]resuming {runId.Value.EscapeMarkup()}[/]").LeftJustified());
 

@@ -3,6 +3,7 @@ using Mandate.Core.Diagnostics;
 using Mandate.Core.Events;
 using Mandate.Core.Execution;
 using Mandate.Core.Identifiers;
+using Mandate.Core.Policies;
 using Mandate.Core.Time;
 using Mandate.Core.Workflow;
 
@@ -42,6 +43,7 @@ public sealed class WorkflowEngine
     private readonly IRunWorkspaceFactory _workspaces;
     private readonly IDelay _delay;
     private readonly ISafeStopMonitor _safeStop;
+    private readonly IPolicyEngine? _policies;
 
     /// <summary>Creates an engine for one workflow, validating that it can be executed.</summary>
     /// <exception cref="EngineConfigurationException">Some component the workflow needs is missing.</exception>
@@ -55,7 +57,8 @@ public sealed class WorkflowEngine
         ICompensationRegistry? compensations = null,
         IRunWorkspaceFactory? workspaces = null,
         IDelay? delay = null,
-        ISafeStopMonitor? safeStop = null)
+        ISafeStopMonitor? safeStop = null,
+        IPolicyEngine? policies = null)
     {
         ArgumentNullException.ThrowIfNull(graph);
         ArgumentNullException.ThrowIfNull(agents);
@@ -73,6 +76,7 @@ public sealed class WorkflowEngine
         _workspaces = workspaces ?? NoWorkspaceFactory.Instance;
         _delay = delay ?? RealDelay.Instance;
         _safeStop = safeStop ?? NeverStops.Instance;
+        _policies = policies;
 
         ImmutableArray<string> problems = FindUnmetRequirements(graph, agents, gates, _compensations);
 
@@ -93,7 +97,7 @@ public sealed class WorkflowEngine
 
         using RunExecution execution = new(
             _graph, _agents, _gates, _journal, _clock, _options, request,
-            _compensations, _workspaces, _delay, _safeStop);
+            _compensations, _workspaces, _delay, _safeStop, _policies);
 
         return await execution.ExecuteAsync(cancellationToken).ConfigureAwait(false);
     }
@@ -117,7 +121,7 @@ public sealed class WorkflowEngine
 
         using RunExecution execution = new(
             _graph, _agents, _gates, _journal, _clock, _options, resume.Request,
-            _compensations, _workspaces, _delay, _safeStop, resume);
+            _compensations, _workspaces, _delay, _safeStop, _policies, resume);
 
         return await execution.ExecuteAsync(cancellationToken).ConfigureAwait(false);
     }

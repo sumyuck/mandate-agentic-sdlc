@@ -35,10 +35,11 @@ lands before the agents, so the orchestrator is defensible even at an intermedia
 | P4 | Durable event store, run catalogue, `audit verify`, evidence export | **done** |
 | P5 | Reliability: git workspace, bounded retries, fallback, real rollback, safe-stop | **done** |
 | P6 | Human approvals, refusals, and resume from the log | **done** |
-| P7 | Policy guardrails: security, compliance, change control | next |
-| P8–P16 | Re-planning, observability, model-backed agents, the three scenarios, documentation | planned |
+| P7 | Policy guardrails: security, compliance, change control, audited waivers | **done** |
+| P8 | Dynamic re-planning when upstream output changes | next |
+| P9–P16 | Observability and metrics, model-backed agents, the three scenarios, documentation | planned |
 
-**557 tests** currently pass, with warnings treated as errors across the solution — including
+**616 tests** currently pass, with warnings treated as errors across the solution — including
 40 that drive the CLI end to end through the same command definitions the binary exposes, and
 a set that exercise rollback against real git rather than a stub.
 
@@ -58,6 +59,14 @@ make audit                                # prove no run's log has been altered
 
 # Exercise the reliability machinery: retry, backoff, exhaustion, handoff.
 make run FAIL=requirements-analyst
+```
+
+Inspect and evaluate the guardrails:
+
+```bash
+dotnet run --project src/Mandate.Cli -- policy list
+dotnet run --project src/Mandate.Cli -- policy check <runId>
+dotnet run --project src/Mandate.Cli -- waive <runId> --rule CHG-003 --as alex --reason "..."
 ```
 
 Close the human loop on a parked run:
@@ -241,6 +250,18 @@ discipline:
 - **A resumed run is reconstructed entirely from its own log** — state and original request
   both — so resuming cannot quietly change what was asked for, and the run is never re-planned
   or re-seeded.
+- **Policy is three readable files, not code.** Ten rules across security, compliance and
+  change control, each stating what must hold, why it matters, and the check that evaluates
+  it. "What does this system enforce?" is answerable by a compliance reviewer, not only by a
+  developer.
+- **A waiver overrides without silencing.** A human can let a blocking violation through, but
+  the rule is still evaluated and still reported as violated — with the waiver, its reason and
+  its author in the hash-chained log. An auditor's question is not "were there violations?"
+  but "what did we knowingly let through, and who said so?", and a suppressed check cannot
+  answer it.
+- **Defence in depth is structural.** Waiving the rule that requires approvals does *not*
+  release the stage, because the stage's own exit gate independently requires the signature.
+  One override does not collapse two controls.
 - **Exit codes distinguish "failed" from "needs a human."** A run waiting on an approval
   returns `3`, not `1`, because a CI job or a demo script has to tell them apart — treating a
   human checkpoint as an error would misrepresent the thing the system is built to do.

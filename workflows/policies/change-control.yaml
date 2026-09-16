@@ -1,0 +1,58 @@
+# ---------------------------------------------------------------------------------------------
+# Change control.
+#
+# The rules about how change is allowed to reach a release decision. Every one is evaluated
+# against recorded evidence, and every one fails closed: a rule whose evidence is missing is a
+# violation, not a pass. A control that passed for want of data would appear in the audit trail
+# as a control that held.
+#
+# A blocking violation can be waived, but only by a named human with a stated reason, and the
+# waiver is itself recorded. The violation is still evaluated and still reported — a waiver
+# stops it blocking, it does not stop it being true.
+# ---------------------------------------------------------------------------------------------
+
+name: change-control
+version: v1
+description: >-
+  How change reaches a release decision: approvals held, duties separated, tests actually run,
+  and nothing in the tree that no stage produced.
+
+rules:
+  - id: CHG-001
+    category: change-control
+    severity: blocking
+    statement: Every approval the lifecycle requires has been recorded by a named human.
+    rationale: >-
+      An approval that was requested and never given means the checkpoint did not happen.
+      Releasing past it would make the checkpoint decorative, which is worse than not having
+      declared one.
+    check: required-approvals-held
+
+  - id: CHG-002
+    category: change-control
+    severity: blocking
+    statement: No approval was given by whoever produced the work or requested the run.
+    rationale: >-
+      Maker-checker. The command refuses this at the moment of signing; this rule is the
+      standing check that it held across the whole run, including for decisions recorded
+      through some other path.
+    check: segregation-of-duties-upheld
+
+  - id: CHG-003
+    category: change-control
+    severity: blocking
+    statement: A change that touches source has a recorded, passing test run.
+    rationale: >-
+      An untested change reaching a release decision is the failure this whole lifecycle is
+      arranged to prevent. The evidence is the recorded result of an execution, not an agent's
+      account of its own work.
+    check: tests-executed
+
+  - id: CHG-004
+    category: change-control
+    severity: blocking
+    statement: The run workspace holds no change that no stage committed.
+    rationale: >-
+      If the tree carries uncommitted edits then what would be released is not what any stage
+      produced, and the provenance the rest of this system depends on stops meaning anything.
+    check: workspace-is-clean

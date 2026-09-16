@@ -4,4 +4,9 @@
   <ItemGroup>
     <ProjectReference Include="..\Mandate.Core\Mandate.Core.csproj" />
   </ItemGroup>
+
+
+  <ItemGroup>
+    <PackageReference Include="YamlDotNet" />
+  </ItemGroup>
 </Project>

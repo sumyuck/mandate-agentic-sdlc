@@ -41,14 +41,7 @@ public static class BuiltInGateEvaluators
             satisfied: IsTrue,
             explain: value => IsTrue(value) ? "compiles." : "does not compile."),
 
-        new ContextEvidenceGateEvaluator(
-            kind: "policy-clean",
-            describes: "Every rule in the named policy pack evaluates clean.",
-            // The pack is named in the condition, so one evaluator covers every pack and a new
-            // pack does not need new engine code.
-            keySelector: condition => $"policy.{condition.Expression.Trim()}-clean",
-            satisfied: IsTrue,
-            explain: value => IsTrue(value) ? "clean." : "violations outstanding."),
+        new PolicyCleanGateEvaluator(),
 
         new NumericCeilingGateEvaluator(
             kind: "ambiguity-below",

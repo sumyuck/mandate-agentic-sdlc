@@ -73,6 +73,10 @@ internal sealed class RunCommand : AsyncCommand<RunCommand.Settings>
         [Description("Where run workspaces are created. Defaults to .mandate/workspaces.")]
         public string WorkspaceRoot { get; init; } = GitRunWorkspaceFactory.DefaultRoot;
 
+        [CommandOption("--policies")]
+        [Description("Directory holding the policy packs. Defaults to workflows/policies.")]
+        public string Policies { get; init; } = PolicyComposition.DefaultDirectory;
+
         [CommandOption("--template")]
         [Description("Tree to seed the workspace from. Defaults to templates/service.")]
         public string Template { get; init; } = GitRunWorkspaceFactory.DefaultTemplate;
@@ -138,6 +142,26 @@ internal sealed class RunCommand : AsyncCommand<RunCommand.Settings>
 
         RunId runId = RunId.New(clock.UtcNow, Guid.NewGuid().ToString("N")[..6]);
 
+        // Policies are required only if the lifecycle actually gates on one. A workflow with
+        // no policy gate should not be blocked by the absence of packs it never consults.
+        bool needsPolicies = graph.Nodes.Any(node =>
+            node.EntryGate.Concat(node.ExitGate).Any(condition =>
+                string.Equals(condition.Kind, "policy-clean", StringComparison.Ordinal)));
+
+        Policy.PolicyEngine? policyEngine =
+            PolicyComposition.TryBuild(settings.Policies, journal, out string? policyProblem);
+
+        if (policyEngine is null && needsPolicies)
+        {
+            AnsiConsole.MarkupLine(
+                $"[red]cannot load policies[/] {policyProblem!.EscapeMarkup()}");
+            AnsiConsole.MarkupLine(
+                "[grey]this lifecycle gates on a policy pack, so it cannot run without one — "
+                + "run from the repository root, or pass --policies[/]");
+
+            return ExitCode.BadInput;
+        }
+
         WorkflowEngine engine;
 
         try
@@ -160,7 +184,8 @@ internal sealed class RunCommand : AsyncCommand<RunCommand.Settings>
                 CompensationRegistry.BuiltIn(),
                 new GitRunWorkspaceFactory(settings.WorkspaceRoot, settings.Template),
                 RealDelay.Instance,
-                new FileSafeStopMonitor(FileSafeStopMonitor.DefaultDirectory));
+                new FileSafeStopMonitor(FileSafeStopMonitor.DefaultDirectory),
+                policyEngine);
         }
         catch (Exception exception) when (
             exception is EngineConfigurationException or ArgumentOutOfRangeException)

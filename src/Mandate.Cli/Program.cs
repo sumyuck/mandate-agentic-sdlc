@@ -63,6 +63,28 @@ internal static class Program
             .WithDescription("Continue a run that stopped, from its recorded log.")
             .WithExample("resume", "run_20260916T142500Z_a1b2c3");
 
+        config.AddCommand<WaiveCommand>("waive")
+            .WithDescription("Allow a policy violation through, on the record.")
+            .WithExample(
+                "waive", "run_20260916T142500Z_a1b2c3", "--rule", "CHG-003",
+                "--as", "alex", "--reason", "Covered by the manual test plan attached to INC-42.")
+            .WithExample(
+                "waive", "run_20260916T142500Z_a1b2c3", "--rule", "CHG-003", "--withdraw");
+
+        config.AddBranch("policy", policy =>
+        {
+            policy.SetDescription("Inspect and evaluate the policy packs.");
+
+            policy.AddCommand<ListPolicyCommand>("list")
+                .WithDescription("List the rules this system asserts it obeys.")
+                .WithExample("policy", "list")
+                .WithExample("policy", "list", "--category", "security");
+
+            policy.AddCommand<CheckPolicyCommand>("check")
+                .WithDescription("Evaluate every policy pack against a recorded run.")
+                .WithExample("policy", "check", "run_20260916T142500Z_a1b2c3");
+        });
+
         config.AddCommand<StopRunCommand>("stop")
             .WithDescription("Ask a run to halt at its next safe boundary.")
             .WithExample("stop", "run_20260916T142500Z_a1b2c3")

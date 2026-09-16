@@ -1,0 +1,54 @@
+# ---------------------------------------------------------------------------------------------
+# Compliance.
+#
+# Rules about the trail rather than the code: whether what happened can be reconstructed and
+# defended afterwards. These are the questions an auditor asks first, and the ones a system
+# that only checked its own output would have no answer to.
+# ---------------------------------------------------------------------------------------------
+
+name: compliance
+version: v1
+description: >-
+  Whether the run can be accounted for afterwards: changes traceable to requirements,
+  decisions arguable, autonomy bounded.
+
+rules:
+  - id: CMP-001
+    category: compliance
+    severity: blocking
+    statement: Every source change descends from a recorded requirement.
+    rationale: >-
+      The first question asked of any change is why it exists. Content addressing makes the
+      answer structural — a patch names what it was derived from — so the trace holds without
+      anyone maintaining a document that says so.
+    check: change-traces-to-requirement
+
+  - id: CMP-002
+    category: compliance
+    severity: blocking
+    statement: A design is accompanied by at least one architecture decision record.
+    rationale: >-
+      A design with no recorded decisions can be read but not argued with. Recording the
+      options rejected is what lets a reviewer disagree with the reasoning rather than only
+      with the result.
+    check: design-has-decision-record
+
+  - id: CMP-003
+    category: compliance
+    severity: advisory
+    statement: Recorded decisions name the options that were rejected and why.
+    rationale: >-
+      Advisory because the domain type already refuses to construct a decision without
+      alternatives. This is the standing check that the invariant has not been routed around
+      by some later path that builds decisions another way.
+    check: decisions-record-alternatives
+
+  - id: CMP-004
+    category: compliance
+    severity: blocking
+    statement: No lifecycle stage carries the fully autonomous level.
+    rationale: >-
+      The governing principle is that agents execute inside declared boundaries. The level
+      exists in the model so that declining to use it is a visible decision rather than an
+      omission; this rule is what keeps it declined.
+    check: no-fully-autonomous-stage

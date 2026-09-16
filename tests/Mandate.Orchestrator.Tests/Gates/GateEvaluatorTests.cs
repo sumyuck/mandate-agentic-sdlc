@@ -229,19 +229,20 @@ public sealed class GateEvaluatorTests
     }
 
     [Fact]
-    public async Task Policy_clean_reads_the_pack_named_in_the_condition()
+    public async Task A_policy_pack_that_was_not_evaluated_fails_closed()
     {
-        // One evaluator covers every pack, so adding a pack needs no engine change.
-        IGateEvaluator evaluator = Evaluator("policy-clean");
+        // "Nothing checked it" and "it came back clean" must never look the same.
+        GateConditionVerdict verdict = await JudgeAsync(Evaluator("policy-clean"), "change-control");
 
-        (await JudgeAsync(evaluator, "change-control",
-            context: [("policy.change-control-clean", "true")])).Passed.ShouldBeTrue();
+        verdict.Passed.ShouldBeFalse();
+        verdict.Explanation.ShouldContain("was not evaluated");
+        verdict.Explanation.ShouldContain("Fails closed");
+    }
 
-        (await JudgeAsync(evaluator, "change-control",
-            context: [("policy.change-control-clean", "false")])).Passed.ShouldBeFalse();
-
-        (await JudgeAsync(evaluator, "security",
-            context: [("policy.change-control-clean", "true")])).Passed.ShouldBeFalse();
+    [Fact]
+    public async Task A_policy_gate_with_no_pack_named_fails_closed()
+    {
+        (await JudgeAsync(Evaluator("policy-clean"), "")).Passed.ShouldBeFalse();
     }
 
     [Fact]
@@ -310,6 +311,9 @@ public sealed class GateEvaluatorTests
 
         public ImmutableDictionary<string, Actor> DeniedApprovals { get; } =
             ImmutableDictionary<string, Actor>.Empty;
+
+        public ImmutableDictionary<string, Core.Policies.PolicyWaiver> Waivers { get; } =
+            ImmutableDictionary<string, Core.Policies.PolicyWaiver>.Empty;
 
         public NodeState StateOf(NodeId nodeId) => NodeState.Running;
 

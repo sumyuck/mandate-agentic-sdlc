@@ -62,6 +62,7 @@ public sealed class RunState : IRunView
         ImmutableDictionary<string, Actor> heldApprovals,
         ImmutableDictionary<string, Actor> deniedApprovals,
         ImmutableDictionary<NodeId, Actor> producers,
+        ImmutableDictionary<string, Policies.PolicyWaiver> waivers,
         long lastSequence)
     {
         RunId = runId;
@@ -72,6 +73,7 @@ public sealed class RunState : IRunView
         HeldApprovals = heldApprovals;
         DeniedApprovals = deniedApprovals;
         Producers = producers;
+        Waivers = waivers;
         LastSequence = lastSequence;
     }
 
@@ -99,6 +101,9 @@ public sealed class RunState : IRunView
     /// <summary>The actor that produced each node's output.</summary>
     public ImmutableDictionary<NodeId, Actor> Producers { get; }
 
+    /// <inheritdoc />
+    public ImmutableDictionary<string, Policies.PolicyWaiver> Waivers { get; }
+
     /// <summary>Sequence number of the last event applied.</summary>
     public long LastSequence { get; }
 
@@ -112,6 +117,8 @@ public sealed class RunState : IRunView
         ImmutableDictionary<string, Actor>.Empty.WithComparers(StringComparer.OrdinalIgnoreCase),
         ImmutableDictionary<string, Actor>.Empty.WithComparers(StringComparer.OrdinalIgnoreCase),
         ImmutableDictionary<NodeId, Actor>.Empty,
+        ImmutableDictionary<string, Policies.PolicyWaiver>.Empty.WithComparers(
+            StringComparer.OrdinalIgnoreCase),
         0);
 
     /// <summary>Rebuilds a run's state by folding over its events.</summary>
@@ -154,6 +161,8 @@ public sealed class RunState : IRunView
             RunEventKind.ContextFactAdded => ApplyContextFactAdded(@event),
             RunEventKind.ApprovalGranted => ApplyApprovalGranted(@event),
             RunEventKind.ApprovalDenied => ApplyApprovalDenied(@event),
+            RunEventKind.PolicyWaiverGranted => ApplyWaiverGranted(@event),
+            RunEventKind.PolicyWaiverDenied => ApplyWaiverDenied(@event),
 
             // Recorded for the audit trail; they carry no state change of their own.
             _ => this,
@@ -311,6 +320,25 @@ public sealed class RunState : IRunView
             deniedApprovals: DeniedApprovals.Remove(payload.Role));
     }
 
+    private RunState ApplyWaiverGranted(RunEvent @event)
+    {
+        PolicyWaiverPayload payload = @event.Payload<PolicyWaiverPayload>();
+
+        return With(waivers: Waivers.SetItem(
+            payload.RuleId,
+            new Policies.PolicyWaiver(
+                payload.RuleId, @event.Actor, payload.Reason, @event.OccurredAt)));
+    }
+
+    private RunState ApplyWaiverDenied(RunEvent @event)
+    {
+        PolicyWaiverPayload payload = @event.Payload<PolicyWaiverPayload>();
+
+        // Refusing a waiver withdraws any earlier one for the same rule, so a later refusal
+        // cannot be silently outranked by an older permission.
+        return With(waivers: Waivers.Remove(payload.RuleId));
+    }
+
     private RunState ApplyApprovalDenied(RunEvent @event)
     {
         ApprovalDecidedPayload payload = @event.Payload<ApprovalDecidedPayload>();
@@ -328,6 +356,7 @@ public sealed class RunState : IRunView
         ImmutableDictionary<string, Actor>? heldApprovals = null,
         ImmutableDictionary<string, Actor>? deniedApprovals = null,
         ImmutableDictionary<NodeId, Actor>? producers = null,
+        ImmutableDictionary<string, Policies.PolicyWaiver>? waivers = null,
         long? lastSequence = null) =>
         new(
             RunId,
@@ -338,6 +367,7 @@ public sealed class RunState : IRunView
             heldApprovals ?? HeldApprovals,
             deniedApprovals ?? DeniedApprovals,
             producers ?? Producers,
+            waivers ?? Waivers,
             lastSequence ?? LastSequence);
 
     private sealed class ContextGuardResolver(RunContext context) : IGuardValueResolver

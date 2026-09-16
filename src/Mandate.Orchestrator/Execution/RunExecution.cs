@@ -6,6 +6,7 @@ using Mandate.Core.Decisions;
 using Mandate.Core.Events;
 using Mandate.Core.Execution;
 using Mandate.Core.Identifiers;
+using Mandate.Core.Policies;
 using Mandate.Core.Runs;
 using Mandate.Core.Time;
 using Mandate.Core.Workflow;
@@ -33,6 +34,7 @@ internal sealed class RunExecution(
     IRunWorkspaceFactory workspaces,
     IDelay delay,
     ISafeStopMonitor safeStop,
+    IPolicyEngine? policies = null,
     ResumePoint? resumeFrom = null) : IDisposable
 {
     private static readonly NodeId EngineNode = NodeId.Parse(WorkflowContextKeys.EngineNodeId);
@@ -871,6 +873,10 @@ internal sealed class RunExecution(
         ImmutableArray<GateCondition> conditions,
         CancellationToken cancellationToken)
     {
+        ImmutableDictionary<string, PolicyEvaluation> policyResults =
+            await EvaluatePoliciesForAsync(node, conditions, cancellationToken)
+                .ConfigureAwait(false);
+
         ImmutableArray<GateConditionVerdict>.Builder verdicts =
             ImmutableArray.CreateBuilder<GateConditionVerdict>(conditions.Length);
 
@@ -881,7 +887,7 @@ internal sealed class RunExecution(
                                            $"Gate kind '{condition.Kind}' disappeared from the "
                                            + "registry mid-run.");
 
-            GateEvaluation evaluation = new(node, position, condition, _state);
+            GateEvaluation evaluation = new(node, position, condition, _state, policyResults);
 
             verdicts.Add(await evaluator.EvaluateAsync(evaluation, cancellationToken)
                 .ConfigureAwait(false));
@@ -889,6 +895,99 @@ internal sealed class RunExecution(
 
         return new GateResult(position, node.Id, verdicts.ToImmutable());
     }
+
+    /// <summary>
+    /// Evaluates the policy packs a gate refers to, recording each evaluation.
+    /// </summary>
+    /// <remarks>
+    /// Done here rather than inside the gate evaluator so the verdict the gate acts on and
+    /// the evidence written to the log come from the same evaluation. Every rule is recorded,
+    /// including ones a waiver lets through: a waiver stops a violation blocking, it does not
+    /// stop it being true, and an auditor came for exactly that distinction.
+    /// </remarks>
+    private async Task<ImmutableDictionary<string, PolicyEvaluation>> EvaluatePoliciesForAsync(
+        WorkflowNode node,
+        ImmutableArray<GateCondition> conditions,
+        CancellationToken cancellationToken)
+    {
+        ImmutableArray<string> packs =
+        [
+            .. conditions
+                .Where(condition => string.Equals(
+                    condition.Kind, PolicyCleanKind, StringComparison.Ordinal))
+                .Select(condition => condition.Expression.Trim())
+                .Where(pack => pack.Length > 0)
+                .Distinct(StringComparer.OrdinalIgnoreCase),
+        ];
+
+        if (packs.IsEmpty || policies is null)
+        {
+            return ImmutableDictionary<string, PolicyEvaluation>.Empty;
+        }
+
+        ImmutableDictionary<string, PolicyEvaluation>.Builder results =
+            ImmutableDictionary.CreateBuilder<string, PolicyEvaluation>(
+                StringComparer.OrdinalIgnoreCase);
+
+        foreach (string pack in packs)
+        {
+            PolicyEvaluation evaluation;
+
+            try
+            {
+                evaluation = await policies
+                    .EvaluateAsync(pack, _state, graph, _workspace, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            catch (KeyNotFoundException missing)
+            {
+                // A gate naming a pack nothing loaded must not quietly pass. Recording the
+                // absence is what lets the gate fail closed with a reason.
+                await AppendAsync(
+                    RunEventKind.PolicyEvaluated, node.Id, Actor.Engine,
+                    new PolicyEvaluatedPayload(pack, Clean: false, []),
+                    cancellationToken).ConfigureAwait(false);
+
+                await AppendAsync(
+                    RunEventKind.PolicyViolationBlocked, node.Id, Actor.Engine,
+                    new PolicyWaiverPayload(pack, pack, missing.Message),
+                    cancellationToken).ConfigureAwait(false);
+
+                continue;
+            }
+
+            results[pack] = evaluation;
+
+            await AppendAsync(
+                RunEventKind.PolicyEvaluated, node.Id, Actor.Engine,
+                new PolicyEvaluatedPayload(
+                    evaluation.Pack,
+                    evaluation.IsClean,
+                    [
+                        .. evaluation.Verdicts.Select(verdict => new PolicyVerdictPayload(
+                            verdict.Rule.Id,
+                            verdict.Rule.Category.ToString(),
+                            verdict.Rule.Severity.ToString(),
+                            verdict.Satisfied,
+                            verdict.IsWaived,
+                            verdict.Explanation)),
+                    ]),
+                cancellationToken).ConfigureAwait(false);
+
+            foreach (PolicyVerdict blocking in evaluation.Blocking)
+            {
+                await AppendAsync(
+                    RunEventKind.PolicyViolationBlocked, node.Id, Actor.Policy(blocking.Rule.Id),
+                    new PolicyWaiverPayload(
+                        blocking.Rule.Id, evaluation.Pack, blocking.Explanation),
+                    cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        return results.ToImmutable();
+    }
+
+    private const string PolicyCleanKind = "policy-clean";
 
     private static GateEvaluatedPayload ToPayload(GateResult gate) => new(
         gate.Position.ToString(),

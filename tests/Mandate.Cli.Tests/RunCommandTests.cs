@@ -13,12 +13,15 @@ public sealed partial class RunCommandTests
 
     private static string Template => Path.Combine(RepositoryRoot.Path, "templates", "service");
 
+    private static string Policies => Path.Combine(RepositoryRoot.Path, "workflows", "policies");
+
     private static CliResult Run(TemporaryWorkspace workspace, string scenario, params string[] extra) =>
         CliHarness.Run(
         [
             "run", "Do the thing", "--scenario", scenario,
             "--workflow", ShippedWorkflow, "--store", workspace.Store, "--as", "tester",
             "--workspace-root", workspace.Path_("workspaces"), "--template", Template,
+            "--policies", Policies,
             .. extra,
         ]);
 
@@ -110,7 +113,7 @@ public sealed partial class RunCommandTests
 
         CliResult result = CliHarness.Run(
             "run", "Do the thing", "--workflow", "does/not/exist.yaml",
-            "--store", workspace.Store, "--template", Template);
+            "--store", workspace.Store, "--template", Template, "--policies", Policies);
 
         result.ExitCode.ShouldBe(ExitCode.BadInput);
         result.Rendered.ShouldContain("cannot load workflow");

@@ -47,6 +47,7 @@ internal static class AgentComposition
         bool useModels,
         decimal budgetUsd,
         IClock clock,
+        IWorkspaceVerifier verifier,
         IReadOnlyDictionary<string, ScriptedBehaviour>? scriptedBehaviours = null)
     {
         ArgumentNullException.ThrowIfNull(graph);
@@ -85,7 +86,8 @@ internal static class AgentComposition
         try
         {
             return new Result(
-                ModelAgents.CoveringGraph(graph, models.Prompts, models.Client, models.Prices, clock),
+                ModelAgents.CoveringGraph(
+                    graph, models.Prompts, models.Client, models.Prices, clock, verifier),
                 models,
                 null);
         }

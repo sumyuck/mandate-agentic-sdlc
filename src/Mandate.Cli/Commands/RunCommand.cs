@@ -213,7 +213,8 @@ internal sealed class RunCommand : AsyncCommand<RunCommand.Settings>
         // absent API key is reported before a run id is minted and a workspace created. A
         // run that dies at its first stage for want of configuration leaves debris behind.
         AgentComposition.Result composed = AgentComposition.Build(
-            graph, settings, settings.UsesModels, settings.BudgetUsd, clock, behaviours);
+            graph, settings, settings.UsesModels, settings.BudgetUsd, clock,
+            settings.VerifierOrDisabled, behaviours);
 
         if (!composed.Succeeded)
         {
@@ -263,6 +264,14 @@ internal sealed class RunCommand : AsyncCommand<RunCommand.Settings>
         AnsiConsole.MarkupLine(models is null
             ? "[grey]agents: scripted — the engine is exercised, the engineering judgment is not[/]"
             : $"[grey]agents: model · {models.Description.EscapeMarkup()}[/]");
+
+        if (models is not null)
+        {
+            AnsiConsole.MarkupLine(settings.VerificationRequested
+                ? $"[grey]verification: {settings.VerifierOrDisabled.Description.EscapeMarkup()}[/]"
+                : "[yellow]verification: off[/] [grey]— build and test results in this run are "
+                  + "the agent's own claims, not measurements[/]");
+        }
 
         RunOutcome outcome;
 

@@ -27,7 +27,8 @@ public static class ModelAgents
         PromptLibrary prompts,
         ILlmClient client,
         ModelPriceBook prices,
-        IClock clock)
+        IClock clock,
+        IWorkspaceVerifier? verifier = null)
     {
         ArgumentNullException.ThrowIfNull(graph);
         ArgumentNullException.ThrowIfNull(prompts);
@@ -57,7 +58,7 @@ public static class ModelAgents
         return new StageAgentRegistry(
         [
             .. required.Select(agent => (IStageAgent)new ModelStageAgent(
-                agent, prompts.Get(agent), client, prices, clock)),
+                agent, prompts.Get(agent), client, prices, clock, verifier)),
         ]);
     }
 }

@@ -167,4 +167,33 @@ public sealed class NodeStateMachineTests
         error.To.ShouldBe(NodeState.Succeeded);
         error.Message.ShouldContain("Ready");
     }
+
+    [Theory]
+    [InlineData(NodeState.Succeeded)]
+    [InlineData(NodeState.Skipped)]
+    [InlineData(NodeState.AwaitingApproval)]
+    [InlineData(NodeState.Blocked)]
+    [InlineData(NodeState.Failed)]
+    [InlineData(NodeState.RolledBack)]
+    public void Any_settled_verdict_can_be_invalidated_when_its_inputs_change(NodeState from)
+    {
+        // One rule, uniformly. A failure is a verdict about particular inputs just as a
+        // success is; when the inputs change, both are equally stale. The gap here used to
+        // be Failed and RolledBack, and it crashed the engine the first time a loop-back
+        // re-ran an upstream stage and cascaded back onto the stage that had failed.
+        NodeStateMachine.CanTransition(from, NodeState.Invalidated).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void A_cancelled_node_stays_cancelled()
+    {
+        NodeStateMachine.CanTransition(NodeState.Cancelled, NodeState.Invalidated).ShouldBeFalse();
+        NodeStateMachine.SuccessorsOf(NodeState.Cancelled).ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void Invalidation_always_leads_back_into_the_plan()
+    {
+        NodeStateMachine.CanTransition(NodeState.Invalidated, NodeState.Pending).ShouldBeTrue();
+    }
 }

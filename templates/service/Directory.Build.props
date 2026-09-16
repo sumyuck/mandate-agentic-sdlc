@@ -1,0 +1,17 @@
+<Project>
+
+  <!--
+    Stops here. MSBuild walks upward looking for this file, and a run workspace lives inside
+    the orchestrator's own repository — without this, a generated service would silently
+    inherit Mandate's build settings and stop being an independent repository. What a run
+    produces has to stand on its own: copied out of .mandate/workspaces, it must still build.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+</Project>

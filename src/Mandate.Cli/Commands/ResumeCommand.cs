@@ -156,7 +156,8 @@ internal sealed class ResumeCommand : AsyncCommand<ResumeCommand.Settings>
         }
 
         AgentComposition.Result composed = AgentComposition.Build(
-            graph, settings, settings.UsesModels, settings.BudgetUsd, SystemClock.Instance);
+            graph, settings, settings.UsesModels, settings.BudgetUsd, SystemClock.Instance,
+            settings.VerifierOrDisabled);
 
         if (!composed.Succeeded)
         {

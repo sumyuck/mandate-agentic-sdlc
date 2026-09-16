@@ -51,10 +51,36 @@ public sealed class FileWorkspaceReader : IWorkspaceReader
                 .. Directory
                     .EnumerateFiles(_root, "*", SearchOption.AllDirectories)
                     .Select(path => Path.GetRelativePath(_root, path).Replace('\\', '/'))
-                    .Where(relative => !relative.StartsWith(".git/", StringComparison.Ordinal))
+                    .Where(relative => !IsExcluded(relative))
                     .Order(StringComparer.Ordinal),
             ];
         }
+    }
+
+    /// <summary>Directories a stage has no business reading.</summary>
+    /// <remarks>
+    /// Git's object store and build output. Not a privacy measure — a size and honesty one.
+    /// A prompt built from <c>obj/</c> is megabytes of generated noise, and a verification
+    /// sandbox seeded with stale build output would compile something other than the source
+    /// in front of it. Matched by name rather than by reading <c>.gitignore</c>, which is a
+    /// whole pattern language and would be an odd thing to reimplement for four directories.
+    /// </remarks>
+    private static readonly string[] ExcludedDirectories = [".git", "bin", "obj", "node_modules"];
+
+    private static bool IsExcluded(string relativePath)
+    {
+        foreach (string segment in relativePath.Split('/'))
+        {
+            foreach (string excluded in ExcludedDirectories)
+            {
+                if (string.Equals(segment, excluded, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     private bool IsInsideRoot(string absolutePath) =>

@@ -159,6 +159,11 @@ class — see [ADR-0014](docs/adr/0014-agents-are-prompts-not-classes.md). What 
 declares a stage produces is enforced against what the model actually returns, in both
 directions.
 
+Build and test results are **measured, not claimed**: before the engine commits anything, the
+real `dotnet build` and `dotnet test` run over a copy of the tree with the stage's proposed
+files applied, and a stage that overstates its own coverage or test results fails. See
+[ADR-0015](docs/adr/0015-verified-not-claimed.md).
+
 To call a provider for real, set `ANTHROPIC_API_KEY` and add `--llm live` (or `--llm record`
 to keep the exchange). Spend is capped and every call is an audited event — see
 [ADR-0013](docs/adr/0013-model-spend-as-a-governed-budget.md).

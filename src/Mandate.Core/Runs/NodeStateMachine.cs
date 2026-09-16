@@ -19,6 +19,7 @@ namespace Mandate.Core.Runs;
 /// <item><description><c>Failed → Ready</c> is a bounded retry, not an unbounded loop; the budget lives in the node's retry policy.</description></item>
 /// <item><description><c>Succeeded → Invalidated</c> is dynamic re-planning: an accepted result stops being valid when an input changes.</description></item>
 /// <item><description><c>AwaitingApproval → Invalidated</c> covers an upstream change landing while a human is still deliberating. Approving stale work must be impossible.</description></item>
+/// <item><description><c>Failed → Invalidated</c> and <c>RolledBack → Invalidated</c> complete the same rule. A failure is a verdict about particular inputs; when those inputs change the verdict is as stale as a success would be. Without these edges, a loop-back that re-runs an upstream stage crashes the moment it cascades onto the stage whose failure caused the loop-back — which is the ordinary case, not an exotic one.</description></item>
 /// <item><description><c>Blocked → Ready</c> requires a human act (a waiver or a fix); the engine can never clear its own policy block.</description></item>
 /// <item><description><c>AwaitingApproval → Succeeded</c> completes an approved node without re-running it. The work was finished before the approval was sought; re-executing on the strength of a signature would mean the human approved something other than what ships.</description></item>
 /// </list>
@@ -69,6 +70,7 @@ public static class NodeStateMachine
             [NodeState.Failed] =
             [
                 NodeState.Ready, NodeState.Compensating, NodeState.Blocked, NodeState.Cancelled,
+                NodeState.Invalidated,
             ],
             [NodeState.Succeeded] =
             [
@@ -80,7 +82,7 @@ public static class NodeStateMachine
             ],
             [NodeState.RolledBack] =
             [
-                NodeState.Pending, NodeState.Cancelled,
+                NodeState.Pending, NodeState.Cancelled, NodeState.Invalidated,
             ],
             [NodeState.Skipped] =
             [

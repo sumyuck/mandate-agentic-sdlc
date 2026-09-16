@@ -1,0 +1,20 @@
+<Project>
+
+  <!--
+    Versions are pinned to the ones the orchestrator's own solution uses. That is not
+    housekeeping: the test stage runs `dotnet test` inside this tree, and matching versions
+    mean the packages are already in the local NuGet cache after the orchestrator has been
+    built once — so verification works without reaching the network.
+  -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageVersion Include="coverlet.collector" Version="10.0.1" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
+    <PackageVersion Include="xunit" Version="2.9.3" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.0" />
+  </ItemGroup>
+
+</Project>

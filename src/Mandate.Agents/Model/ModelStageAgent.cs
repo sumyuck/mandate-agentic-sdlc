@@ -51,10 +51,22 @@ public sealed class ModelStageAgent : IStageAgent
     /// </remarks>
     public const int MaxWorkspaceCharacters = 60_000;
 
+    /// <summary>How far a claimed coverage figure may exceed the measured one.</summary>
+    /// <remarks>
+    /// The model is asked for an estimate, so a small optimism is an estimate being an
+    /// estimate. Ten points is a different claim about the work.
+    /// </remarks>
+    public const double CoverageTolerance = 0.10;
+
+    private const string BuildsKey = "implementation.builds";
+    private const string FailuresKey = "test.failures";
+    private const string CoverageKey = "test.coverage";
+
     private readonly PromptTemplate _prompt;
     private readonly ILlmClient _client;
     private readonly ModelPriceBook _prices;
     private readonly IClock _clock;
+    private readonly IWorkspaceVerifier _verifier;
 
     /// <summary>Creates an agent bound to one prompt.</summary>
     public ModelStageAgent(
@@ -62,7 +74,8 @@ public sealed class ModelStageAgent : IStageAgent
         PromptTemplate prompt,
         ILlmClient client,
         ModelPriceBook prices,
-        IClock clock)
+        IClock clock,
+        IWorkspaceVerifier? verifier = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         ArgumentNullException.ThrowIfNull(prompt);
@@ -75,6 +88,7 @@ public sealed class ModelStageAgent : IStageAgent
         _client = client;
         _prices = prices;
         _clock = clock;
+        _verifier = verifier ?? IWorkspaceVerifier.Disabled;
     }
 
     /// <inheritdoc />
@@ -145,7 +159,8 @@ public sealed class ModelStageAgent : IStageAgent
             AgentResponse answer = AgentResponseParser.Parse(response.Text);
             RefuseUndeclaredOutput(node, answer);
 
-            return Interpret(execution, answer, calls);
+            return await InterpretAsync(execution, answer, calls, cancellationToken)
+                .ConfigureAwait(false);
         }
         catch (Exception exception) when (
             exception is AgentResponseException or ArgumentException)
@@ -218,8 +233,11 @@ public sealed class ModelStageAgent : IStageAgent
         }
     }
 
-    private StageResult Interpret(
-        StageExecution execution, AgentResponse answer, ImmutableArray<ModelCall> calls)
+    private async Task<StageResult> InterpretAsync(
+        StageExecution execution,
+        AgentResponse answer,
+        ImmutableArray<ModelCall> calls,
+        CancellationToken cancellationToken)
     {
         WorkflowNode node = execution.Node;
         DateTimeOffset now = _clock.UtcNow;
@@ -258,11 +276,28 @@ public sealed class ModelStageAgent : IStageAgent
             }
         }
 
+        ImmutableArray<WorkspaceFile> proposed = files.ToImmutable();
+
+        // Measured facts replace claimed ones. Everything downstream — the exit gate, the
+        // release evidence pack, the metrics — reads these values, so if they are the
+        // model's opinion of its own work then so is everything built on them.
+        (ImmutableDictionary<string, string> values, string? overclaim) =
+            await MeasureAsync(execution, answer.Facts, proposed, cancellationToken)
+                .ConfigureAwait(false);
+
+        if (overclaim is not null)
+        {
+            // Distinct from the gate simply failing. A stage that reports a passing build it
+            // does not have has not merely failed; it has reported something untrue, and the
+            // failure message is the only place that distinction survives into the log.
+            return StageResult.Failed(overclaim, artifacts.ToImmutable(), modelCalls: calls);
+        }
+
         ImmutableArray<Sha256Hash> evidence = [.. artifacts.Select(artifact => artifact.Hash)];
 
         ImmutableArray<ContextFact> facts =
         [
-            .. answer.Facts
+            .. values
                 .OrderBy(pair => pair.Key, StringComparer.Ordinal)
                 .Select(pair => ContextFact.Create(
                     pair.Key, pair.Value, node.Id, execution.Actor, now, evidence)),
@@ -289,8 +324,159 @@ public sealed class ModelStageAgent : IStageAgent
         ];
 
         return StageResult.Success(
-            artifacts.ToImmutable(), facts, decisions, files.ToImmutable(), calls);
+            artifacts.ToImmutable(), facts, decisions, proposed, calls);
     }
+
+    /// <summary>
+    /// Runs the real toolchain where the node's declared facts call for it, and replaces
+    /// the model's claims with what was measured.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Which check to run is derived from what the node declares it produces, not from the
+    /// agent's name. A workflow that adds a build-verified stage gets verification without
+    /// anyone editing C#, and a stage that declares none of these facts never pays the cost
+    /// of a toolchain invocation.
+    /// </para>
+    /// <para>
+    /// The model is still asked for these values, and is still expected to answer honestly.
+    /// That is not redundant: asking makes the claim explicit and comparable, and the
+    /// comparison is what turns "the tests failed" into "the stage said the tests passed".
+    /// </para>
+    /// </remarks>
+    private async Task<(ImmutableDictionary<string, string> Values, string? Overclaim)> MeasureAsync(
+        StageExecution execution,
+        ImmutableDictionary<string, string> claimed,
+        ImmutableArray<WorkspaceFile> proposed,
+        CancellationToken cancellationToken)
+    {
+        VerificationKind kind = KindFor(execution.Node);
+
+        if (kind == VerificationKind.Unknown || !_verifier.IsAvailable)
+        {
+            return (claimed, null);
+        }
+
+        VerificationOutcome measured = await _verifier
+            .VerifyAsync(execution.Workspace, proposed, kind, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (!measured.Executed)
+        {
+            // The toolchain could not be run. Fail rather than fall back to the claim: a
+            // stage whose evidence silently degrades from a measurement to an assertion is
+            // the exact failure this whole mechanism exists to prevent.
+            return (claimed, $"Verification did not run: {measured.Summary}");
+        }
+
+        ImmutableDictionary<string, string>.Builder values = claimed.ToBuilder();
+        List<string> overclaims = [];
+        List<string> unmeasured = [];
+
+        if (claimed.ContainsKey(BuildsKey))
+        {
+            values[BuildsKey] = measured.Succeeded ? "true" : "false";
+
+            if (!measured.Succeeded && IsTrue(claimed[BuildsKey]))
+            {
+                overclaims.Add(
+                    $"the stage reported '{BuildsKey}' as true, and the tree does not build: "
+                    + measured.Summary);
+            }
+        }
+
+        if (claimed.ContainsKey(FailuresKey))
+        {
+            if (measured.TestsFailed is { } failed)
+            {
+                values[FailuresKey] = failed.ToString(CultureInfo.InvariantCulture);
+
+                if (failed > 0 && ClaimedNumber(claimed[FailuresKey]) == 0)
+                {
+                    overclaims.Add(
+                        $"the stage reported '{FailuresKey}' as 0, and {failed} test(s) failed");
+                }
+            }
+            else
+            {
+                unmeasured.Add(FailuresKey);
+            }
+        }
+
+        if (claimed.ContainsKey(CoverageKey))
+        {
+            if (measured.LineCoverage is { } coverage)
+            {
+                values[CoverageKey] = coverage.ToString("0.0000", CultureInfo.InvariantCulture);
+
+                // A tolerance, because the model is asked for an estimate and an estimate
+                // that is a little optimistic is not dishonesty. A wide miss is.
+                if (ClaimedNumber(claimed[CoverageKey]) is { } claimedCoverage
+                    && claimedCoverage > coverage + CoverageTolerance)
+                {
+                    overclaims.Add(
+                        string.Create(
+                            CultureInfo.InvariantCulture,
+                            $"the stage reported '{CoverageKey}' as {claimedCoverage:0.00} and the measured figure is {coverage:0.00}"));
+                }
+            }
+            else
+            {
+                unmeasured.Add(CoverageKey);
+            }
+        }
+
+        // The toolchain ran but did not produce a figure the node declares. Falling back to
+        // the model's number here would be the whole defect this mechanism exists to
+        // prevent, arrived at by a quieter route: the gate would pass on an unverified
+        // claim while the run's evidence said verification was on.
+        if (unmeasured.Count > 0)
+        {
+            return (
+                claimed,
+                $"Verification ran but produced no figure for {string.Join(" or ", unmeasured)}. "
+                + $"The toolchain reported: {measured.Summary} "
+                + Excerpt(measured.Output));
+        }
+
+        return (
+            values.ToImmutable(),
+            overclaims.Count == 0
+                ? null
+                : "Measured verification contradicts what the stage reported: "
+                  + string.Join("; ", overclaims) + ".");
+    }
+
+    /// <summary>The tail of the toolchain's output, which is where its errors are.</summary>
+    private static string Excerpt(string output)
+    {
+        string trimmed = output.Trim();
+
+        if (trimmed.Length == 0)
+        {
+            return "It produced no output.";
+        }
+
+        const int limit = 600;
+        return "Output: " + (trimmed.Length <= limit ? trimmed : "…" + trimmed[^limit..]);
+    }
+
+    /// <summary>Which check a node's declared facts call for.</summary>
+    private static VerificationKind KindFor(WorkflowNode node) =>
+        node.ProducesContext.Contains(FailuresKey, StringComparer.Ordinal)
+        || node.ProducesContext.Contains(CoverageKey, StringComparer.Ordinal)
+            ? VerificationKind.Test
+            : node.ProducesContext.Contains(BuildsKey, StringComparer.Ordinal)
+                ? VerificationKind.Build
+                : VerificationKind.Unknown;
+
+    private static bool IsTrue(string value) =>
+        bool.TryParse(value.Trim(), out bool parsed) && parsed;
+
+    private static double? ClaimedNumber(string value) =>
+        double.TryParse(value.Trim(), CultureInfo.InvariantCulture, out double parsed)
+            ? parsed
+            : null;
 
     private ModelCall CallOf(LlmRequest request, LlmResponse response, TimeSpan elapsed) =>
         new(

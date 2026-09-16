@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
+using Mandate.Core.Execution;
 using Mandate.Core.Llm;
 using Mandate.Core.Time;
 using Mandate.Llm;
@@ -8,6 +9,7 @@ using Mandate.Llm.Cassettes;
 using Mandate.Llm.Clients;
 using Mandate.Llm.Pricing;
 using Mandate.Llm.Prompts;
+using Mandate.Persistence.Verification;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -32,6 +34,45 @@ internal abstract class LlmSettings : CommandSettings
     [Description("Model price list. Defaults to config/model-pricing.yaml.")]
     public string Pricing { get; init; } = ModelPriceBook.DefaultPath;
 
+    // Two flags rather than one "--verify|--no-verify" option: in Spectre, names joined
+    // with a pipe are aliases for the same switch, so --no-verify would have set verify to
+    // true. It parsed, it ran, and it did the opposite of what it said.
+    [CommandOption("--verify")]
+    [Description(
+        "Run the real toolchain over what each stage proposes, so build and test results "
+        + "are measured rather than claimed. On unless the model layer is stubbed.")]
+    public bool Verify { get; init; }
+
+    [CommandOption("--no-verify")]
+    [Description("Skip toolchain verification. Build and test results become claims.")]
+    public bool NoVerify { get; init; }
+
+    /// <summary>
+    /// Whether this run measures its build and test results.
+    /// </summary>
+    /// <remarks>
+    /// On by default wherever a model produced the code, and off by default for the stub.
+    /// The stub emits inert placeholder files: compiling them proves nothing about the
+    /// system, and would make the one mode that needs no key or network the one mode that
+    /// needs a .NET SDK. Passing <c>--verify</c> explicitly still measures a stubbed run,
+    /// and it should be expected to fail — the stub writes no tests, so there is no
+    /// coverage to find.
+    /// </remarks>
+    public bool VerificationRequested =>
+        !NoVerify && (Verify || ParsedMode != LlmMode.Stub);
+
+    /// <summary>
+    /// The verifier these settings ask for.
+    /// </summary>
+    /// <remarks>
+    /// Turning verification off is supported because a machine without a .NET SDK should
+    /// still be able to walk the lifecycle. A run made with it off says so on its own
+    /// output: an unverified build result is a claim, not a measurement, and the difference
+    /// has to be visible to whoever reads the run.
+    /// </remarks>
+    public IWorkspaceVerifier VerifierOrDisabled =>
+        VerificationRequested ? new DotnetWorkspaceVerifier() : IWorkspaceVerifier.Disabled;
+
     /// <summary>The mode, parsed.</summary>
     public LlmMode ParsedMode =>
         Enum.TryParse(Mode, ignoreCase: true, out LlmMode parsed) ? parsed : LlmMode.Unknown;
@@ -41,7 +82,10 @@ internal abstract class LlmSettings : CommandSettings
         ParsedMode == LlmMode.Unknown
             ? ValidationResult.Error(
                 $"'{Mode}' is not a model mode. Expected live, record, replay or stub.")
-            : ValidationResult.Success();
+            : Verify && NoVerify
+                ? ValidationResult.Error(
+                    "--verify and --no-verify contradict each other. Pass one, or neither.")
+                : ValidationResult.Success();
 
     /// <summary>The options these settings describe.</summary>
     public LlmOptions ToOptions(LlmBudget? budget = null) => new(

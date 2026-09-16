@@ -41,7 +41,13 @@ internal static class ScriptedEvidence
 
         if (string.Equals(key, "requirements.ambiguity-score", StringComparison.Ordinal))
         {
-            return IsAmbiguous(execution) ? "0.8" : "0.1";
+            // Once a clarification has been recorded, the requirement is no longer ambiguous.
+            // Without this the loop back into requirements would never converge, which is
+            // exactly the failure a re-plan budget exists to contain — but converging because
+            // the question was answered is the behaviour we actually want.
+            bool clarified = execution.Context.Latest("requirements.clarified") is not null;
+
+            return IsAmbiguous(execution) && !clarified ? "0.8" : "0.1";
         }
 
         // Anything else is a marker that the stage ran. Gates read the keys above; the rest

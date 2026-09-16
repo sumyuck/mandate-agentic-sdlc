@@ -54,6 +54,12 @@ internal sealed class RunExecution(
     private RunState _state = resumeFrom?.State ?? RunState.Empty(request.Id);
     private RunEvent? _tail = resumeFrom?.Tail;
     private IRunWorkspace _workspace = null!;
+    private readonly Dictionary<NodeId, ImmutableHashSet<Sha256Hash>> _lastOutputs = [];
+
+    // Re-plans are queued while stages are executing and applied between scheduling passes.
+    // Invalidating a node's downstream work while that work might be running would race with
+    // it; the boundary between passes is the only point where the run's state is coherent.
+    private readonly List<ReplanRequest> _pendingReplans = [];
     private NodeId? _rollbackTrigger;
     private bool _safeStopped;
 
@@ -76,6 +82,26 @@ internal sealed class RunExecution(
 
         if (resuming)
         {
+            // What each node produced before is read back from the recorded artifacts. Without
+            // it a resumed run could not tell a re-run that changed something from one that
+            // changed nothing, and would either redo everything or nothing.
+            foreach (IGrouping<NodeId, Artifact> produced in
+                     _state.Artifacts.GroupBy(artifact => artifact.ProducedByNode))
+            {
+                _lastOutputs[produced.Key] =
+                    [.. produced.Select(artifact => artifact.Hash)];
+            }
+
+            // A node blocked on an unmet precondition gets another look. The precondition may
+            // be exactly what the human just resolved, and leaving it blocked would make the
+            // resume pointless for the stage it was meant to unblock.
+            await ReconsiderBlockedPreconditionsAsync(cancellationToken).ConfigureAwait(false);
+
+            // An amendment is a statement that work already done was based on the wrong
+            // input, so it is applied before anything else: approving or building on that
+            // work first would be acting on a premise the requester has withdrawn.
+            await ApplyAmendmentsAsync(cancellationToken).ConfigureAwait(false);
+
             // An approval that arrived while the run was parked has to be acted on before any
             // scheduling: the nodes it unblocks are the reason the run is being resumed.
             await ReconcileApprovalsAsync(cancellationToken).ConfigureAwait(false);
@@ -98,6 +124,98 @@ internal sealed class RunExecution(
             .ConfigureAwait(false);
 
         return new RunOutcome(request.Id, _state.Status, reason, _state, _state.LastSequence);
+    }
+
+    /// <summary>
+    /// Returns nodes blocked on an unmet precondition to the plan, so their gates run again.
+    /// </summary>
+    private async Task ReconsiderBlockedPreconditionsAsync(CancellationToken cancellationToken)
+    {
+        foreach (NodeId nodeId in graph.TopologicalOrder)
+        {
+            if (_state.StateOf(nodeId) != NodeState.Blocked)
+            {
+                continue;
+            }
+
+            string? detail = _state.Nodes[nodeId].Detail;
+
+            // Only precondition blocks. A node blocked by a policy violation or a refused
+            // approval needs the underlying decision changed, not another attempt.
+            if (detail is null || !detail.Contains("Entry gate on", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            await TransitionAsync(
+                nodeId, NodeState.Ready, Actor.Engine,
+                "Resumed; the entry gate is evaluated again.", cancellationToken)
+                .ConfigureAwait(false);
+
+            await TransitionAsync(
+                nodeId, NodeState.Invalidated, Actor.Engine,
+                "Returned to the plan so its precondition is re-checked.", cancellationToken)
+                .ConfigureAwait(false);
+
+            await TransitionAsync(
+                nodeId, NodeState.Pending, Actor.Engine,
+                "Awaiting re-evaluation.", cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// Applies amendments a human recorded while the run was stopped.
+    /// </summary>
+    /// <remarks>
+    /// An amendment is applied once. Whether it already has been is read from the log: a
+    /// re-plan recorded after the amendment, for the same stage, is the evidence that it was
+    /// acted on. Checking the node's current state would not do — by the time the run
+    /// finishes, the stage has been redone and is settled again, and a second resume would
+    /// redo it a second time.
+    /// </remarks>
+    private async Task ApplyAmendmentsAsync(CancellationToken cancellationToken)
+    {
+        if (resumeFrom is not { } resume)
+        {
+            return;
+        }
+
+        foreach (RunEvent amendment in resume.Events.Where(
+                     @event => @event.Kind == RunEventKind.RunAmended))
+        {
+            if (amendment.NodeId is not { } nodeId || !IsSettled(_state.StateOf(nodeId)))
+            {
+                continue;
+            }
+
+            bool alreadyApplied = resume.Events.Any(@event =>
+                @event.Kind == RunEventKind.ReplanPerformed
+                && @event.Sequence > amendment.Sequence
+                && @event.Payload<ReplanPayload>().Trigger == nodeId.Value);
+
+            if (alreadyApplied)
+            {
+                continue;
+            }
+
+            AmendmentPayload payload = amendment.Payload<AmendmentPayload>();
+
+            // Contributed as a run-level fact so the stage being redone can see what changed.
+            // Redoing a stage while withholding the reason it is being redone would produce
+            // the same output and make the whole exercise pointless.
+            await AppendAsync(
+                RunEventKind.ContextFactAdded, EngineNode, amendment.Actor,
+                new ContextFactAddedPayload(
+                    WorkflowContextKeys.Amendment, payload.Reason, []),
+                cancellationToken).ConfigureAwait(false);
+
+            await ReplanAsync(
+                trigger: nodeId,
+                reason: $"{amendment.Actor} amended the input to '{nodeId}': {payload.Reason}",
+                toInvalidate: [nodeId],
+                by: amendment.Actor,
+                cancellationToken).ConfigureAwait(false);
+        }
     }
 
     /// <summary>
@@ -134,6 +252,12 @@ internal sealed class RunExecution(
                     nodeId, NodeState.Succeeded, producer,
                     "Approved; exit gate passed without re-running the stage.", cancellationToken)
                     .ConfigureAwait(false);
+
+                // A stage completing on resume has the same consequences as one completing
+                // during a run. Returning control along a loop-back is the whole point of the
+                // clarification stage, and it must not depend on which code path finished it.
+                QueueCascadeIfOutputChanged(graph.Node(nodeId));
+                QueueLoopBacks(graph.Node(nodeId), LoopBackTrigger.OnSuccess);
 
                 continue;
             }
@@ -178,7 +302,8 @@ internal sealed class RunExecution(
                 return;
             }
 
-            bool progressed = await ResolveGuardsAsync(cancellationToken).ConfigureAwait(false);
+            bool progressed = await DrainReplansAsync(cancellationToken).ConfigureAwait(false);
+            progressed |= await ResolveGuardsAsync(cancellationToken).ConfigureAwait(false);
 
             (ImmutableArray<WorkflowNode> eligible, bool skipped) =
                 await ClassifyPendingAsync(cancellationToken).ConfigureAwait(false);
@@ -563,6 +688,31 @@ internal sealed class RunExecution(
             new RetryPayload(attempts, node.Retry.MaxAttempts, 0, failure),
             cancellationToken).ConfigureAwait(false);
 
+        // A failure loop-back says the problem is upstream, not here: the stage did its job
+        // and reported that the work it was checking does not hold. Redoing that work is a
+        // different recovery from compensating this stage, and it is tried first while the
+        // re-plan budget allows.
+        ImmutableArray<WorkflowEdge> failureLoops =
+            graph.LoopBacksFrom(node.Id, LoopBackTrigger.OnFailure);
+
+        if (!failureLoops.IsEmpty && _state.ReplanCount < options.MaxReplans)
+        {
+            foreach (WorkflowEdge loop in failureLoops)
+            {
+                lock (_pendingReplans)
+                {
+                    _pendingReplans.Add(new ReplanRequest(
+                        node.Id,
+                        $"'{node.Id}' failed after {attempts} attempt(s), so '{loop.To}' is "
+                        + $"redone: {failure}",
+                        [loop.To],
+                        Actor.Engine));
+                }
+            }
+
+            return;
+        }
+
         FallbackStrategy strategy = node.Retry.OnExhaustion;
 
         await AppendAsync(
@@ -815,6 +965,9 @@ internal sealed class RunExecution(
                 node.Id, NodeState.Succeeded, producer, "Exit gate passed.", cancellationToken)
                 .ConfigureAwait(false);
 
+            QueueCascadeIfOutputChanged(node);
+            QueueLoopBacks(node, LoopBackTrigger.OnSuccess);
+
             return;
         }
 
@@ -862,6 +1015,245 @@ internal sealed class RunExecution(
                 cancellationToken).ConfigureAwait(false);
         }
     }
+
+    // ---- re-planning ----
+
+    /// <summary>
+    /// Invalidates work built on a node whose output has actually changed.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This is what makes re-planning incremental rather than a restart. A node that re-runs
+    /// and produces byte-identical output has changed nothing, so everything downstream of it
+    /// is still valid and is deliberately left alone. Content addressing makes that an exact
+    /// comparison rather than a guess.
+    /// </para>
+    /// <para>
+    /// Cascading lazily — after the re-run, not before — is the reason it can be exact. At
+    /// the moment someone amends an input, nobody yet knows whether redoing the stage will
+    /// change anything.
+    /// </para>
+    /// </remarks>
+    private void QueueCascadeIfOutputChanged(WorkflowNode node)
+    {
+        ImmutableHashSet<Sha256Hash> produced =
+        [
+            .. _state.Artifacts
+                .Where(artifact => artifact.ProducedByNode == node.Id)
+                .Select(artifact => artifact.Hash),
+        ];
+
+        if (!_lastOutputs.TryGetValue(node.Id, out ImmutableHashSet<Sha256Hash>? previous))
+        {
+            _lastOutputs[node.Id] = produced;
+            return;
+        }
+
+        _lastOutputs[node.Id] = produced;
+
+        if (previous.SetEquals(produced))
+        {
+            // Re-ran, produced the same bytes. Nothing downstream needs redoing.
+            return;
+        }
+
+        ImmutableArray<NodeId> dependents =
+        [
+            .. graph.TransitiveDependentsOf(node.Id)
+                .Where(id => IsSettled(_state.StateOf(id)))
+                .OrderBy(id => id.Value, StringComparer.Ordinal),
+        ];
+
+        if (dependents.IsEmpty)
+        {
+            return;
+        }
+
+        lock (_pendingReplans)
+        {
+            _pendingReplans.Add(new ReplanRequest(
+                node.Id,
+                $"'{node.Id}' re-ran and produced different output, so work built on it is no "
+                + "longer valid.",
+                dependents,
+                Actor.Engine));
+        }
+    }
+
+    /// <summary>
+    /// Returns control to an earlier stage along a declared loop-back edge.
+    /// </summary>
+    /// <remarks>
+    /// This is how a clarification re-enters requirements: the answer is in the context, so
+    /// the stage that interpreted the requirement is redone against it. Bounded by the run's
+    /// re-plan budget, which is what keeps a declared loop from becoming an unbounded one.
+    /// </remarks>
+    private void QueueLoopBacks(WorkflowNode node, LoopBackTrigger trigger)
+    {
+        foreach (WorkflowEdge loop in graph.LoopBacksFrom(node.Id, trigger))
+        {
+            if (!IsSettled(_state.StateOf(loop.To)))
+            {
+                continue;
+            }
+
+            lock (_pendingReplans)
+            {
+                _pendingReplans.Add(new ReplanRequest(
+                    node.Id,
+                    $"'{node.Id}' completed and returns control to '{loop.To}', which is re-run "
+                    + "against what it produced.",
+                    [loop.To],
+                    Actor.Engine));
+            }
+        }
+    }
+
+    /// <summary>Applies any re-plans queued while stages were executing.</summary>
+    private async Task<bool> DrainReplansAsync(CancellationToken cancellationToken)
+    {
+        ImmutableArray<ReplanRequest> queued;
+
+        lock (_pendingReplans)
+        {
+            if (_pendingReplans.Count == 0)
+            {
+                return false;
+            }
+
+            queued = [.. _pendingReplans];
+            _pendingReplans.Clear();
+        }
+
+        bool changed = false;
+
+        foreach (ReplanRequest request in queued)
+        {
+            changed |= await ReplanAsync(
+                request.Trigger, request.Reason, request.ToInvalidate, request.By, cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        return changed;
+    }
+
+    /// <summary>A queued request to recompute the plan.</summary>
+    private sealed record ReplanRequest(
+        NodeId Trigger, string Reason, ImmutableArray<NodeId> ToInvalidate, Actor By);
+
+    /// <summary>
+    /// Invalidates a set of nodes and recomputes the plan.
+    /// </summary>
+    /// <remarks>
+    /// Governance is re-applied rather than carried over. An invalidated node's approvals are
+    /// withdrawn, because a signature was given for work that is now being redone; letting it
+    /// stand would put a human's name against output they never saw.
+    /// </remarks>
+    private async Task<bool> ReplanAsync(
+        NodeId trigger,
+        string reason,
+        ImmutableArray<NodeId> toInvalidate,
+        Actor by,
+        CancellationToken cancellationToken)
+    {
+        if (toInvalidate.IsEmpty)
+        {
+            return false;
+        }
+
+        if (_state.ReplanCount >= options.MaxReplans)
+        {
+            // Nothing is transitioned. The nodes that would have been redone are not broken —
+            // their results stand — it is the loop that has stopped turning, and marking
+            // finished work as blocked would misdescribe which thing needs attention.
+            await AppendAsync(
+                RunEventKind.ReplanRefused, trigger, Actor.Engine,
+                new ReplanPayload(
+                    _state.ReplanCount,
+                    trigger.Value,
+                    $"The run's budget of {options.MaxReplans} re-plan(s) is spent, so this one "
+                    + $"was not performed: {reason}",
+                    [],
+                    [.. toInvalidate.Select(id => id.Value)],
+                    []),
+                cancellationToken).ConfigureAwait(false);
+
+            return false;
+        }
+
+        // Only what the caller named. Downstream work is invalidated later, and only if the
+        // re-run actually produces different output — that is what makes a re-plan
+        // incremental rather than a restart wearing a different word.
+        ImmutableArray<NodeId> invalidating =
+        [
+            .. toInvalidate
+                .Distinct()
+                .Where(id => IsSettled(_state.StateOf(id)))
+                .OrderBy(id => id.Value, StringComparer.Ordinal),
+        ];
+
+        if (invalidating.IsEmpty)
+        {
+            return false;
+        }
+
+        List<string> revokedApprovals = [];
+
+        foreach (NodeId nodeId in invalidating)
+        {
+            WorkflowNode node = graph.Node(nodeId);
+
+            ImmutableArray<string> revoked =
+            [
+                .. node.Approvals
+                    .Select(approval => approval.Role)
+                    .Where(role => _state.HeldApprovals.ContainsKey(role)),
+            ];
+
+            revokedApprovals.AddRange(revoked);
+
+            await AppendAsync(
+                RunEventKind.NodeInvalidated, nodeId, by,
+                new NodeInvalidatedPayload(reason, trigger.Value, revoked),
+                cancellationToken).ConfigureAwait(false);
+
+            await TransitionAsync(
+                nodeId, NodeState.Invalidated, by, reason, cancellationToken).ConfigureAwait(false);
+
+            // Straight back to Pending: the scheduler treats it as unstarted work and applies
+            // every gate and guard again from scratch.
+            await TransitionAsync(
+                nodeId, NodeState.Pending, Actor.Engine,
+                "Returned to the plan for re-execution.", cancellationToken).ConfigureAwait(false);
+
+            _unmetPreconditions.Remove(nodeId);
+        }
+
+        ImmutableArray<NodeId> unaffected =
+        [
+            .. graph.TopologicalOrder
+                .Where(id => _state.StateOf(id) == NodeState.Succeeded)
+                .OrderBy(id => id.Value, StringComparer.Ordinal),
+        ];
+
+        await AppendAsync(
+            RunEventKind.ReplanPerformed, trigger, by,
+            new ReplanPayload(
+                _state.ReplanCount + 1,
+                trigger.Value,
+                reason,
+                [.. invalidating.Select(id => id.Value)],
+                [.. unaffected.Select(id => id.Value)],
+                [.. revokedApprovals.Distinct(StringComparer.OrdinalIgnoreCase)]),
+            cancellationToken).ConfigureAwait(false);
+
+        return true;
+    }
+
+    /// <summary>True when a node has reached an outcome that a re-plan would undo.</summary>
+    private static bool IsSettled(NodeState state) =>
+        state is NodeState.Succeeded or NodeState.Skipped or NodeState.Failed
+            or NodeState.Blocked or NodeState.AwaitingApproval;
 
     // ---- gates ----
 
@@ -1016,12 +1408,27 @@ internal sealed class RunExecution(
         IEnumerable<string> upstream = graph.TransitiveDependenciesOf(node.Id)
             .SelectMany(id => graph.Node(id).ProducesContext);
 
-        return ["run.*", .. upstream.Distinct().OrderBy(key => key, StringComparer.Ordinal)];
+        // A loop-back is a declared information flow, so it grants scope in the direction it
+        // flows. Without this a stage re-run by a loop-back could not see the answer that
+        // caused it to be re-run — requirements would be redone without the clarification
+        // that prompted the redo, which is worse than not looping back at all.
+        IEnumerable<string> returned = graph.Definition.Edges
+            .Where(edge => edge.Kind == EdgeKind.LoopBack && edge.To == node.Id)
+            .SelectMany(edge => graph.Node(edge.From).ProducesContext);
+
+        return
+        [
+            "run.*",
+            .. upstream.Concat(returned).Distinct().OrderBy(key => key, StringComparer.Ordinal),
+        ];
     }
 
     private ImmutableArray<Artifact> InputsFor(WorkflowNode node)
     {
-        ImmutableHashSet<NodeId> upstream = graph.TransitiveDependenciesOf(node.Id);
+        ImmutableHashSet<NodeId> upstream = graph.TransitiveDependenciesOf(node.Id)
+            .Union(graph.Definition.Edges
+                .Where(edge => edge.Kind == EdgeKind.LoopBack && edge.To == node.Id)
+                .Select(edge => edge.From));
 
         return
         [

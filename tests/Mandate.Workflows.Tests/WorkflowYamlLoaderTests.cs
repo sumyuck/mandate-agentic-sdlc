@@ -351,4 +351,60 @@ public sealed class WorkflowYamlLoaderTests
         loaded.Nodes.Length.ShouldBe(2);
         Should.Throw<WorkflowValidationException>(() => WorkflowGraph.Build(loaded));
     }
+
+    [Fact]
+    public void A_loop_back_without_a_trigger_is_rejected()
+    {
+        // The distinction is too important to default: firing on success where failure was
+        // meant redoes finished work every time it works.
+        WorkflowDefinition loaded = WorkflowYamlLoader.Load("""
+            name: sdlc
+            version: v1
+            nodes:
+              - id: a
+                stage: requirements
+                agent: x
+                autonomy: act-in-sandbox
+              - id: b
+                stage: testing
+                agent: y
+                autonomy: act-in-sandbox
+            edges:
+              - from: a
+                to: b
+              - from: b
+                to: a
+                kind: loop-back
+            """);
+
+        Should.Throw<WorkflowValidationException>(() => WorkflowGraph.Build(loaded))
+            .Errors.ShouldContain(issue => issue.Code == "WF025");
+    }
+
+    [Fact]
+    public void A_loop_back_trigger_is_read_from_the_file()
+    {
+        WorkflowDefinition loaded = WorkflowYamlLoader.Load("""
+            name: sdlc
+            version: v1
+            nodes:
+              - id: a
+                stage: requirements
+                agent: x
+                autonomy: act-in-sandbox
+              - id: b
+                stage: testing
+                agent: y
+                autonomy: act-in-sandbox
+            edges:
+              - from: a
+                to: b
+              - from: b
+                to: a
+                kind: loop-back
+                on: failure
+            """);
+
+        loaded.Edges[1].On.ShouldBe(LoopBackTrigger.OnFailure);
+    }
 }

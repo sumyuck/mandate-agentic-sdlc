@@ -36,10 +36,11 @@ lands before the agents, so the orchestrator is defensible even at an intermedia
 | P5 | Reliability: git workspace, bounded retries, fallback, real rollback, safe-stop | **done** |
 | P6 | Human approvals, refusals, and resume from the log | **done** |
 | P7 | Policy guardrails: security, compliance, change control, audited waivers | **done** |
-| P8 | Dynamic re-planning when upstream output changes | next |
-| P9–P16 | Observability and metrics, model-backed agents, the three scenarios, documentation | planned |
+| P8 | Dynamic re-planning: lazy invalidation, loop-backs, governance re-applied | **done** |
+| P9 | Observability: structured logs, traces, reliability metrics, run reports | next |
+| P10–P16 | Model-backed agents, the three scenarios, documentation | planned |
 
-**616 tests** currently pass, with warnings treated as errors across the solution — including
+**640 tests** currently pass, with warnings treated as errors across the solution — including
 40 that drive the CLI end to end through the same command definitions the binary exposes, and
 a set that exercise rollback against real git rather than a stub.
 
@@ -67,6 +68,14 @@ Inspect and evaluate the guardrails:
 dotnet run --project src/Mandate.Cli -- policy list
 dotnet run --project src/Mandate.Cli -- policy check <runId>
 dotnet run --project src/Mandate.Cli -- waive <runId> --rule CHG-003 --as alex --reason "..."
+```
+
+Change your mind about an input the run already acted on:
+
+```bash
+dotnet run --project src/Mandate.Cli -- amend <runId> --stage requirements \
+    --as muskan --reason "Expiry means a TTL, not one-time use."
+dotnet run --project src/Mandate.Cli -- resume <runId>
 ```
 
 Close the human loop on a parked run:
@@ -262,6 +271,16 @@ discipline:
 - **Defence in depth is structural.** Waiving the rule that requires approvals does *not*
   release the stage, because the stage's own exit gate independently requires the signature.
   One override does not collapse two controls.
+- **Re-planning is incremental, not a restart.** An amendment invalidates only the stage it
+  names. Whether anything downstream is invalidated is decided *after* that stage re-runs, by
+  comparing what it produced against what it produced before — an exact comparison, because
+  artifacts are content-addressed. A re-run that changes nothing disturbs nothing.
+- **Invalidating a stage withdraws the approval given for it.** A signature was given for work
+  that is now being redone; carrying it forward would put a human's name against output they
+  never saw.
+- **Loop-backs declare which outcome fires them.** A clarification returns to requirements when
+  it *succeeds*; a test returns to implementation when it *fails*. Defaulting this was a real
+  bug: the test loop-back re-planned the implementation every time the tests passed.
 - **Exit codes distinguish "failed" from "needs a human."** A run waiting on an approval
   returns `3`, not `1`, because a CI job or a demo script has to tell them apart — treating a
   human checkpoint as an error would misrepresent the thing the system is built to do.

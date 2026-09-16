@@ -453,11 +453,12 @@ edges:
     to: clarification
     guard: requirements.ambiguity-score > 0.3
 
-  # ...and the answers re-enter requirements, which is re-run against them. Bounded by the
-  # requirements stage's own retry budget, so this cannot cycle indefinitely.
+  # ...and the answers re-enter requirements, which is re-run against them. Triggered by the
+  # clarification succeeding: the answer is ready. Bounded by the run's re-plan budget.
   - from: clarification
     to: requirements
     kind: loop-back
+    on: success
 
   # Brownfield work earns an extra stage; greenfield skips straight to design. Exactly one of
   # these two guards can hold, which is why 'architecture' joins on 'any'.
@@ -488,10 +489,14 @@ edges:
   - from: implement
     to: documentation
 
-  # Failing tests return to implementation rather than failing the run outright.
+  # Failing tests return to implementation rather than failing the run outright. Triggered by
+  # the test stage failing: the stage did its job and reported that the code does not hold, so
+  # the code is redone rather than the test re-run again. Tried while the re-plan budget
+  # allows; after that the stage's own compensating fallback applies.
   - from: test
     to: implement
     kind: loop-back
+    on: failure
 
   # Fan-in: the synchronising barrier before any release decision.
   - from: test

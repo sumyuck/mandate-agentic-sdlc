@@ -73,6 +73,28 @@ public enum EdgeKind
     LoopBack = 2,
 }
 
+/// <summary>
+/// What outcome sends control back along a loop-back edge.
+/// </summary>
+/// <remarks>
+/// Loop-backs exist for two different reasons and firing on the wrong one is silently wrong
+/// rather than obviously broken. A clarification returns to requirements when it
+/// <em>succeeds</em> — the answer is ready. A test returns to implementation when it
+/// <em>fails</em> — the code needs redoing. A loop-back that fired on success where failure
+/// was meant would redo finished work every time it worked.
+/// </remarks>
+public enum LoopBackTrigger
+{
+    /// <summary>Unset. Rejected at validation; the distinction is too important to default.</summary>
+    Unknown = 0,
+
+    /// <summary>Return control when the source stage succeeds.</summary>
+    OnSuccess = 1,
+
+    /// <summary>Return control when the source stage fails.</summary>
+    OnFailure = 2,
+}
+
 /// <summary>What to do when a node exhausts its retry budget.</summary>
 public enum FallbackStrategy
 {

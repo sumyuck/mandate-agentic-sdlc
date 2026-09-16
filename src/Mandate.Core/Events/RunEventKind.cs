@@ -103,6 +103,9 @@ public enum RunEventKind
     /// <summary>A human answered a clarification question.</summary>
     ClarificationProvided = 34,
 
+    /// <summary>A human revised an input the run had already acted on.</summary>
+    RunAmended = 36,
+
     /// <summary>An unanswered question was recorded as a working assumption instead.</summary>
     AssumptionRecorded = 35,
 
@@ -130,4 +133,14 @@ public enum RunEventKind
 
     /// <summary>The engine recomputed the plan. Carries the difference from the previous plan.</summary>
     ReplanPerformed = 51,
+
+    /// <summary>
+    /// A re-plan was called for but not performed, because the run's budget for it is spent.
+    /// </summary>
+    /// <remarks>
+    /// Distinct from performing one, so the re-plan count keeps meaning "times the plan
+    /// actually changed". Recorded rather than dropped: a loop that stopped turning is
+    /// something a reviewer needs to see, and silence would look like it never came up.
+    /// </remarks>
+    ReplanRefused = 52,
 }

@@ -107,6 +107,31 @@ public sealed record PolicyVerdictPayload(
 /// <summary>Payload of the policy violation and waiver events.</summary>
 public sealed record PolicyWaiverPayload(string RuleId, string Pack, string Reason);
 
+/// <summary>Payload of <see cref="RunEventKind.RunAmended"/>.</summary>
+/// <param name="Reason">
+/// What changed and why. An amendment discards completed work, so the record has to say what
+/// justified discarding it.
+/// </param>
+public sealed record AmendmentPayload(string Reason);
+
+/// <summary>Payload of <see cref="RunEventKind.NodeInvalidated"/>.</summary>
+public sealed record NodeInvalidatedPayload(
+    string Reason, string TriggeredBy, ImmutableArray<string> RevokedApprovals);
+
+/// <summary>Payload of <see cref="RunEventKind.ReplanPerformed"/>.</summary>
+/// <remarks>
+/// Carries the difference the re-plan made, not just the fact that one happened: which nodes
+/// lost their results, which approvals stopped counting, and which downstream work was left
+/// alone because its input had not actually changed.
+/// </remarks>
+public sealed record ReplanPayload(
+    int ReplanNumber,
+    string Trigger,
+    string Reason,
+    ImmutableArray<string> Invalidated,
+    ImmutableArray<string> Unaffected,
+    ImmutableArray<string> ApprovalsRevoked);
+
 /// <summary>Payload of the safe-stop events.</summary>
 public sealed record SafeStopPayload(string RequestedBy, int NodesCancelled, string Detail);
 

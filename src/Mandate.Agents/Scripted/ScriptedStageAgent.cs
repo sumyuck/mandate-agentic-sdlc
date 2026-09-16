@@ -125,6 +125,16 @@ public sealed class ScriptedStageAgent(string id, ScriptedBehaviour? behaviour =
         body.AppendLine(CultureInfo.InvariantCulture, $"model: {execution.Node.Model ?? "none"}");
         body.AppendLine(CultureInfo.InvariantCulture, $"derived-from: {inputs.Length} artifact(s)");
 
+        // The stage's output reflects what the stage could see. A real agent's output depends
+        // on its context; without that here, redoing a stage against a changed requirement
+        // would produce byte-identical output and nothing downstream would be re-planned.
+        foreach (string key in execution.Context.Keys)
+        {
+            body.AppendLine(
+                CultureInfo.InvariantCulture,
+                $"context {key}: {execution.Context.Latest(key)!.Value}");
+        }
+
         foreach (Sha256Hash input in inputs)
         {
             body.AppendLine(CultureInfo.InvariantCulture, $"  - {input.Hex}");

@@ -63,6 +63,7 @@ public sealed class RunState : IRunView
         ImmutableDictionary<string, Actor> deniedApprovals,
         ImmutableDictionary<NodeId, Actor> producers,
         ImmutableDictionary<string, Policies.PolicyWaiver> waivers,
+        int replanCount,
         long lastSequence)
     {
         RunId = runId;
@@ -74,6 +75,7 @@ public sealed class RunState : IRunView
         DeniedApprovals = deniedApprovals;
         Producers = producers;
         Waivers = waivers;
+        ReplanCount = replanCount;
         LastSequence = lastSequence;
     }
 
@@ -104,6 +106,15 @@ public sealed class RunState : IRunView
     /// <inheritdoc />
     public ImmutableDictionary<string, Policies.PolicyWaiver> Waivers { get; }
 
+    /// <summary>
+    /// How many times the plan has been recomputed because an input changed.
+    /// </summary>
+    /// <remarks>
+    /// Counted so re-planning can be bounded. A lifecycle that re-plans without limit is not
+    /// adaptive, it is stuck — and the failure looks like progress from the outside.
+    /// </remarks>
+    public int ReplanCount { get; }
+
     /// <summary>Sequence number of the last event applied.</summary>
     public long LastSequence { get; }
 
@@ -119,6 +130,7 @@ public sealed class RunState : IRunView
         ImmutableDictionary<NodeId, Actor>.Empty,
         ImmutableDictionary<string, Policies.PolicyWaiver>.Empty.WithComparers(
             StringComparer.OrdinalIgnoreCase),
+        0,
         0);
 
     /// <summary>Rebuilds a run's state by folding over its events.</summary>
@@ -161,6 +173,8 @@ public sealed class RunState : IRunView
             RunEventKind.ContextFactAdded => ApplyContextFactAdded(@event),
             RunEventKind.ApprovalGranted => ApplyApprovalGranted(@event),
             RunEventKind.ApprovalDenied => ApplyApprovalDenied(@event),
+            RunEventKind.ReplanPerformed => With(replanCount: ReplanCount + 1),
+            RunEventKind.NodeInvalidated => ApplyNodeInvalidated(@event),
             RunEventKind.PolicyWaiverGranted => ApplyWaiverGranted(@event),
             RunEventKind.PolicyWaiverDenied => ApplyWaiverDenied(@event),
 
@@ -320,6 +334,34 @@ public sealed class RunState : IRunView
             deniedApprovals: DeniedApprovals.Remove(payload.Role));
     }
 
+    /// <summary>
+    /// Withdraws the approvals an invalidated node was holding.
+    /// </summary>
+    /// <remarks>
+    /// An approval was given for a particular piece of work. Once that work is being redone
+    /// the signature no longer refers to anything that will ship, so it stops counting and a
+    /// fresh one is required. Carrying it forward would let a human's name endorse output
+    /// they never saw.
+    /// </remarks>
+    private RunState ApplyNodeInvalidated(RunEvent @event)
+    {
+        NodeInvalidatedPayload payload = @event.Payload<NodeInvalidatedPayload>();
+
+        if (payload.RevokedApprovals.IsEmpty)
+        {
+            return this;
+        }
+
+        ImmutableDictionary<string, Actor> remaining = HeldApprovals;
+
+        foreach (string role in payload.RevokedApprovals)
+        {
+            remaining = remaining.Remove(role);
+        }
+
+        return With(heldApprovals: remaining);
+    }
+
     private RunState ApplyWaiverGranted(RunEvent @event)
     {
         PolicyWaiverPayload payload = @event.Payload<PolicyWaiverPayload>();
@@ -357,6 +399,7 @@ public sealed class RunState : IRunView
         ImmutableDictionary<string, Actor>? deniedApprovals = null,
         ImmutableDictionary<NodeId, Actor>? producers = null,
         ImmutableDictionary<string, Policies.PolicyWaiver>? waivers = null,
+        int? replanCount = null,
         long? lastSequence = null) =>
         new(
             RunId,
@@ -368,6 +411,7 @@ public sealed class RunState : IRunView
             deniedApprovals ?? DeniedApprovals,
             producers ?? Producers,
             waivers ?? Waivers,
+            replanCount ?? ReplanCount,
             lastSequence ?? LastSequence);
 
     private sealed class ContextGuardResolver(RunContext context) : IGuardValueResolver

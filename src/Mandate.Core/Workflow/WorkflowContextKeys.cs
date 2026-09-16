@@ -28,9 +28,14 @@ public static class WorkflowContextKeys
     /// <summary>Whether the target repository already contains the code under change.</summary>
     public const string HasExistingCode = "run.has-existing-code";
 
+    /// <summary>
+    /// The most recent amendment a human made to an input the run had already acted on.
+    /// </summary>
+    public const string Amendment = "run.amendment";
+
     /// <summary>Every key the engine guarantees is present.</summary>
     public static ImmutableHashSet<string> EngineProvided { get; } =
-        [RunId, Scenario, Workflow, InitiatedBy, HasExistingCode];
+        [RunId, Scenario, Workflow, InitiatedBy, HasExistingCode, Amendment];
 
     /// <summary>
     /// The node id the engine attributes run-level facts to.

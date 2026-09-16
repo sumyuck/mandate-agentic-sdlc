@@ -241,7 +241,10 @@ public static class WorkflowYamlLoader
             Kind: edge.Kind is null
                 ? WorkflowDefaults.Edge
                 : ParseEnum<EdgeKind>(edge.Kind, "kind", where, sourceName),
-            Guard: string.IsNullOrWhiteSpace(edge.Guard) ? null : edge.Guard.Trim());
+            Guard: string.IsNullOrWhiteSpace(edge.Guard) ? null : edge.Guard.Trim(),
+            On: edge.On is null
+                ? LoopBackTrigger.Unknown
+                : ParseEnum<LoopBackTrigger>(edge.On, "on", where, sourceName));
     }
 
     private static string Required(string? value, string field, string sourceName) =>
@@ -275,7 +278,13 @@ public static class WorkflowYamlLoader
         }
 
         // Hyphenated YAML ('impact-analysis') maps onto PascalCase members ('ImpactAnalysis').
+        // 'on: success' reads better in a file than 'on: on-success'.
         string candidate = value.Replace("-", string.Empty, StringComparison.Ordinal);
+
+        if (typeof(TEnum) == typeof(LoopBackTrigger))
+        {
+            candidate = "On" + candidate;
+        }
 
         if (Enum.TryParse(candidate, ignoreCase: true, out TEnum parsed)
             && !IsUnknownMember(parsed))

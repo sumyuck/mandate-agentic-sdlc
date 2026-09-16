@@ -158,9 +158,13 @@ public sealed class WorkflowGraph
     public ImmutableArray<WorkflowEdge> ForwardDependentsOf(NodeId id) =>
         [.. _outbound[id].Where(edge => edge.Kind == EdgeKind.Forward)];
 
-    /// <summary>Loop-back edges leaving a node.</summary>
-    public ImmutableArray<WorkflowEdge> LoopBacksFrom(NodeId id) =>
-        [.. _outbound[id].Where(edge => edge.Kind == EdgeKind.LoopBack)];
+    /// <summary>Loop-back edges leaving a node, optionally filtered by their trigger.</summary>
+    public ImmutableArray<WorkflowEdge> LoopBacksFrom(
+        NodeId id, LoopBackTrigger? on = null) =>
+        [
+            .. _outbound[id].Where(edge =>
+                edge.Kind == EdgeKind.LoopBack && (on is null || edge.On == on)),
+        ];
 
     /// <summary>
     /// Every node downstream of <paramref name="id"/> along forward edges.
@@ -451,6 +455,18 @@ public sealed class WorkflowGraph
                     "WF023",
                     $"Edge '{edge.From}' -> '{edge.To}' does not say whether it is a forward "
                     + "dependency or a loop-back.",
+                    edge.From));
+            }
+
+            if (edge.Kind == EdgeKind.LoopBack && edge.On == LoopBackTrigger.Unknown)
+            {
+                issues.Add(new WorkflowIssue(
+                    WorkflowIssueSeverity.Error,
+                    "WF025",
+                    $"The loop-back '{edge.From}' -> '{edge.To}' does not say which outcome "
+                    + "sends control back. Write 'on: success' or 'on: failure': a loop-back "
+                    + "that fires on the wrong one redoes finished work rather than failing "
+                    + "visibly.",
                     edge.From));
             }
 

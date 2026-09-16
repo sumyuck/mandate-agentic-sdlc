@@ -63,6 +63,12 @@ internal static class Program
             .WithDescription("Continue a run that stopped, from its recorded log.")
             .WithExample("resume", "run_20260916T142500Z_a1b2c3");
 
+        config.AddCommand<AmendCommand>("amend")
+            .WithDescription("Record that an input the run already acted on has changed.")
+            .WithExample(
+                "amend", "run_20260916T142500Z_a1b2c3", "--stage", "requirements",
+                "--as", "muskan", "--reason", "Expiry means a TTL, not one-time use.");
+
         config.AddCommand<WaiveCommand>("waive")
             .WithDescription("Allow a policy violation through, on the record.")
             .WithExample(

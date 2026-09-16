@@ -14,7 +14,10 @@ namespace Mandate.Orchestrator.Execution;
 /// predictable enough to put a budget on.
 /// </para>
 /// </remarks>
-public sealed record EngineOptions(int MaxConcurrency = 4)
+/// <param name="MaxReplans">
+/// How many times the plan may be recomputed because an input changed.
+/// </param>
+public sealed record EngineOptions(int MaxConcurrency = 4, int MaxReplans = 5)
 {
     /// <summary>The default limits.</summary>
     public static EngineOptions Default { get; } = new();
@@ -27,6 +30,12 @@ public sealed record EngineOptions(int MaxConcurrency = 4)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(MaxConcurrency, 1);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(MaxConcurrency, 64);
+
+        // Re-planning has to be bounded. A lifecycle that re-plans without limit is not
+        // adaptive, it is stuck — and from the outside the failure looks like progress.
+        ArgumentOutOfRangeException.ThrowIfLessThan(MaxReplans, 0);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(MaxReplans, 50);
+
         return this;
     }
 }

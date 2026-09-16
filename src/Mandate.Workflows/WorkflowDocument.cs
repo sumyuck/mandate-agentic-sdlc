@@ -103,6 +103,8 @@ internal sealed class EdgeDocument
     public string? Kind { get; set; }
 
     public string? Guard { get; set; }
+
+    public string? On { get; set; }
 }
 
 #pragma warning restore CA2227

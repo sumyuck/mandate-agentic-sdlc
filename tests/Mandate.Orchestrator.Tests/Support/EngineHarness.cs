@@ -145,6 +145,24 @@ internal sealed class EngineHarness
             CancellationToken.None);
     }
 
+    /// <summary>Records that an input the run already acted on has changed.</summary>
+    public async Task AmendAsync(string stage, string by, string reason)
+    {
+        RunId runId = LastRun ?? throw new InvalidOperationException("No run has executed yet.");
+
+        await Journal.AppendAsync(
+            runId,
+            previous => RunEvent.Append(
+                previous,
+                runId,
+                Clock.UtcNow,
+                RunEventKind.RunAmended,
+                NodeId.Parse(stage),
+                Actor.Human(by),
+                new AmendmentPayload(reason)),
+            CancellationToken.None);
+    }
+
     /// <summary>Continues the parked run from its recorded log.</summary>
     public async Task<RunOutcome> ResumeAsync()
     {

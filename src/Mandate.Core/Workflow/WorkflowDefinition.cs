@@ -70,7 +70,15 @@ public sealed record WorkflowNode(
 /// guards evaluate false is skipped rather than blocked, which is how the brownfield-only
 /// branch of the lifecycle is expressed without a second workflow file.
 /// </param>
-public sealed record WorkflowEdge(NodeId From, NodeId To, EdgeKind Kind, string? Guard)
+/// <param name="On">
+/// For a loop-back, the outcome that sends control back. Meaningless on a forward edge.
+/// </param>
+public sealed record WorkflowEdge(
+    NodeId From,
+    NodeId To,
+    EdgeKind Kind,
+    string? Guard,
+    LoopBackTrigger On = LoopBackTrigger.Unknown)
 {
     /// <summary>An unconditional forward dependency.</summary>
     public static WorkflowEdge Forward(NodeId from, NodeId to) =>
@@ -80,9 +88,10 @@ public sealed record WorkflowEdge(NodeId From, NodeId To, EdgeKind Kind, string?
     public static WorkflowEdge Guarded(NodeId from, NodeId to, string guard) =>
         new(from, to, EdgeKind.Forward, guard);
 
-    /// <summary>A deliberate return to an earlier node.</summary>
-    public static WorkflowEdge LoopBack(NodeId from, NodeId to) =>
-        new(from, to, EdgeKind.LoopBack, Guard: null);
+    /// <summary>A deliberate return to an earlier node when the source succeeds.</summary>
+    public static WorkflowEdge LoopBack(
+        NodeId from, NodeId to, LoopBackTrigger on = LoopBackTrigger.OnSuccess) =>
+        new(from, to, EdgeKind.LoopBack, Guard: null, on);
 
     /// <summary>True when this path is conditional.</summary>
     public bool IsConditional => !string.IsNullOrWhiteSpace(Guard);

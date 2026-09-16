@@ -16,7 +16,9 @@ namespace Mandate.Orchestrator.Execution;
 /// <param name="State">The run's state, projected from its events.</param>
 /// <param name="Tail">The last event, which the next append links to.</param>
 /// <param name="Request">The original request, read back from the plan event.</param>
-public sealed record ResumePoint(RunState State, RunEvent Tail, RunRequest Request)
+/// <param name="Events">The run's full log, for decisions that depend on its history.</param>
+public sealed record ResumePoint(
+    RunState State, RunEvent Tail, RunRequest Request, ImmutableArray<RunEvent> Events)
 {
     /// <summary>
     /// Reads a resume point out of a run's persisted events.
@@ -61,7 +63,7 @@ public sealed record ResumePoint(RunState State, RunEvent Tail, RunRequest Reque
             planned.HasExistingCode,
             ImmutableDictionary<string, string>.Empty);
 
-        return new ResumePoint(state, events[^1], request);
+        return new ResumePoint(state, events[^1], request, events);
     }
 
     /// <summary>True when the run has work the engine could still do.</summary>

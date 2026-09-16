@@ -99,6 +99,31 @@ public sealed class ShippedWorkflowTests
     }
 
     [Fact]
+    public void Every_loop_back_states_which_outcome_sends_control_back()
+    {
+        // A loop-back that fired on success where failure was meant would redo finished work
+        // every time it worked, which looks like progress rather than a defect.
+        foreach (WorkflowEdge loop in Graph.Definition.Edges.Where(
+                     edge => edge.Kind == EdgeKind.LoopBack))
+        {
+            loop.On.ShouldNotBe(
+                LoopBackTrigger.Unknown, $"'{loop.From}' -> '{loop.To}' has no trigger.");
+        }
+    }
+
+    [Fact]
+    public void The_clarification_returns_on_success_and_the_test_returns_on_failure()
+    {
+        // The two loop-backs exist for opposite reasons: a clarification returns when the
+        // answer is ready, a test returns when the code it was checking does not hold.
+        Graph.LoopBacksFrom(Id("clarification")).ShouldAllBe(
+            edge => edge.On == LoopBackTrigger.OnSuccess);
+
+        Graph.LoopBacksFrom(Id("test")).ShouldAllBe(
+            edge => edge.On == LoopBackTrigger.OnFailure);
+    }
+
+    [Fact]
     public void Every_loop_back_targets_a_node_with_a_bounded_retry_budget()
     {
         // This is what stops a declared loop from being an unbounded one.

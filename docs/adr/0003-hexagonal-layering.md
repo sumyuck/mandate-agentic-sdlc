@@ -11,20 +11,20 @@ engine untestable without a database, and makes "what does the engine actually d
 impossible to answer in isolation — which is precisely the question this assessment asks.
 
 ## Decision
-`Helmsman.Core` owns the domain model *and* every port (interface) the engine needs.
-`Helmsman.Orchestrator` references **only** `Helmsman.Core`. Adapters
+`Mandate.Core` owns the domain model *and* every port (interface) the engine needs.
+`Mandate.Orchestrator` references **only** `Mandate.Core`. Adapters
 (`Persistence`, `Policy`, `Llm`, `Observability`, `Agents`) reference `Core` and are bound to
-ports in exactly one place: `Helmsman.Cli/Program.cs`.
+ports in exactly one place: `Mandate.Cli/Program.cs`.
 
 ## Alternatives considered
 | Option | Why we rejected it |
 |---|---|
 | Engine references adapters directly | Cannot unit-test scheduling, gating or rollback without SQLite, a policy file and a model provider. The governance logic would only ever be testable as an integration test. |
 | Single project | Nothing structurally prevents the engine from reaching into infrastructure; layering becomes a naming convention instead of a compiler-enforced constraint. |
-| Separate `Helmsman.Ports` project | An extra assembly whose contents are inseparable from the domain model they describe. |
+| Separate `Mandate.Ports` project | An extra assembly whose contents are inseparable from the domain model they describe. |
 
 ## Consequences
-- Engine behaviour is unit-testable with in-memory fakes; `Helmsman.Orchestrator.Tests` needs
+- Engine behaviour is unit-testable with in-memory fakes; `Mandate.Orchestrator.Tests` needs
   no infrastructure at all.
 - The dependency rule is enforced by the compiler: an adapter reference added to the
   orchestrator project is a visible, reviewable change to one `.csproj`.
@@ -32,5 +32,5 @@ ports in exactly one place: `Helmsman.Cli/Program.cs`.
   the binding.
 
 ## Validation
-`Helmsman.Orchestrator.csproj` must list exactly one `ProjectReference`: `Helmsman.Core`.
+`Mandate.Orchestrator.csproj` must list exactly one `ProjectReference`: `Mandate.Core`.
 This is asserted as an architecture test, not left to review.

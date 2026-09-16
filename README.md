@@ -1,17 +1,21 @@
-# Helmsman
+# Mandate
 
 **A governed agentic software-engineering system.**
-Helmsman turns a requirement into a reviewable engineering outcome by orchestrating the full
+Mandate turns a requirement into a reviewable engineering outcome by orchestrating the full
 SDLC — requirements, design, implementation, test, review, documentation, release readiness —
 as an explicit dependency graph with gates, policy guardrails, human approvals, bounded
 retries, rollback, and an audit chain you can verify.
 
-> **Principle:** the helmsman steers; the crew rows.
-> Agents execute inside declared autonomy boundaries. Humans own oversight, approvals, and
-> final quality.
+> **Principle:** agents execute under a mandate; humans grant it, bound it, and revoke it.
+>
+> In this domain a *mandate* is the document that states exactly what an agent may and may
+> not do on someone else's behalf — its limits, its prohibited actions, its reporting
+> obligations. That is precisely what an autonomy boundary is, which is why the system is
+> named for it. Agents execute inside declared boundaries. Humans own oversight, approvals,
+> and final quality.
 
 The system's proving ground is a real service: a **URL shortener** with create/redirect APIs,
-click analytics and reliability features, built and then modified *by* Helmsman rather than
+click analytics and reliability features, built and then modified *by* Mandate rather than
 by hand. Two products, one repository — the orchestrator is the deliverable, the service is
 the evidence that it works.
 
@@ -63,23 +67,23 @@ Without `make`:
 
 ```bash
 dotnet build --nologo && dotnet test --nologo
-dotnet run --project src/Helmsman.Cli -- info --json
+dotnet run --project src/Mandate.Cli -- info --json
 ```
 
 ## Repository layout
 
 ```
 src/
-  Helmsman.Core/          domain model and every port the engine depends on
-  Helmsman.Orchestrator/  the engine: scheduling, gates, retries, rollback, re-planning
-  Helmsman.Policy/        declarative security / compliance / change-control rules
-  Helmsman.Agents/        stage agents (requirements, design, implement, test, review, docs, release)
-  Helmsman.Llm/           model provider port, prompts, record/replay cassettes
-  Helmsman.Persistence/   event store, artifact store, git-backed workspace
-  Helmsman.Observability/ structured logs, traces, metrics, run reports
-  Helmsman.Cli/           `helmsman` - the sole composition root
-  Helmsman.Api/           read-only run inspection surface
-services/                 Product A: the URL shortener, produced by Helmsman runs
+  Mandate.Core/          domain model and every port the engine depends on
+  Mandate.Orchestrator/  the engine: scheduling, gates, retries, rollback, re-planning
+  Mandate.Policy/        declarative security / compliance / change-control rules
+  Mandate.Agents/        stage agents (requirements, design, implement, test, review, docs, release)
+  Mandate.Llm/           model provider port, prompts, record/replay cassettes
+  Mandate.Persistence/   event store, artifact store, git-backed workspace
+  Mandate.Observability/ structured logs, traces, metrics, run reports
+  Mandate.Cli/           `mandate` - the sole composition root
+  Mandate.Api/           read-only run inspection surface
+services/                 Product A: the URL shortener, produced by Mandate runs
 workflows/                the SDLC graph, policy packs, autonomy matrix
 prompts/                  versioned prompt templates and custom instructions
 runs/                     committed run evidence: events, artifacts, cassettes, metrics
@@ -127,7 +131,7 @@ Five choices shape everything else:
 3. **Rollback is a real revert.** Agents write into a per-run git workspace and each node
    commits its own output, so compensation reverts commits and the tree provably returns to
    its prior state. ([ADR-0006](docs/adr/0006-git-backed-workspace.md))
-4. **The engine depends on ports only.** `Helmsman.Orchestrator` references nothing but the
+4. **The engine depends on ports only.** `Mandate.Orchestrator` references nothing but the
    domain, so governance logic is unit-testable with no database, no policy file and no model
    provider. Enforced by a test, not a convention.
    ([ADR-0003](docs/adr/0003-hexagonal-layering.md))

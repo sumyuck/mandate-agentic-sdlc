@@ -11,7 +11,7 @@ is made rather than reconstructed afterwards.
 | ADR | Decision | Status |
 |---|---|---|
 | [0001](0001-orchestrator-in-dotnet.md) | Implement the orchestrator in C# / .NET, with no agent framework | Accepted |
-| [0002](0002-target-framework.md) | Target `net9.0`, with the TFM managed centrally | Accepted |
+| [0002](0002-target-framework.md) | Target .NET 10 (current LTS), TFM and SDK pinned centrally | Accepted |
 | [0003](0003-hexagonal-layering.md) | Engine depends on ports only; the CLI is the sole composition root | Accepted |
 | [0004](0004-declarative-workflow.md) | Workflows are declarative YAML graphs, not code | Accepted |
 | [0005](0005-event-sourced-state.md) | Run state is event-sourced in SQLite with a hash-chained audit log | Accepted |
@@ -19,5 +19,5 @@ is made rather than reconstructed afterwards.
 | [0007](0007-llm-record-replay.md) | LLM access sits behind a port with record/replay, so the submission runs offline | Accepted |
 
 Enforcement: ADR-0001, 0002 and 0003 are asserted by
-[`DependencyRuleTests`](../../tests/Helmsman.Orchestrator.Tests/Architecture/DependencyRuleTests.cs),
+[`DependencyRuleTests`](../../tests/Mandate.Orchestrator.Tests/Architecture/DependencyRuleTests.cs),
 so breaking them fails the build rather than the review.

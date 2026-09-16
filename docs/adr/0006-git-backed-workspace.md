@@ -12,7 +12,7 @@ evidence of what each node produced to be reviewable.
 
 ## Decision
 Each run executes against a git repository workspace at
-`.helmsman/workspaces/<runId>/`. Each node that writes code commits its own output, tagged
+`.mandate/workspaces/<runId>/`. Each node that writes code commits its own output, tagged
 with the node id and the run id. Compensation for a node is a real `git revert` of that
 node's commit, executed in reverse topological order. Safe-stop leaves the workspace at a
 known commit.

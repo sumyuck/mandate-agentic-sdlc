@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Mandate.Core\Mandate.Core.csproj" />
+    <ProjectReference Include="..\Mandate.Orchestrator\Mandate.Orchestrator.csproj" />
+    <ProjectReference Include="..\Mandate.Agents\Mandate.Agents.csproj" />
+    <ProjectReference Include="..\Mandate.Policy\Mandate.Policy.csproj" />
+    <ProjectReference Include="..\Mandate.Persistence\Mandate.Persistence.csproj" />
+    <ProjectReference Include="..\Mandate.Observability\Mandate.Observability.csproj" />
+    <ProjectReference Include="..\Mandate.Llm\Mandate.Llm.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Spectre.Console.Cli" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>mandate</AssemblyName>
+    <RootNamespace>Mandate.Cli</RootNamespace>
+  </PropertyGroup>
+
+</Project>

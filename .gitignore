@@ -18,10 +18,10 @@ coverage*.json
 *.coverage
 *.trx
 
-# ---- Helmsman runtime state ----
+# ---- Mandate runtime state ----
 # Durable run state + per-run git workspaces are machine-local.
 # Curated run EVIDENCE is committed under runs/ instead.
-.helmsman/
+.mandate/
 !runs/**
 
 # ---- Secrets ----

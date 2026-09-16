@@ -1,4 +1,4 @@
-# Helmsman - developer and reviewer entry points.
+# Mandate - developer and reviewer entry points.
 # Every target here is expected to work from a clean clone.
 
 SHELL := /bin/bash
@@ -7,7 +7,7 @@ SHELL := /bin/bash
 # Override if your .NET 8 SDK is not first on PATH, e.g.
 #   make build DOTNET=$$HOME/.dotnet/dotnet
 DOTNET ?= dotnet
-CLI := $(DOTNET) run --project src/Helmsman.Cli --
+CLI := $(DOTNET) run --project src/Mandate.Cli --
 
 .PHONY: help doctor restore build test format lint info clean verify
 
@@ -18,11 +18,11 @@ help: ## Show available targets
 doctor: ## Check the toolchain matches global.json
 	@printf 'requested SDK : %s\n' "$$(python3 -c 'import json;print(json.load(open("global.json"))["sdk"]["version"])')"
 	@printf 'resolved SDK  : %s\n' "$$($(DOTNET) --version 2>&1)"
-	@if $(DOTNET) --version >/dev/null 2>&1 && [[ "$$($(DOTNET) --version)" == 8.0.* ]]; then \
+	@if $(DOTNET) --version >/dev/null 2>&1 && [[ "$$($(DOTNET) --version)" == 10.0.* ]]; then \
 		echo "doctor: OK"; \
 	else \
-		echo "doctor: FAIL - a .NET 8 SDK is required (see docs/adr/0002-target-framework.md)."; \
-		echo "        install: curl -fsSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 8.0"; \
+		echo "doctor: FAIL - a .NET 10 SDK is required (see docs/adr/0002-target-framework.md)."; \
+		echo "        install: curl -fsSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 10.0"; \
 		echo "        then:    export PATH=\"\$$HOME/.dotnet:\$$PATH\""; \
 		exit 1; \
 	fi
@@ -50,4 +50,4 @@ verify: doctor build test lint ## Full local gate: toolchain, build, test, style
 
 clean: ## Remove build output and local run state
 	$(DOTNET) clean --nologo >/dev/null
-	rm -rf .helmsman
+	rm -rf .mandate

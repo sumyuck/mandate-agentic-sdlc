@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Mandate.Core\Mandate.Core.csproj" />
+    <ProjectReference Include="..\Mandate.Persistence\Mandate.Persistence.csproj" />
+    <ProjectReference Include="..\Mandate.Observability\Mandate.Observability.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <RootNamespace>Mandate.Api</RootNamespace>
+  </PropertyGroup>
+
+</Project>

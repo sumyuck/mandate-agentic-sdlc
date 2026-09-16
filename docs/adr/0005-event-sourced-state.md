@@ -15,7 +15,7 @@ that matters.
 Every state transition, decision, gate verdict, policy evaluation, approval and retry is an
 append-only `RunEvent` persisted in SQLite. Current run state is a projection over the event
 stream, never the source of truth. Each event stores the SHA-256 hash of its canonical bytes
-plus the hash of its predecessor, forming a chain per run. `helmsman audit verify <runId>`
+plus the hash of its predecessor, forming a chain per run. `mandate audit verify <runId>`
 re-walks the chain and detects any insertion, deletion or edit.
 
 ## Alternatives considered
@@ -31,7 +31,7 @@ re-walks the chain and detects any insertion, deletion or edit.
   *derived* from the event stream. None can be hardcoded, because none are stored.
 - Resume and replay fall out of the design rather than being bolted on.
 - Canonical serialization becomes load-bearing: reordering a persisted record's members
-  changes its hash. Locked down and tested in `HelmsmanJson` / `HelmsmanJsonTests`.
+  changes its hash. Locked down and tested in `MandateJson` / `MandateJsonTests`.
 - Reads cost a projection. Irrelevant at prototype scale; noted as a scaling limitation.
 
 ## Validation

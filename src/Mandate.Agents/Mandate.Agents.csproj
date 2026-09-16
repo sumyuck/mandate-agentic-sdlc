@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk"><!-- TargetFramework, nullability, analyzers and warnings-as-errors: Directory.Build.props -->
+
+
+  <ItemGroup>
+    <ProjectReference Include="..\Mandate.Core\Mandate.Core.csproj" />
+    <ProjectReference Include="..\Mandate.Llm\Mandate.Llm.csproj" />
+  </ItemGroup>
+</Project>

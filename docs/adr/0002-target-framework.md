@@ -1,50 +1,56 @@
-# ADR-0002: Target .NET 8 (LTS), with the TFM and SDK pinned centrally
+# ADR-0002: Target .NET 10 (current LTS), with the TFM and SDK pinned centrally
 
 - **Status:** Accepted
 - **Date:** 2026-09-16
 - **Decider:** Human (Muskan Jain)
-- **Supersedes:** an earlier draft of this record that targeted `net9.0` as a concession to
-  the build host. The host was fixed instead. Recorded here rather than quietly deleted,
-  because the reasoning matters: toolchain convenience is not a valid input to a
-  platform-targeting decision.
+- **Supersedes:** two earlier drafts of this record. The first targeted `net9.0` because that
+  was the only SDK the build host had. The second targeted `net8.0` on the stated grounds
+  that .NET 8 was "the current LTS" — which was true when .NET 8 shipped and is not true now.
+  Both are recorded rather than quietly deleted, because the corrections are the point:
+  toolchain convenience is not a valid input to a platform decision, and a support-lifecycle
+  claim has to be checked against the calendar rather than recalled.
 
 ## Context
-.NET 8 is the current LTS release and the version enterprise platforms — particularly in
-regulated financial environments, where support lifecycle is a compliance input rather than a
-preference — standardise on. The build host initially carried only the .NET 9 SDK and
-runtime, and its `dotnet new` templates would not offer `net8.0` as a target.
+.NET releases annually each November and alternates support terms: odd-numbered releases are
+LTS with three years of support, even-numbered are STS with two. As of September 2026:
+
+| Version | Term | Support ends |
+|---|---|---|
+| .NET 8 | LTS | **10 November 2026** |
+| .NET 9 | STS | already out of support (May 2026) |
+| **.NET 10** | **LTS** | **November 2028** |
+
+This system is written for a regulated financial platform. In that setting the support
+lifecycle of a runtime is a compliance input — an unsupported runtime is an audit finding,
+not an inconvenience. A greenfield prototype that targets a framework leaving support eight
+weeks from now would be a defect in the decision, however well the code was written.
 
 ## Decision
-Target **`net8.0`**. Declare it exactly once, as `$(HelmsmanTargetFramework)` in
-`Directory.Build.props`; no project declares its own `TargetFramework`. Pin the SDK to
-`8.0.425` with `rollForward: latestFeature` in `global.json`, so every build — local and CI —
-uses the same LTS SDK band.
-
-Where the host was short a toolchain, we installed it. A .NET 8 SDK was installed into a
-dedicated, self-consistent root (`~/.dotnet`) rather than being layered into the existing
-Homebrew installation: mixing Microsoft-signed host binaries with Homebrew-built ones in a
-single root breaks macOS library validation and the host is killed on launch. Two clean roots
-beat one mixed root.
+Target **`net10.0`**, the current LTS. Declare it exactly once, as
+`$(MandateTargetFramework)` in `Directory.Build.props`; no project declares its own
+`TargetFramework`. Pin the SDK to `10.0.400` with `rollForward: latestFeature` in
+`global.json`, so local and CI builds use the same LTS band.
 
 ## Alternatives considered
 | Option | Why we rejected it |
 |---|---|
-| Target `net9.0` because that is what the host had | Ships the prototype on a non-LTS runtime and lets tooling dictate a platform decision. The support lifecycle is a real constraint for the target environment; the missing SDK was not. |
-| Multi-target `net8.0;net9.0` | Doubles build and test time and adds conditional-compilation surface for no assessment value. Nothing here needs to be library-portable. |
-| Per-project `<TargetFramework>` | Invites drift across 12+ projects and turns a retarget into a 12-file change. |
-| Layer the .NET 8 SDK into the Homebrew root | Tried; the mixed-signature host is SIGKILLed by macOS library validation. Diagnosed and abandoned in favour of a separate clean root. |
+| `net8.0` | Leaves support on 10 November 2026. Defensible only as "match what the client runs today mid-migration", which is an argument for maintaining existing code, not for starting new code. A reviewer would be right to ask why a new system was started on an expiring runtime. |
+| `net9.0` | Already out of support, and was only ever a concession to which SDK the build host happened to have installed. |
+| Multi-target `net8.0;net10.0` | Doubles build and test time and adds conditional-compilation surface for no assessment value. Nothing here needs to be library-portable. |
+| Per-project `<TargetFramework>` | Invites drift across 12+ projects and turns a retarget into a 12-file change — which is exactly the cost this decision has now paid off twice. |
 
 ## Consequences
-- The prototype runs on a supported LTS runtime, matching the environment it is written for.
-- Retargeting is a one-line edit, guarded by `DependencyRuleTests`, which fails the build if
-  any project declares its own TFM.
-- Local development needs the .NET 8 SDK ahead of a newer one on `PATH`. `make doctor`
-  reports the mismatch with the exact fix rather than leaving a confusing restore error.
-- CI is unambiguous: `actions/setup-dotnet` reads `global.json`, so the pin is the single
-  source of truth for both environments.
+- The prototype runs on a runtime supported until November 2028.
+- Retargeting stays a one-line edit, guarded by `DependencyRuleTests`, which fails the build
+  if any project declares its own TFM. That guard is why correcting this decision twice cost
+  one line each time instead of a sweep through the solution.
+- The host's default toolchain (Homebrew, .NET 10.0.400) now satisfies `global.json`, so no
+  `PATH` manipulation is needed to build the repository.
+- Code may use post-.NET-8 APIs. `Sha256Hash` now uses `Convert.ToHexStringLower` rather than
+  hashing to uppercase hex and lowering it in a second allocation.
 
 ## Validation
 - `grep -r "<TargetFramework>" src tests services` returns only `Directory.Build.props`
   (asserted by `DependencyRuleTests.No_project_declares_its_own_target_framework`).
-- `dotnet --version` inside the repository reports an `8.0.4xx` SDK.
+- `make doctor` fails with a remediation hint unless the resolved SDK is `10.0.*`.
 - `BuildInfoTests.Target_framework_is_known` fails if the compiled moniker drifts.

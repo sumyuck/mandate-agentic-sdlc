@@ -125,6 +125,53 @@ public sealed class EngineConfigurationTests
     }
 
     [Fact]
+    public void A_node_naming_an_unregistered_compensating_action_is_refused()
+    {
+        // A node that cannot be undone must not claim it can — least of all discovered at the
+        // moment the run most needs to undo something.
+        WorkflowDefinition definition = WorkflowFixtures.Definition(
+            [WorkflowFixtures.Node("a") with { Compensation = "wave-a-wand" }], []);
+
+        EngineConfigurationException error = Should.Throw<EngineConfigurationException>(
+            () => Build(definition, agents: new StageAgentRegistry(
+                [new Agents.Scripted.ScriptedStageAgent("a-agent")])));
+
+        error.Problems.ShouldContain(problem =>
+            problem.Contains("wave-a-wand", StringComparison.Ordinal));
+        error.Message.ShouldContain("must not claim it can");
+    }
+
+    [Theory]
+    [InlineData(FallbackStrategy.DegradedAgent)]
+    [InlineData(FallbackStrategy.SkipWithWaiver)]
+    public void A_fallback_this_build_cannot_perform_is_refused_at_construction(
+        FallbackStrategy unsupported)
+    {
+        // Declarable in the schema, not yet performable. Refusing here beats discovering it
+        // when the fallback is actually needed.
+        WorkflowDefinition definition = WorkflowFixtures.Definition(
+            [
+                WorkflowFixtures.Node("a") with
+                {
+                    Retry = RetryPolicy.Default with { OnExhaustion = unsupported },
+                },
+            ],
+            []);
+
+        EngineConfigurationException error = Should.Throw<EngineConfigurationException>(
+            () => Build(definition, agents: new StageAgentRegistry(
+                [new Agents.Scripted.ScriptedStageAgent("a-agent")])));
+
+        error.Message.ShouldContain("cannot perform");
+        error.Message.ShouldContain("fail-node, human-handoff, compensate");
+    }
+
+    [Fact]
+    public void Two_compensating_actions_claiming_the_same_id_are_refused() =>
+        Should.Throw<ArgumentException>(() => new Compensation.CompensationRegistry(
+            [new Compensation.RevertNodeCommitAction(), new Compensation.RevertNodeCommitAction()]));
+
+    [Fact]
     public void A_run_must_be_initiated_by_a_named_human()
     {
         // A run with no accountable requester is not auditable.

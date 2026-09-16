@@ -28,7 +28,11 @@ internal sealed class RunExecution(
     IRunJournal journal,
     IClock clock,
     EngineOptions options,
-    RunRequest request) : IDisposable
+    RunRequest request,
+    ICompensationRegistry compensations,
+    IRunWorkspaceFactory workspaces,
+    IDelay delay,
+    ISafeStopMonitor safeStop) : IDisposable
 {
     private static readonly NodeId EngineNode = NodeId.Parse(WorkflowContextKeys.EngineNodeId);
 
@@ -46,6 +50,9 @@ internal sealed class RunExecution(
 
     private RunState _state = RunState.Empty(request.Id);
     private RunEvent? _tail;
+    private IRunWorkspace _workspace = null!;
+    private NodeId? _rollbackTrigger;
+    private bool _safeStopped;
 
     public async Task<RunOutcome> ExecuteAsync(CancellationToken cancellationToken)
     {
@@ -56,7 +63,16 @@ internal sealed class RunExecution(
             RunEventKind.RunStarted, null, Actor.Engine,
             new RunStartedPayload(Resumed: false), cancellationToken).ConfigureAwait(false);
 
+        _workspace = await workspaces.CreateAsync(request.Id, cancellationToken)
+            .ConfigureAwait(false);
+
         await ScheduleUntilQuiescentAsync(cancellationToken).ConfigureAwait(false);
+
+        if (_rollbackTrigger is { } trigger)
+        {
+            await RollBackRunAsync(trigger, cancellationToken).ConfigureAwait(false);
+        }
+
         await BlockUnmetPreconditionsAsync(cancellationToken).ConfigureAwait(false);
 
         (RunStatus status, string reason) = Conclude();
@@ -76,6 +92,23 @@ internal sealed class RunExecution(
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
+
+            // Checked between passes, not mid-stage: stopping cleanly means stopping where the
+            // run's state is coherent. Interrupting a stage half-way would leave the workspace
+            // in a condition no node declared.
+            if (await safeStop.IsStopRequestedAsync(request.Id, cancellationToken)
+                    .ConfigureAwait(false))
+            {
+                await SafeStopAsync(cancellationToken).ConfigureAwait(false);
+                return;
+            }
+
+            if (_rollbackTrigger is not null)
+            {
+                // A node has asked for the run to be undone. Stop scheduling new work rather
+                // than racing compensation against stages still starting.
+                return;
+            }
 
             bool progressed = await ResolveGuardsAsync(cancellationToken).ConfigureAwait(false);
 
@@ -334,48 +367,331 @@ internal sealed class RunExecution(
 
     // ---- node execution ----
 
+    /// <summary>
+    /// Runs one node, retrying within its declared budget and applying its fallback when the
+    /// budget is spent.
+    /// </summary>
+    /// <remarks>
+    /// Retries loop here rather than going back through the scheduler, so a node's attempts
+    /// stay a property of that node. Each attempt is a real state transition — Running to
+    /// Failed to Ready to Running — so the audit log shows the retries as retries, and the
+    /// state machine refuses any path the governance model does not allow.
+    /// </remarks>
     private async Task ExecuteNodeAsync(WorkflowNode node, CancellationToken cancellationToken)
     {
         Actor actor = Actor.Agent(node.Agent);
-        int attempt = _state.Nodes[node.Id].AttemptsMade + 1;
 
-        await TransitionAsync(
-            node.Id, NodeState.Running, Actor.Engine,
-            $"Attempt {attempt} of {node.Retry.MaxAttempts}.", cancellationToken)
-            .ConfigureAwait(false);
-
-        await AppendAsync(
-            RunEventKind.NodeAttemptStarted, node.Id, Actor.Engine,
-            new NodeAttemptStartedPayload(
-                attempt, node.Agent, node.Model, node.Autonomy.ToString()),
-            cancellationToken).ConfigureAwait(false);
-
-        long startedTicks = Stopwatch.GetTimestamp();
-        StageResult result = await InvokeAgentAsync(node, attempt, actor, cancellationToken)
-            .ConfigureAwait(false);
-        long elapsedMilliseconds = (long)Stopwatch.GetElapsedTime(startedTicks).TotalMilliseconds;
-
-        await AppendAsync(
-            RunEventKind.NodeAttemptFinished, node.Id, Actor.Engine,
-            new NodeAttemptFinishedPayload(
-                attempt, result.Succeeded, result.Failure, elapsedMilliseconds),
-            cancellationToken).ConfigureAwait(false);
-
-        // Recorded even on failure: a partial result is evidence about what went wrong, and
-        // is what compensation needs in order to undo cleanly.
-        await RecordProductionAsync(node, actor, result, cancellationToken).ConfigureAwait(false);
-
-        if (!result.Succeeded)
+        while (true)
         {
+            int attempt = _state.Nodes[node.Id].AttemptsMade + 1;
+
             await TransitionAsync(
-                node.Id, NodeState.Failed, Actor.Engine,
-                result.Failure ?? "The stage reported failure without a reason.",
+                node.Id, NodeState.Running, Actor.Engine,
+                $"Attempt {attempt} of {node.Retry.MaxAttempts}.", cancellationToken)
+                .ConfigureAwait(false);
+
+            await AppendAsync(
+                RunEventKind.NodeAttemptStarted, node.Id, Actor.Engine,
+                new NodeAttemptStartedPayload(
+                    attempt, node.Agent, node.Model, node.Autonomy.ToString()),
                 cancellationToken).ConfigureAwait(false);
 
+            long startedTicks = Stopwatch.GetTimestamp();
+            StageResult result = await InvokeAgentAsync(node, attempt, actor, cancellationToken)
+                .ConfigureAwait(false);
+            long elapsedMilliseconds = (long)Stopwatch.GetElapsedTime(startedTicks).TotalMilliseconds;
+
+            await AppendAsync(
+                RunEventKind.NodeAttemptFinished, node.Id, Actor.Engine,
+                new NodeAttemptFinishedPayload(
+                    attempt, result.Succeeded, result.Failure, elapsedMilliseconds),
+                cancellationToken).ConfigureAwait(false);
+
+            if (result.Succeeded)
+            {
+                string? refusal = await TryApplyWorkspaceChangesAsync(
+                    node, attempt, actor, result, cancellationToken).ConfigureAwait(false);
+
+                if (refusal is null)
+                {
+                    await RecordProductionAsync(node, actor, result, cancellationToken)
+                        .ConfigureAwait(false);
+
+                    await ApplyExitGateAsync(node, actor, cancellationToken).ConfigureAwait(false);
+                    return;
+                }
+
+                // The stage said it succeeded, but what it proposed could not be applied. That
+                // is a failed stage, not a failed engine: it belongs in the same retry,
+                // fallback and compensation machinery as any other failure.
+                result = StageResult.Failed(refusal, result.Artifacts, result.Decisions);
+            }
+
+            // A failed attempt may have left half-written files. They are not a change any
+            // node declared, so they are discarded before anything else happens.
+            await _workspace.DiscardUncommittedAsync(cancellationToken).ConfigureAwait(false);
+
+            await RecordProductionAsync(node, actor, result, cancellationToken)
+                .ConfigureAwait(false);
+
+            string failure = result.Failure ?? "The stage reported failure without a reason.";
+
+            await TransitionAsync(node.Id, NodeState.Failed, Actor.Engine, failure, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (!node.Retry.PermitsRetryAfter(attempt))
+            {
+                await ApplyFallbackAsync(node, attempt, failure, cancellationToken)
+                    .ConfigureAwait(false);
+
+                return;
+            }
+
+            TimeSpan backoff = WithJitter(node.Retry, node.Retry.BackoffBefore(attempt + 1));
+
+            await AppendAsync(
+                RunEventKind.NodeRetryScheduled, node.Id, Actor.Engine,
+                new RetryPayload(
+                    attempt + 1, node.Retry.MaxAttempts, backoff.TotalSeconds, failure),
+                cancellationToken).ConfigureAwait(false);
+
+            await delay.WaitAsync(backoff, cancellationToken).ConfigureAwait(false);
+
+            // Back through Ready, so the retry is visible as one in the log and the state
+            // machine gets to refuse it if the governance model ever says it should.
+            await TransitionAsync(
+                node.Id, NodeState.Ready, Actor.Engine,
+                $"Retrying after attempt {attempt}.", cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// Adds jitter to a backoff.
+    /// </summary>
+    /// <remarks>
+    /// Without it, several stages that failed together would retry together, which is how a
+    /// transient upstream problem becomes a repeated thundering herd against the thing that
+    /// was already struggling.
+    /// </remarks>
+    private static TimeSpan WithJitter(RetryPolicy policy, TimeSpan backoff)
+    {
+        if (backoff <= TimeSpan.Zero || policy.JitterRatio <= 0)
+        {
+            return backoff;
+        }
+
+        double spread = backoff.TotalSeconds * policy.JitterRatio;
+        double offset = (Random.Shared.NextDouble() * 2 - 1) * spread;
+
+        return TimeSpan.FromSeconds(Math.Max(0, backoff.TotalSeconds + offset));
+    }
+
+    /// <summary>Applies the node's declared fallback once its retry budget is spent.</summary>
+    private async Task ApplyFallbackAsync(
+        WorkflowNode node, int attempts, string failure, CancellationToken cancellationToken)
+    {
+        await AppendAsync(
+            RunEventKind.NodeRetryBudgetExhausted, node.Id, Actor.Engine,
+            new RetryPayload(attempts, node.Retry.MaxAttempts, 0, failure),
+            cancellationToken).ConfigureAwait(false);
+
+        FallbackStrategy strategy = node.Retry.OnExhaustion;
+
+        await AppendAsync(
+            RunEventKind.NodeFallbackSelected, node.Id, Actor.Engine,
+            new FallbackSelectedPayload(
+                strategy.ToString(),
+                $"'{node.Id}' failed {attempts} attempt(s): {failure}"),
+            cancellationToken).ConfigureAwait(false);
+
+        switch (strategy)
+        {
+            case FallbackStrategy.HumanHandoff:
+                // Blocked rather than failed: the run is not beyond saving, it needs someone
+                // to look at it. The distinction matters to whoever reads the outcome.
+                await TransitionAsync(
+                    node.Id, NodeState.Blocked, Actor.Engine,
+                    $"Exhausted {attempts} attempt(s) and handed off to a human: {failure}",
+                    cancellationToken).ConfigureAwait(false);
+                break;
+
+            case FallbackStrategy.Compensate:
+                _rollbackTrigger = node.Id;
+                break;
+
+            case FallbackStrategy.FailNode:
+            default:
+                // Already Failed; the run's conclusion reports it.
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Undoes the run's effects, newest work first.
+    /// </summary>
+    /// <remarks>
+    /// Reverse topological order because later work was built on earlier work: undoing a
+    /// design before the implementation that depends on it would leave the tree in a state
+    /// that never existed. Nodes with nothing to undo are left as they are — marking them
+    /// rolled back would claim an action that never happened.
+    /// </remarks>
+    private async Task RollBackRunAsync(NodeId trigger, CancellationToken cancellationToken)
+    {
+        await AppendAsync(
+            RunEventKind.NodeCompensationStarted, trigger, Actor.Engine,
+            new FallbackSelectedPayload(
+                FallbackStrategy.Compensate.ToString(),
+                $"'{trigger}' exhausted its retries; undoing the run's effects."),
+            cancellationToken).ConfigureAwait(false);
+
+        foreach (NodeId nodeId in graph.TopologicalOrder.Reverse())
+        {
+            NodeState state = _state.StateOf(nodeId);
+
+            if (state is not (NodeState.Succeeded or NodeState.Failed))
+            {
+                continue;
+            }
+
+            WorkflowNode node = graph.Node(nodeId);
+
+            if (!node.IsCompensable)
+            {
+                continue;
+            }
+
+            ICompensationAction action = compensations.Resolve(node.Compensation!)
+                                         ?? throw new EngineConfigurationException(
+                                             $"Compensating action '{node.Compensation}' "
+                                             + "disappeared from the registry mid-run.");
+
+            await TransitionAsync(
+                nodeId, NodeState.Compensating, Actor.Engine,
+                $"Undoing with '{action.Id}'.", cancellationToken).ConfigureAwait(false);
+
+            CompensationResult result = await action
+                .ExecuteAsync(new CompensationContext(request.Id, node, _workspace), cancellationToken)
+                .ConfigureAwait(false);
+
+            WorkspaceStatus status = await _workspace.StatusAsync(cancellationToken)
+                .ConfigureAwait(false);
+
+            await AppendAsync(
+                RunEventKind.WorkspaceReverted, nodeId, Actor.Engine,
+                new WorkspaceRevertedPayload(
+                    0, status.HeadSha, status.IsClean, result.Detail),
+                cancellationToken).ConfigureAwait(false);
+
+            await AppendAsync(
+                RunEventKind.NodeCompensationCompleted, nodeId, Actor.Engine,
+                new CompensationPayload(action.Id, result.Undone, result.Detail),
+                cancellationToken).ConfigureAwait(false);
+
+            await TransitionAsync(
+                nodeId,
+                result.Undone ? NodeState.RolledBack : NodeState.Failed,
+                Actor.Engine,
+                result.Detail,
+                cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>Halts the run at a coherent boundary, preserving what has been done.</summary>
+    private async Task SafeStopAsync(CancellationToken cancellationToken)
+    {
+        await AppendAsync(
+            RunEventKind.SafeStopRequested, null, Actor.Engine,
+            new SafeStopPayload("operator", 0, "A stop was requested for this run."),
+            cancellationToken).ConfigureAwait(false);
+
+        int cancelled = 0;
+
+        foreach (NodeId nodeId in graph.TopologicalOrder)
+        {
+            // Only work that is still outstanding. A stage that already succeeded did
+            // succeed, and relabelling it would make the log state something untrue.
+            if (!NodeStateMachine.Cancellable.Contains(_state.StateOf(nodeId)))
+            {
+                continue;
+            }
+
+            await TransitionAsync(
+                nodeId, NodeState.Cancelled, Actor.Engine,
+                "Cancelled by a safe stop.", cancellationToken).ConfigureAwait(false);
+
+            cancelled++;
+        }
+
+        await AppendAsync(
+            RunEventKind.SafeStopCompleted, null, Actor.Engine,
+            new SafeStopPayload(
+                "operator",
+                cancelled,
+                $"Halted at a safe boundary with {cancelled} node(s) cancelled. Completed work "
+                + "is preserved and the run can be inspected."),
+            cancellationToken).ConfigureAwait(false);
+
+        _safeStopped = true;
+    }
+
+    /// <summary>Applies and commits the files a stage proposed.</summary>
+    /// <remarks>
+    /// The engine writes, not the agent. Every path is validated against the workspace
+    /// boundary before anything touches the disk, which is what makes "the agent may act in
+    /// the run workspace" a constraint rather than a description.
+    /// </remarks>
+    private async Task<string?> TryApplyWorkspaceChangesAsync(
+        WorkflowNode node,
+        int attempt,
+        Actor actor,
+        StageResult result,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await ApplyWorkspaceChangesAsync(node, attempt, actor, result, cancellationToken)
+                .ConfigureAwait(false);
+
+            return null;
+        }
+        catch (InvalidOperationException refusal)
+        {
+            return refusal.Message;
+        }
+    }
+
+    private async Task ApplyWorkspaceChangesAsync(
+        WorkflowNode node,
+        int attempt,
+        Actor actor,
+        StageResult result,
+        CancellationToken cancellationToken)
+    {
+        if (result.Files.IsEmpty)
+        {
             return;
         }
 
-        await ApplyExitGateAsync(node, actor, cancellationToken).ConfigureAwait(false);
+        WorkspaceCommit? commit = await _workspace.CommitAsync(
+            node.Id,
+            attempt,
+            result.Files,
+            $"{node.Id}: {node.Stage}",
+            cancellationToken).ConfigureAwait(false);
+
+        if (commit is null)
+        {
+            return;
+        }
+
+        await AppendAsync(
+            RunEventKind.WorkspaceCommitted, node.Id, actor,
+            new WorkspaceCommittedPayload(
+                commit.Sha,
+                attempt,
+                commit.FilesChanged,
+                [.. result.Files.Select(file => file.RelativePath).Order(StringComparer.Ordinal)]),
+            cancellationToken).ConfigureAwait(false);
     }
 
     private async Task<StageResult> InvokeAgentAsync(
@@ -712,9 +1028,38 @@ internal sealed class RunExecution(
         ImmutableArray<NodeId> awaiting =
             [.. nodes.Where(node => node.State == NodeState.AwaitingApproval).Select(node => node.Id)];
 
-        // Status is the most serious thing that happened; the reason names everything a human
-        // would need to act on, because a run stopped by a policy block may also have a
-        // signature waiting, and reporting only one of them wastes a round trip.
+        // An operator stop and a rollback are statements about the run as a whole, so they
+        // outrank anything an individual node ended up in: reporting "failed" for a run the
+        // operator deliberately halted, or for one whose effects were undone on purpose,
+        // would misdescribe what happened.
+        if (_safeStopped)
+        {
+            ImmutableArray<NodeId> cancelled =
+                [.. nodes.Where(node => node.State == NodeState.Cancelled).Select(node => node.Id)];
+
+            return (
+                RunStatus.SafeStopped,
+                $"Halted at a safe boundary with {cancelled.Length} node(s) cancelled. "
+                + "Completed work is preserved.");
+        }
+
+        if (_rollbackTrigger is { } trigger)
+        {
+            ImmutableArray<NodeId> undone =
+                [.. nodes.Where(node => node.State == NodeState.RolledBack).Select(node => node.Id)];
+
+            return (
+                RunStatus.RolledBack,
+                $"Rolled back after '{trigger}' exhausted its retries. "
+                + (undone.IsEmpty
+                    ? "No stage had effects to undo."
+                    : $"Undone, newest first: {Name(undone)}.")
+                + " Both the changes and their reversals remain in the workspace history.");
+        }
+
+        // Status is otherwise the most serious thing that happened; the reason names
+        // everything a human would need to act on, because a run stopped by a policy block
+        // may also have a signature waiting, and reporting only one wastes a round trip.
         ImmutableArray<string> notes =
         [
             .. new[]

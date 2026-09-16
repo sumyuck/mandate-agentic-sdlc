@@ -11,11 +11,14 @@ public sealed partial class RunCommandTests
     private static string ShippedWorkflow => Path.Combine(
         RepositoryRoot.Path, "workflows", "sdlc.v1.yaml");
 
+    private static string Template => Path.Combine(RepositoryRoot.Path, "templates", "service");
+
     private static CliResult Run(TemporaryWorkspace workspace, string scenario, params string[] extra) =>
         CliHarness.Run(
         [
             "run", "Do the thing", "--scenario", scenario,
             "--workflow", ShippedWorkflow, "--store", workspace.Store, "--as", "tester",
+            "--workspace-root", workspace.Path_("workspaces"), "--template", Template,
             .. extra,
         ]);
 
@@ -56,6 +59,39 @@ public sealed partial class RunCommandTests
     }
 
     [Fact]
+    public void A_missing_workspace_template_is_reported_as_a_sentence_not_a_stack_trace()
+    {
+        // The template path is relative to the working directory, so running from the wrong
+        // place is an easy mistake and should read like one.
+        using TemporaryWorkspace workspace = new();
+
+        CliResult result = CliHarness.Run(
+            "run", "Do the thing", "--workflow", ShippedWorkflow, "--store", workspace.Store,
+            "--template", workspace.Path_("no-such-template"));
+
+        result.ExitCode.ShouldBe(ExitCode.BadInput);
+        result.Rendered.ShouldContain("no workspace template");
+        result.Rendered.ShouldContain("--template");
+    }
+
+    [Fact]
+    public void A_run_writes_its_output_into_a_workspace()
+    {
+        using TemporaryWorkspace workspace = new();
+
+        Run(workspace, "greenfield");
+
+        string root = workspace.Path_("workspaces");
+        Directory.Exists(root).ShouldBeTrue();
+
+        // Seeded from the template, then extended by the stages that ran.
+        string[] created = Directory.GetDirectories(root);
+        created.Length.ShouldBe(1);
+        File.Exists(Path.Combine(created[0], "Program.cs")).ShouldBeTrue();
+        File.Exists(Path.Combine(created[0], "docs", "design.md")).ShouldBeTrue();
+    }
+
+    [Fact]
     public void An_unrecognised_scenario_is_refused_before_anything_runs()
     {
         using TemporaryWorkspace workspace = new();
@@ -74,7 +110,7 @@ public sealed partial class RunCommandTests
 
         CliResult result = CliHarness.Run(
             "run", "Do the thing", "--workflow", "does/not/exist.yaml",
-            "--store", workspace.Store);
+            "--store", workspace.Store, "--template", Template);
 
         result.ExitCode.ShouldBe(ExitCode.BadInput);
         result.Rendered.ShouldContain("cannot load workflow");

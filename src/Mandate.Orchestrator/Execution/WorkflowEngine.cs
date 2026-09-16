@@ -36,6 +36,10 @@ public sealed class WorkflowEngine
     private readonly IRunJournal _journal;
     private readonly IClock _clock;
     private readonly EngineOptions _options;
+    private readonly ICompensationRegistry _compensations;
+    private readonly IRunWorkspaceFactory _workspaces;
+    private readonly IDelay _delay;
+    private readonly ISafeStopMonitor _safeStop;
 
     /// <summary>Creates an engine for one workflow, validating that it can be executed.</summary>
     /// <exception cref="EngineConfigurationException">Some component the workflow needs is missing.</exception>
@@ -45,7 +49,11 @@ public sealed class WorkflowEngine
         IGateEvaluatorRegistry gates,
         IRunJournal journal,
         IClock clock,
-        EngineOptions? options = null)
+        EngineOptions? options = null,
+        ICompensationRegistry? compensations = null,
+        IRunWorkspaceFactory? workspaces = null,
+        IDelay? delay = null,
+        ISafeStopMonitor? safeStop = null)
     {
         ArgumentNullException.ThrowIfNull(graph);
         ArgumentNullException.ThrowIfNull(agents);
@@ -59,8 +67,12 @@ public sealed class WorkflowEngine
         _journal = journal;
         _clock = clock;
         _options = (options ?? EngineOptions.Default).Validated();
+        _compensations = compensations ?? Compensation.CompensationRegistry.BuiltIn();
+        _workspaces = workspaces ?? NoWorkspaceFactory.Instance;
+        _delay = delay ?? RealDelay.Instance;
+        _safeStop = safeStop ?? NeverStops.Instance;
 
-        ImmutableArray<string> problems = FindUnmetRequirements(graph, agents, gates);
+        ImmutableArray<string> problems = FindUnmetRequirements(graph, agents, gates, _compensations);
 
         if (!problems.IsEmpty)
         {
@@ -78,7 +90,8 @@ public sealed class WorkflowEngine
         ArgumentNullException.ThrowIfNull(request);
 
         using RunExecution execution = new(
-            _graph, _agents, _gates, _journal, _clock, _options, request);
+            _graph, _agents, _gates, _journal, _clock, _options, request,
+            _compensations, _workspaces, _delay, _safeStop);
 
         return await execution.ExecuteAsync(cancellationToken).ConfigureAwait(false);
     }
@@ -91,12 +104,16 @@ public sealed class WorkflowEngine
     /// next missing piece on the next attempt.
     /// </remarks>
     public static ImmutableArray<string> FindUnmetRequirements(
-        WorkflowGraph graph, IStageAgentRegistry agents, IGateEvaluatorRegistry gates)
+        WorkflowGraph graph,
+        IStageAgentRegistry agents,
+        IGateEvaluatorRegistry gates,
+        ICompensationRegistry? compensations = null)
     {
         ArgumentNullException.ThrowIfNull(graph);
         ArgumentNullException.ThrowIfNull(agents);
         ArgumentNullException.ThrowIfNull(gates);
 
+        ICompensationRegistry actions = compensations ?? Compensation.CompensationRegistry.BuiltIn();
         ImmutableArray<string>.Builder problems = ImmutableArray.CreateBuilder<string>();
 
         foreach (WorkflowNode node in graph.Nodes.OrderBy(node => node.Id.Value, StringComparer.Ordinal))
@@ -117,6 +134,26 @@ public sealed class WorkflowEngine
                         + $"condition kind '{condition.Kind}', which nothing can judge. "
                         + $"Known kinds: {Describe(gates.KnownKinds)}.");
                 }
+            }
+
+            if (node.IsCompensable && actions.Resolve(node.Compensation!) is null)
+            {
+                problems.Add(
+                    $"Node '{node.Id}' names compensating action '{node.Compensation}', which is "
+                    + $"not registered. Known actions: {Describe(actions.KnownActions)}. A node "
+                    + "that cannot be undone must not claim it can.");
+            }
+
+            // Two fallback strategies are declarable but not yet performable. Refusing them at
+            // construction is the honest handling: the alternative is discovering it at the
+            // moment the run most needs the fallback to work.
+            if (node.Retry.OnExhaustion is FallbackStrategy.DegradedAgent
+                or FallbackStrategy.SkipWithWaiver)
+            {
+                problems.Add(
+                    $"Node '{node.Id}' falls back to '{node.Retry.OnExhaustion}', which this "
+                    + "build cannot perform. Supported strategies: fail-node, human-handoff, "
+                    + "compensate.");
             }
         }
 

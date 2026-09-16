@@ -31,12 +31,19 @@ public sealed record StageExecution(
 
 /// <summary>What a stage agent produced.</summary>
 /// <param name="Succeeded">Whether the stage completed its work.</param>
+/// <param name="Files">
+/// Files the stage proposes to write into the run workspace. The stage does not write them:
+/// the engine validates every path and applies them as that node's commit, which is what
+/// makes "the agent may act in the workspace" a boundary the engine enforces rather than a
+/// description of intended behaviour.
+/// </param>
 /// <param name="Artifacts">Artifacts produced, with provenance.</param>
 /// <param name="Facts">Context facts contributed for later stages and for guards.</param>
 /// <param name="Decisions">Choices made, with the options rejected and the rationale.</param>
 /// <param name="Failure">Why the stage did not complete, when it did not.</param>
 public sealed record StageResult(
     bool Succeeded,
+    ImmutableArray<WorkspaceFile> Files,
     ImmutableArray<Artifact> Artifacts,
     ImmutableArray<ContextFact> Facts,
     ImmutableArray<Decision> Decisions,
@@ -46,9 +53,11 @@ public sealed record StageResult(
     public static StageResult Success(
         IEnumerable<Artifact>? artifacts = null,
         IEnumerable<ContextFact>? facts = null,
-        IEnumerable<Decision>? decisions = null) =>
+        IEnumerable<Decision>? decisions = null,
+        IEnumerable<WorkspaceFile>? files = null) =>
         new(
             Succeeded: true,
+            Files: files is null ? [] : [.. files],
             Artifacts: artifacts is null ? [] : [.. artifacts],
             Facts: facts is null ? [] : [.. facts],
             Decisions: decisions is null ? [] : [.. decisions],
@@ -70,6 +79,10 @@ public sealed record StageResult(
 
         return new StageResult(
             Succeeded: false,
+            // A failed stage proposes no files. Anything it half-wrote is not a change we
+            // want applied, and discarding it keeps the workspace at a state some node
+            // declared rather than one nobody did.
+            Files: [],
             Artifacts: artifacts is null ? [] : [.. artifacts],
             Facts: [],
             Decisions: decisions is null ? [] : [.. decisions],

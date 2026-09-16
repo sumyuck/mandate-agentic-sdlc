@@ -117,6 +117,12 @@ public enum RunEventKind
     /// <summary>A fact was added to the shared run context.</summary>
     ContextFactAdded = 42,
 
+    /// <summary>A node's output was committed to the run workspace.</summary>
+    WorkspaceCommitted = 43,
+
+    /// <summary>A node's commits were reverted, undoing its effect on the workspace.</summary>
+    WorkspaceReverted = 44,
+
     // ---- Re-planning ----
 
     /// <summary>An input to an accepted node changed, invalidating its result.</summary>

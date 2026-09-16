@@ -9,4 +9,10 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Data.Sqlite" />
   </ItemGroup>
+
+  <ItemGroup>
+    <!-- The workspace tests read git metadata directly to confirm what was actually written. -->
+    <InternalsVisibleTo Include="Mandate.Persistence.Tests" />
+  </ItemGroup>
+
 </Project>

@@ -46,6 +46,11 @@ internal static class Program
             .WithExample("run", "\"Build a URL shortener\"", "--scenario", "greenfield")
             .WithExample("run", "\"Add click analytics\"", "--scenario", "brownfield");
 
+        config.AddCommand<StopRunCommand>("stop")
+            .WithDescription("Ask a run to halt at its next safe boundary.")
+            .WithExample("stop", "run_20260916T142500Z_a1b2c3")
+            .WithExample("stop", "run_20260916T142500Z_a1b2c3", "--clear");
+
         config.AddBranch("runs", runs =>
         {
             runs.SetDescription("Inspect and export recorded runs.");

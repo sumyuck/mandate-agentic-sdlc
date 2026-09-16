@@ -87,8 +87,9 @@ public sealed class ScriptedStageAgent(string id, ScriptedBehaviour? behaviour =
         ImmutableArray<Artifact> artifacts = ProduceArtifacts(execution);
         ImmutableArray<ContextFact> facts = ProduceFacts(execution, artifacts);
         ImmutableArray<Decision> decisions = ProduceDecisions(execution, artifacts);
+        ImmutableArray<WorkspaceFile> files = ProposeFiles(execution, artifacts);
 
-        return StageResult.Success(artifacts, facts, decisions);
+        return StageResult.Success(artifacts, facts, decisions, files);
     }
 
     private static ImmutableArray<Artifact> ProduceArtifacts(StageExecution execution)
@@ -191,6 +192,52 @@ public sealed class ScriptedStageAgent(string id, ScriptedBehaviour? behaviour =
                 evidence: artifacts.Select(artifact => artifact.Hash)),
         ];
     }
+
+    /// <summary>
+    /// The files this stage proposes to write into the workspace.
+    /// </summary>
+    /// <remarks>
+    /// Content mirrors the artifact the stage recorded, so what is committed to the tree and
+    /// what is recorded in the audit log are the same bytes rather than two descriptions of
+    /// the same idea. Paths are shaped like the output a real stage would produce, because
+    /// compensation is only meaningfully tested against a tree that looks like a project.
+    /// </remarks>
+    private static ImmutableArray<WorkspaceFile> ProposeFiles(
+        StageExecution execution, ImmutableArray<Artifact> artifacts)
+    {
+        ImmutableArray<WorkspaceFile>.Builder files =
+            ImmutableArray.CreateBuilder<WorkspaceFile>();
+
+        foreach (Artifact artifact in artifacts)
+        {
+            if (PathFor(artifact.Kind, execution.Node.Id.Value) is not { } path)
+            {
+                continue;
+            }
+
+            files.Add(new WorkspaceFile(path, Body(execution, artifact.Kind, artifact.DerivedFrom)));
+        }
+
+        return files.ToImmutable();
+    }
+
+    /// <summary>
+    /// Where a given kind of output belongs in the tree, or <see langword="null"/> when the
+    /// kind is a record rather than a file the service is built from.
+    /// </summary>
+    private static string? PathFor(ArtifactKind kind, string node) => kind switch
+    {
+        ArtifactKind.SourcePatch => $"src/{node}.cs",
+        ArtifactKind.TestSuite => $"tests/{node}.Tests.cs",
+        ArtifactKind.Documentation => "docs/README.md",
+        ArtifactKind.ApiContract => "contracts/openapi.yaml",
+        ArtifactKind.DesignDoc => "docs/design.md",
+        ArtifactKind.ArchitectureDecisionRecord => $"docs/adr/{node}.md",
+
+        // Reports, requests and assumptions are evidence about the run, not part of the
+        // service. They live in the audit log and the export, not in the source tree.
+        _ => null,
+    };
 
     private static string Hyphenate(string pascalCase)
     {

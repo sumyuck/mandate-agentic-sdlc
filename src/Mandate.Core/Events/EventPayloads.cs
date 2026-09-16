@@ -73,6 +73,27 @@ public sealed record DecisionRecordedPayload(
     string Authority,
     ImmutableArray<string> Evidence);
 
+/// <summary>Payload of <see cref="RunEventKind.WorkspaceCommitted"/>.</summary>
+public sealed record WorkspaceCommittedPayload(
+    string Sha, int Attempt, int FilesChanged, ImmutableArray<string> Paths);
+
+/// <summary>Payload of <see cref="RunEventKind.WorkspaceReverted"/>.</summary>
+public sealed record WorkspaceRevertedPayload(
+    int CommitsReverted, string HeadSha, bool TreeClean, string Detail);
+
+/// <summary>Payload of the retry and fallback events.</summary>
+public sealed record RetryPayload(
+    int Attempt, int MaxAttempts, double BackoffSeconds, string Reason);
+
+/// <summary>Payload of <see cref="RunEventKind.NodeFallbackSelected"/>.</summary>
+public sealed record FallbackSelectedPayload(string Strategy, string Reason);
+
+/// <summary>Payload of the compensation events.</summary>
+public sealed record CompensationPayload(string Action, bool Undone, string Detail);
+
+/// <summary>Payload of the safe-stop events.</summary>
+public sealed record SafeStopPayload(string RequestedBy, int NodesCancelled, string Detail);
+
 /// <summary>Payload of <see cref="RunEventKind.ApprovalRequested"/>.</summary>
 public sealed record ApprovalRequestedPayload(
     string Role, string Reason, bool SegregationOfDuties, string? ProducedBy);

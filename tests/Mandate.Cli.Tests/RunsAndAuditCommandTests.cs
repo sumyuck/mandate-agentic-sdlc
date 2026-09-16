@@ -18,7 +18,9 @@ public sealed partial class RunsAndAuditCommandTests
     {
         CliResult result = CliHarness.Run(
             "run", "Build a URL shortener", "--scenario", scenario,
-            "--workflow", ShippedWorkflow, "--store", workspace.Store, "--as", "tester");
+            "--workflow", ShippedWorkflow, "--store", workspace.Store, "--as", "tester",
+            "--workspace-root", workspace.Path_("workspaces"),
+            "--template", Path.Combine(RepositoryRoot.Path, "templates", "service"));
 
         Match match = RunIdPattern().Match(result.Plain);
         match.Success.ShouldBeTrue($"no run id in: {result.Plain}");

@@ -264,7 +264,7 @@ nodes:
     autonomy: act-and-auto-accept-low-risk
     model: claude-haiku-4-5
     timeout: 20m
-    compensation: discard-test-artifacts
+    compensation: revert-node-commit
     retry:
       max-attempts: 3
       initial-backoff: 5s

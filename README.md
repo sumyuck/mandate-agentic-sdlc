@@ -33,11 +33,13 @@ lands before the agents, so the orchestrator is defensible even at an intermedia
 | P2 | Guard grammar, strict YAML loader, static validation, diagram renderer, the lifecycle itself | **done** |
 | P3 | Engine: scheduler, join policies, guard-driven skipping, gates, bounded concurrency | **done** |
 | P4 | Durable event store, run catalogue, `audit verify`, evidence export | **done** |
-| P5 | Reliability: bounded retries, fallback, rollback, safe-stop | next |
-| P6–P16 | Approvals and resume, policy, re-planning, observability, model-backed agents, the three scenarios, documentation | planned |
+| P5 | Reliability: git workspace, bounded retries, fallback, real rollback, safe-stop | **done** |
+| P6 | Human approvals and resume | next |
+| P7–P16 | Policy, re-planning, observability, model-backed agents, the three scenarios, documentation | planned |
 
-**474 tests** currently pass, with warnings treated as errors across the solution — including
-38 that drive the CLI end to end through the same command definitions the binary exposes.
+**527 tests** currently pass, with warnings treated as errors across the solution — including
+40 that drive the CLI end to end through the same command definitions the binary exposes, and
+a set that exercise rollback against real git rather than a stub.
 
 The lifecycle runs end to end today against *scripted* agents — which produce real
 content-addressed artifacts with real provenance, contribute the context facts their nodes
@@ -52,6 +54,9 @@ make run SCENARIO=ambiguous               # diverts to a human, and refuses to d
 
 make runs                                 # list recorded runs
 make audit                                # prove no run's log has been altered
+
+# Exercise the reliability machinery: retry, backoff, exhaustion, handoff.
+make run FAIL=requirements-analyst
 ```
 
 Runs persist by default to `.mandate/runs.db`. Inspect, verify or export one:
@@ -199,6 +204,18 @@ discipline:
   demonstrates by forging one.
 - **The run listing is a query over the events**, not a second table recording the same facts,
   so there is no denormalised status that can drift away from the log.
+- **Agents propose file changes; the engine applies them.** Every path is validated against
+  the workspace boundary before anything touches disk, so a stage cannot write a git hook or
+  escape its tree — and a refused write fails the *stage*, not the engine, so it goes through
+  the same retry and compensation machinery as any other failure.
+- **Rollback is a real `git revert`.** After compensation the tree can be inspected: added
+  files are gone, edited files are as they were, the tree is clean. Both the change and its
+  reversal stay in the history, because erasing the record of a mistake is the wrong instinct
+  for a system built to be audited.
+- **Retries are bounded and jittered.** Backoff grows, respects a ceiling, and is spread, so
+  stages that failed together do not retry together against whatever was already struggling.
+- **A stop halts at a coherent boundary**, between stages rather than mid-stage, and preserves
+  completed work rather than relabelling it.
 - **Exit codes distinguish "failed" from "needs a human."** A run waiting on an approval
   returns `3`, not `1`, because a CI job or a demo script has to tell them apart — treating a
   human checkpoint as an error would misrepresent the thing the system is built to do.

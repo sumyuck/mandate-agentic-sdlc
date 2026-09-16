@@ -52,8 +52,11 @@ workflow: ## Validate the lifecycle definition and show its parallel structure
 SCENARIO ?= greenfield
 REQUEST ?= Build a URL shortener with create and redirect APIs
 
-run: ## Execute the lifecycle against scripted agents (SCENARIO=greenfield|brownfield|ambiguous)
-	@$(CLI) run "$(REQUEST)" --scenario $(SCENARIO)
+# Set FAIL=<agent-id> to inject a failure and watch retry, fallback and rollback.
+FAIL ?=
+
+run: ## Execute the lifecycle (SCENARIO=greenfield|brownfield|ambiguous, FAIL=<agent>)
+	@$(CLI) run "$(REQUEST)" --scenario $(SCENARIO) $(if $(FAIL),--fail $(FAIL),)
 
 runs: ## List recorded runs
 	@$(CLI) runs list

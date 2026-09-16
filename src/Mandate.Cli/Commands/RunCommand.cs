@@ -8,10 +8,12 @@ using Mandate.Core.Identifiers;
 using Mandate.Core.Runs;
 using Mandate.Core.Time;
 using Mandate.Core.Workflow;
+using Mandate.Orchestrator.Compensation;
 using Mandate.Orchestrator.Execution;
 using Mandate.Orchestrator.Gates;
 using Mandate.Persistence;
 using Mandate.Persistence.Sqlite;
+using Mandate.Persistence.Workspaces;
 using Mandate.Workflows;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -67,6 +69,19 @@ internal sealed class RunCommand : AsyncCommand<RunCommand.Settings>
         [Description("Do not persist the run. Nothing to inspect, verify or resume afterwards.")]
         public bool Ephemeral { get; init; }
 
+        [CommandOption("--workspace-root")]
+        [Description("Where run workspaces are created. Defaults to .mandate/workspaces.")]
+        public string WorkspaceRoot { get; init; } = GitRunWorkspaceFactory.DefaultRoot;
+
+        [CommandOption("--template")]
+        [Description("Tree to seed the workspace from. Defaults to templates/service.")]
+        public string Template { get; init; } = GitRunWorkspaceFactory.DefaultTemplate;
+
+        [CommandOption("--fail")]
+        [Description(
+            "Make the named agent fail every attempt, to exercise retry, fallback and rollback.")]
+        public string? FailAgent { get; init; }
+
         public override ValidationResult Validate() =>
             Enum.TryParse(Scenario, ignoreCase: true, out ScenarioKind parsed)
             && parsed != ScenarioKind.Unknown
@@ -93,6 +108,18 @@ internal sealed class RunCommand : AsyncCommand<RunCommand.Settings>
             return ExitCode.BadInput;
         }
 
+        // Checked before anything is created. The template path is relative to the working
+        // directory, so running from the wrong place is an easy mistake — and it should
+        // produce a sentence, not a stack trace.
+        if (!Directory.Exists(settings.Template))
+        {
+            AnsiConsole.MarkupLine(
+                $"[red]no workspace template[/] at '{settings.Template.EscapeMarkup()}'. "
+                + "Run from the repository root, or pass --template.");
+
+            return ExitCode.BadInput;
+        }
+
         ScenarioKind scenario = Enum.Parse<ScenarioKind>(settings.Scenario, ignoreCase: true);
 
         // Brownfield means there is existing code, by definition. Accepting the flag
@@ -115,13 +142,25 @@ internal sealed class RunCommand : AsyncCommand<RunCommand.Settings>
 
         try
         {
+            Dictionary<string, ScriptedBehaviour> behaviours = new(StringComparer.Ordinal);
+
+            if (settings.FailAgent is { } failing)
+            {
+                behaviours[failing] = ScriptedBehaviour.AlwaysFails(
+                    $"Injected failure in '{failing}'.");
+            }
+
             engine = new WorkflowEngine(
                 graph,
-                ScriptedAgents.CoveringGraph(graph),
+                ScriptedAgents.CoveringGraph(graph, behaviours),
                 BuiltInGateEvaluators.CreateRegistry(),
                 journal,
                 clock,
-                new EngineOptions(settings.MaxConcurrency));
+                new EngineOptions(settings.MaxConcurrency),
+                CompensationRegistry.BuiltIn(),
+                new GitRunWorkspaceFactory(settings.WorkspaceRoot, settings.Template),
+                RealDelay.Instance,
+                new FileSafeStopMonitor(FileSafeStopMonitor.DefaultDirectory));
         }
         catch (Exception exception) when (
             exception is EngineConfigurationException or ArgumentOutOfRangeException)
@@ -138,7 +177,22 @@ internal sealed class RunCommand : AsyncCommand<RunCommand.Settings>
             $"[grey]{graph.Definition.Identity.EscapeMarkup()} · {scenario.ToString().ToLowerInvariant()} · "
             + $"existing code: {hasExistingCode} · max concurrency {settings.MaxConcurrency}[/]");
 
-        RunOutcome outcome = await engine.RunAsync(request, cancellationToken).ConfigureAwait(false);
+        RunOutcome outcome;
+
+        try
+        {
+            outcome = await engine.RunAsync(request, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (
+            exception is IOException or UnauthorizedAccessException or GitCommandException)
+        {
+            // The workspace could not be prepared. A stage failing is the engine's business;
+            // not being able to create the tree at all is the operator's.
+            AnsiConsole.MarkupLine(
+                $"[red]workspace unavailable[/] {exception.Message.EscapeMarkup()}");
+
+            return ExitCode.BadInput;
+        }
 
         ImmutableArray<RunEvent> events = await journal
             .ReadAsync(runId, cancellationToken)
@@ -155,6 +209,9 @@ internal sealed class RunCommand : AsyncCommand<RunCommand.Settings>
 
         WriteAudit(runId, events);
         WriteOutcome(outcome);
+
+        AnsiConsole.MarkupLine(
+            $"[grey]workspace: {Path.Combine(settings.WorkspaceRoot, runId.Value).EscapeMarkup()}[/]");
 
         if (store is not null)
         {

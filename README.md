@@ -19,15 +19,17 @@ the evidence that it works.
 
 ## Status
 
-This repository is being built in ordered parts (see [PLAN.md](PLAN.md)). **Part 0 is
-complete**: solution skeleton, build governance, architecture decisions, and the decisions
-they enforce.
+This repository is being built in ordered parts (see [PLAN.md](PLAN.md)). The governance core
+lands before the agents, so the orchestrator is defensible even at an intermediate state.
 
 | | Part | State |
 |---|---|---|
 | P0 | Repository skeleton, build governance, ADRs | **done** |
-| P1 | Core domain: graph, run state, events, artifacts, decisions | next |
-| P2–P16 | Workflow loader, engine, persistence, reliability, approvals, policy, re-planning, observability, agents, the three scenarios, documentation | planned |
+| P1 | Core domain: graph, state machine, hash-chained events, artifact provenance, decisions, context | **done** |
+| P2 | YAML workflow loader, static validator, diagram renderer | next |
+| P3–P16 | Engine, persistence, reliability, approvals, policy, re-planning, observability, agents, the three scenarios, documentation | planned |
+
+**207 tests** currently pass, with warnings treated as errors across the solution.
 
 Only the commands listed below exist today. Nothing in this README describes behaviour that
 is not yet implemented.
@@ -84,6 +86,30 @@ runs/                     committed run evidence: events, artifacts, cassettes, 
 tests/                    unit, architecture and integration tests
 docs/                     architecture, ADRs, scenarios, testing, traceability
 ```
+
+## What the core model already guarantees
+
+The domain is built so that the governance properties are enforced by types rather than by
+discipline:
+
+- **Illegal state changes are impossible.** Every node transition goes through one table, so
+  a node cannot reach `Succeeded` without running, the engine cannot clear its own policy
+  block, and work parked for approval can be invalidated by an upstream change instead of
+  being approved stale.
+- **An unattributed action cannot be recorded.** Events, artifacts, decisions and context
+  facts all refuse to exist without an actor, which is what makes segregation of duties
+  checkable rather than aspirational.
+- **An indefensible decision cannot be recorded.** `Decision` rejects a choice with fewer than
+  two options, or a rejected option with no stated reason. Rationale is captured when the
+  choice is made, because ADRs are generated from these records.
+- **Tampering with the audit log is detectable.** Editing, deleting, reordering, duplicating,
+  backdating or splicing events all break the hash chain at an identifiable point.
+- **Provenance is structural.** Artifacts are content-addressed and name what they were
+  derived from, so lineage needs no trace document and re-plan invalidation is an exact digest
+  comparison rather than a heuristic.
+- **A workflow that cannot execute is rejected before a run exists**, with every problem
+  reported at once — cycles in the forward graph, nodes wired into no path, contradictory
+  autonomy, a compensation fallback with nothing to compensate, an attempt with no timeout.
 
 ## Design in one page
 

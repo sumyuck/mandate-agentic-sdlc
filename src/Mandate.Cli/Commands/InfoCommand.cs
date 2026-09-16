@@ -43,7 +43,7 @@ internal sealed class InfoCommand : Command<InfoCommand.Settings>
             // hard-wraps at terminal width, which would corrupt piped JSON.
             Console.Out.WriteLine(
                 System.Text.Json.JsonSerializer.Serialize(facts, MandateJson.Pretty));
-            return 0;
+            return ExitCode.Success;
         }
 
         Table table = new Table()
@@ -58,6 +58,6 @@ internal sealed class InfoCommand : Command<InfoCommand.Settings>
 
         AnsiConsole.Write(new Rule("[bold]mandate[/]").LeftJustified());
         AnsiConsole.Write(table);
-        return 0;
+        return ExitCode.Success;
     }
 }

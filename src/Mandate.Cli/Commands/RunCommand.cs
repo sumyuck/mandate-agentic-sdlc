@@ -90,7 +90,7 @@ internal sealed class RunCommand : AsyncCommand<RunCommand.Settings>
             exception is WorkflowFormatException or WorkflowValidationException)
         {
             AnsiConsole.MarkupLine($"[red]cannot load workflow[/] {exception.Message.EscapeMarkup()}");
-            return 2;
+            return ExitCode.BadInput;
         }
 
         ScenarioKind scenario = Enum.Parse<ScenarioKind>(settings.Scenario, ignoreCase: true);
@@ -127,7 +127,7 @@ internal sealed class RunCommand : AsyncCommand<RunCommand.Settings>
             exception is EngineConfigurationException or ArgumentOutOfRangeException)
         {
             AnsiConsole.MarkupLine($"[red]engine not configured[/] {exception.Message.EscapeMarkup()}");
-            return 2;
+            return ExitCode.BadInput;
         }
 
         RunRequest request = RunRequest.Create(
@@ -166,9 +166,9 @@ internal sealed class RunCommand : AsyncCommand<RunCommand.Settings>
 
         return outcome.Status switch
         {
-            RunStatus.Succeeded => 0,
-            RunStatus.AwaitingApproval or RunStatus.Blocked => 3,
-            _ => 1,
+            RunStatus.Succeeded => ExitCode.Success,
+            RunStatus.AwaitingApproval or RunStatus.Blocked => ExitCode.AwaitingHuman,
+            _ => ExitCode.Failed,
         };
     }
 

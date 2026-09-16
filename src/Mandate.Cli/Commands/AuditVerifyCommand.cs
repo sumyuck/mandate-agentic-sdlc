@@ -58,13 +58,13 @@ internal sealed class AuditVerifyCommand : AsyncCommand<AuditVerifyCommand.Setti
         else
         {
             AnsiConsole.MarkupLine($"[red]'{settings.RunId.EscapeMarkup()}' is not a run id.[/]");
-            return 2;
+            return ExitCode.BadInput;
         }
 
         if (runIds.IsEmpty)
         {
             AnsiConsole.MarkupLine("[grey]No runs recorded yet.[/]");
-            return 0;
+            return ExitCode.Success;
         }
 
         int broken = 0;
@@ -109,10 +109,10 @@ internal sealed class AuditVerifyCommand : AsyncCommand<AuditVerifyCommand.Setti
                 + "[grey]Each event commits to its predecessor, so any edit, deletion or "
                 + "reordering would have been detected.[/]");
 
-            return 0;
+            return ExitCode.Success;
         }
 
         AnsiConsole.MarkupLine($"[red]{broken} of {runIds.Length} run(s) failed verification.[/]");
-        return 1;
+        return ExitCode.Failed;
     }
 }

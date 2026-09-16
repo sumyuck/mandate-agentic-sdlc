@@ -57,7 +57,7 @@ internal sealed class ListRunsCommand : AsyncCommand<ListRunsCommand.Settings>
                 Console.Out.WriteLine(run.RunId.Value);
             }
 
-            return 0;
+            return ExitCode.Success;
         }
 
         if (settings.Json)
@@ -77,13 +77,13 @@ internal sealed class ListRunsCommand : AsyncCommand<ListRunsCommand.Settings>
                 }),
                 Core.Serialization.MandateJson.Pretty));
 
-            return 0;
+            return ExitCode.Success;
         }
 
         if (runs.IsEmpty)
         {
             AnsiConsole.MarkupLine("[grey]No runs recorded yet.[/]");
-            return 0;
+            return ExitCode.Success;
         }
 
         Table table = new Table()
@@ -105,7 +105,7 @@ internal sealed class ListRunsCommand : AsyncCommand<ListRunsCommand.Settings>
         }
 
         AnsiConsole.Write(table);
-        return 0;
+        return ExitCode.Success;
     }
 
     private static string Shorten(string request) =>
@@ -139,7 +139,7 @@ internal sealed class ShowRunCommand : AsyncCommand<ShowRunCommand.Settings>
         if (!RunId.TryParse(settings.RunId, out RunId runId))
         {
             AnsiConsole.MarkupLine($"[red]'{settings.RunId.EscapeMarkup()}' is not a run id.[/]");
-            return 2;
+            return ExitCode.BadInput;
         }
 
         using SqliteRunJournal journal = SqliteRunJournal.Open(settings.Store);
@@ -149,7 +149,7 @@ internal sealed class ShowRunCommand : AsyncCommand<ShowRunCommand.Settings>
         if (summary is null)
         {
             AnsiConsole.MarkupLine($"[red]No run {runId.Value.EscapeMarkup()} in this store.[/]");
-            return 2;
+            return ExitCode.BadInput;
         }
 
         ImmutableArray<RunEvent> events =
@@ -193,7 +193,7 @@ internal sealed class ShowRunCommand : AsyncCommand<ShowRunCommand.Settings>
             $"{RunStatusMarkup.For(summary.Status)} "
             + $"[grey]{state.Artifacts.Length} artifact(s), {state.Context.Count} context fact(s)[/]");
 
-        return 0;
+        return ExitCode.Success;
     }
 }
 
@@ -219,7 +219,7 @@ internal sealed class ExportRunCommand : AsyncCommand<ExportRunCommand.Settings>
         if (!RunId.TryParse(settings.RunId, out RunId runId))
         {
             AnsiConsole.MarkupLine($"[red]'{settings.RunId.EscapeMarkup()}' is not a run id.[/]");
-            return 2;
+            return ExitCode.BadInput;
         }
 
         using SqliteRunJournal journal = SqliteRunJournal.Open(settings.Store);
@@ -229,7 +229,7 @@ internal sealed class ExportRunCommand : AsyncCommand<ExportRunCommand.Settings>
         if (summary is null)
         {
             AnsiConsole.MarkupLine($"[red]No run {runId.Value.EscapeMarkup()} in this store.[/]");
-            return 2;
+            return ExitCode.BadInput;
         }
 
         ImmutableArray<RunEvent> events =
@@ -245,7 +245,7 @@ internal sealed class ExportRunCommand : AsyncCommand<ExportRunCommand.Settings>
         AnsiConsole.MarkupLine(
             "[grey]events.jsonl · run.json · timeline.md[/]");
 
-        return export.ChainIntact ? 0 : 1;
+        return export.ChainIntact ? ExitCode.Success : ExitCode.Failed;
     }
 }
 

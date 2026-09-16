@@ -48,13 +48,13 @@ internal sealed class RenderWorkflowCommand : Command<RenderWorkflowCommand.Sett
         catch (WorkflowFormatException exception)
         {
             AnsiConsole.MarkupLine($"[red]format error[/] {exception.Message.EscapeMarkup()}");
-            return 2;
+            return ExitCode.BadInput;
         }
         catch (WorkflowValidationException exception)
         {
             AnsiConsole.MarkupLine($"[red]invalid workflow[/] {exception.Message.EscapeMarkup()}");
             AnsiConsole.MarkupLine("Run [bold]mandate workflow validate[/] for the full list.");
-            return 1;
+            return ExitCode.Failed;
         }
 
         bool legend = !settings.NoLegend;
@@ -68,7 +68,7 @@ internal sealed class RenderWorkflowCommand : Command<RenderWorkflowCommand.Sett
             // Straight to stdout: the console renderer hard-wraps, which would corrupt the
             // diagram when piped into a file.
             Console.Out.Write(diagram);
-            return 0;
+            return ExitCode.Success;
         }
 
         string? directory = Path.GetDirectoryName(settings.Output);
@@ -82,6 +82,6 @@ internal sealed class RenderWorkflowCommand : Command<RenderWorkflowCommand.Sett
         AnsiConsole.MarkupLine(
             $"[green]wrote[/] {settings.Output.EscapeMarkup()} "
             + $"({graph.Nodes.Count()} nodes, {graph.Definition.Edges.Length} edges)");
-        return 0;
+        return ExitCode.Success;
     }
 }

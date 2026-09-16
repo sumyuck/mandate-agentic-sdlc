@@ -16,6 +16,15 @@
     <PackageReference Include="Spectre.Console.Cli" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!--
+      The commands are internal: they are the CLI's own surface, not a library API. The test
+      project drives the same command definitions the binary exposes, so what is tested is
+      what ships.
+    -->
+    <InternalsVisibleTo Include="Mandate.Cli.Tests" />
+  </ItemGroup>
+
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <AssemblyName>mandate</AssemblyName>

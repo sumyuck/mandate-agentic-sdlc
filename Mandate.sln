@@ -37,6 +37,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mandate.Workflows.Tests", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mandate.Persistence.Tests", "tests\Mandate.Persistence.Tests\Mandate.Persistence.Tests.csproj", "{0C427314-AD70-4C31-8780-F79C9B5C40C7}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mandate.Cli.Tests", "tests\Mandate.Cli.Tests\Mandate.Cli.Tests.csproj", "{28752F20-9436-458B-A809-52827A4E3EAD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -227,6 +229,18 @@ Global
 		{0C427314-AD70-4C31-8780-F79C9B5C40C7}.Release|x64.Build.0 = Release|Any CPU
 		{0C427314-AD70-4C31-8780-F79C9B5C40C7}.Release|x86.ActiveCfg = Release|Any CPU
 		{0C427314-AD70-4C31-8780-F79C9B5C40C7}.Release|x86.Build.0 = Release|Any CPU
+		{28752F20-9436-458B-A809-52827A4E3EAD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{28752F20-9436-458B-A809-52827A4E3EAD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{28752F20-9436-458B-A809-52827A4E3EAD}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{28752F20-9436-458B-A809-52827A4E3EAD}.Debug|x64.Build.0 = Debug|Any CPU
+		{28752F20-9436-458B-A809-52827A4E3EAD}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{28752F20-9436-458B-A809-52827A4E3EAD}.Debug|x86.Build.0 = Debug|Any CPU
+		{28752F20-9436-458B-A809-52827A4E3EAD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{28752F20-9436-458B-A809-52827A4E3EAD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{28752F20-9436-458B-A809-52827A4E3EAD}.Release|x64.ActiveCfg = Release|Any CPU
+		{28752F20-9436-458B-A809-52827A4E3EAD}.Release|x64.Build.0 = Release|Any CPU
+		{28752F20-9436-458B-A809-52827A4E3EAD}.Release|x86.ActiveCfg = Release|Any CPU
+		{28752F20-9436-458B-A809-52827A4E3EAD}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -247,5 +261,6 @@ Global
 		{DC71F555-9690-4E49-96CD-EB5979493678} = {18788C16-6F6E-4DDF-B0F9-B8B8BD9EA3F8}
 		{457866BC-EBDC-4A54-856C-A004E10B73BC} = {E1BA0EAD-7FCC-4D0B-9C12-E708A5344E09}
 		{0C427314-AD70-4C31-8780-F79C9B5C40C7} = {E1BA0EAD-7FCC-4D0B-9C12-E708A5344E09}
+		{28752F20-9436-458B-A809-52827A4E3EAD} = {E1BA0EAD-7FCC-4D0B-9C12-E708A5344E09}
 	EndGlobalSection
 EndGlobal

@@ -22,3 +22,10 @@ is made rather than reconstructed afterwards.
 Enforcement: ADR-0001, 0002, 0003 and 0008 are asserted by
 [`DependencyRuleTests`](../../tests/Mandate.Orchestrator.Tests/Architecture/DependencyRuleTests.cs),
 so breaking them fails the build rather than the review.
+
+## Exit codes
+
+Commands return `0` success, `1` failed or verification defect, `2` bad input, and `3` the run
+is complete as far as it can go and is waiting on a human. The last is deliberately distinct:
+a run parked at an approval is not a broken run, and a script that could not tell the
+difference would report the system's central behaviour as a failure.

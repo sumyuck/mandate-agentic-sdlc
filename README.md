@@ -36,7 +36,8 @@ lands before the agents, so the orchestrator is defensible even at an intermedia
 | P5 | Reliability: bounded retries, fallback, rollback, safe-stop | next |
 | P6–P16 | Approvals and resume, policy, re-planning, observability, model-backed agents, the three scenarios, documentation | planned |
 
-**436 tests** currently pass, with warnings treated as errors across the solution.
+**474 tests** currently pass, with warnings treated as errors across the solution — including
+38 that drive the CLI end to end through the same command definitions the binary exposes.
 
 The lifecycle runs end to end today against *scripted* agents — which produce real
 content-addressed artifacts with real provenance, contribute the context facts their nodes
@@ -198,6 +199,9 @@ discipline:
   demonstrates by forging one.
 - **The run listing is a query over the events**, not a second table recording the same facts,
   so there is no denormalised status that can drift away from the log.
+- **Exit codes distinguish "failed" from "needs a human."** A run waiting on an approval
+  returns `3`, not `1`, because a CI job or a demo script has to tell them apart — treating a
+  human checkpoint as an error would misrepresent the thing the system is built to do.
 
 ## Design in one page
 

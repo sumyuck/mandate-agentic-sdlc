@@ -41,7 +41,7 @@ internal sealed class ValidateWorkflowCommand : Command<ValidateWorkflowCommand.
         catch (WorkflowFormatException exception)
         {
             AnsiConsole.MarkupLine($"[red]format error[/] {exception.Message.EscapeMarkup()}");
-            return 2;
+            return ExitCode.BadInput;
         }
 
         ImmutableArray<WorkflowIssue> issues = WorkflowGraph.Validate(definition);
@@ -80,17 +80,17 @@ internal sealed class ValidateWorkflowCommand : Command<ValidateWorkflowCommand.
             AnsiConsole.MarkupLine(
                 $"[red]{definition.Identity.EscapeMarkup()} cannot be executed[/] — "
                 + $"{errors.Length} blocking problem(s).");
-            return 1;
+            return ExitCode.Failed;
         }
 
         if (settings.Quiet)
         {
-            return 0;
+            return ExitCode.Success;
         }
 
         WorkflowGraph graph = WorkflowGraph.Build(definition);
         Summarise(graph, warnings.Length);
-        return 0;
+        return ExitCode.Success;
     }
 
     private static void Summarise(WorkflowGraph graph, int warningCount)

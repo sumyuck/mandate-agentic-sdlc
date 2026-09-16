@@ -48,10 +48,10 @@ Design for the requirement in front of you and no further. A design that anticip
 requirements nobody has asked for costs real implementation time and is the most common way a
 small change becomes a large one.
 
-Set `architecture.approved` to `false` — you are not the approver; a human is, and this stage
-parks for their decision. Claiming otherwise in a fact that a gate reads would be a
-misstatement of who signed off.
 Set `architecture.components` to a comma-separated list of the components you defined.
+
+You are not the approver. This stage parks for a named human, and their decision is recorded
+by the engine — there is nothing for you to report about it.
 
 ## How to answer
 

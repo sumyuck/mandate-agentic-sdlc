@@ -61,6 +61,12 @@ Set `implementation.builds` to `true` only if you are confident the tree compile
 The engine verifies this independently; claiming a build that does not happen is the single
 most damaging thing you can do here, because every downstream stage trusts it.
 
+**This tree uses central package management.** Every package version lives in
+`Directory.Packages.props` as a `PackageVersion`, and a `PackageReference` in a `.csproj`
+must not carry a `Version` attribute. Adding one fails the restore with NU1008 before a
+single line is compiled. To add a package you write both files: the version in
+`Directory.Packages.props`, the reference in the project that needs it.
+
 ## How to answer
 
 Return one JSON object and nothing else — no prose before or after it, no markdown fence.

@@ -105,7 +105,6 @@ public static partial class ContractStubResponder
         "impact.blast-radius" => "low",
         "implementation.builds" => "true",
         "implementation.files-changed" => "1",
-        "architecture.approved" => "false",
         "release.decision" => "go",
         _ when key.EndsWith(".recorded", StringComparison.Ordinal)
                || key.EndsWith(".written", StringComparison.Ordinal)

@@ -23,6 +23,7 @@ flowchart TD
     implement --> security_scan
     implement --> documentation
     test -.->|retry / re-plan| implement
+    code_review -.->|retry / re-plan| implement
     test --> release_readiness
     code_review --> release_readiness
     security_scan --> release_readiness

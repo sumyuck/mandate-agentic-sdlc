@@ -218,7 +218,13 @@ nodes:
       - architecture-decision-record
       - api-contract
     produces-context:
-      - architecture.approved
+      # 'architecture.approved' used to live here and has been removed. The agent is not the
+      # approver, so it could only ever report false — and it went on reporting false after a
+      # human had signed off, because nothing updated it. The code reviewer read it on a real
+      # run and raised a lifecycle violation that had not happened. No gate or guard ever
+      # consulted it: approval is recorded by the ApprovalGranted event and enforced by the
+      # 'approval-held' gate below. A fact that duplicates a real record, badly, is worse
+      # than no fact.
       - architecture.components
 
   - id: implement

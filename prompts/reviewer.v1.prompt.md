@@ -17,8 +17,8 @@ verbatim:
   - context
   - workspace
   - inputs
-max-output-tokens: 24000
-effort: high
+max-output-tokens: 32000
+effort: low
 ---
 
 ## system
@@ -43,6 +43,11 @@ pays. If the change is genuinely sound, say so and report only what you actually
 
 Review the code that is there. If the workspace withheld a file's contents, say you could not
 review it rather than assuming what it contains.
+
+Be economical. Your whole answer has to fit in one response, and you are reading a large
+tree: do not restate the code, do not narrate your process, and do not write out reasoning
+before the JSON. Running out of room throws away every finding you had written, so a short
+report naming the real problems beats a thorough one that never arrives.
 
 Write the review report to `docs/mandate/review-report.md`. A later implementation pass
 reads it from there to fix what you found, so write findings someone can act on without

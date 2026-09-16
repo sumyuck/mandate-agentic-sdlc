@@ -6,6 +6,15 @@
     mean the packages are already in the local NuGet cache after the orchestrator has been
     built once — so verification works without reaching the network.
   -->
+  <!--
+    Central package management is ON. Every version lives in this file, and a
+    PackageReference elsewhere must NOT carry a Version attribute:
+
+        here:          <PackageVersion Include="Some.Package" Version="1.2.3" />
+        in the csproj: <PackageReference Include="Some.Package" />
+
+    A PackageReference with an inline Version fails the restore outright (NU1008).
+  -->
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>

@@ -28,8 +28,41 @@ under the existing test project. Test the acceptance criteria and the failure pa
 invalid input, the missing resource, the boundary. Tests that only exercise the happy path
 tell you nothing you did not already know from the code compiling.
 
+**Test the code that is there, not the code you would have written.** Read each type before
+you use it: whether it is sealed, what its constructor actually takes, which members are
+virtual, what its methods are really called and really return. Do not invent an interface,
+a base class or a fake to derive from — if the implementation offers no seam, there is no
+seam, and a test that assumes one does not compile.
+
+Where a type has no seam, test it directly:
+
+- Pure logic — encoders, validators, parsers — call it and assert on the result. These are
+  usually the highest-value tests in the tree and they need no scaffolding at all.
+- A type that talks to SQLite — construct it against a real temporary database
+  (`Path.GetTempFileName()`, or `Data Source=:memory:` if the type accepts a connection
+  string) and let it do its work. A real database in a temporary file is simpler than a
+  fake and tests something true.
+
+Nothing you write may change the service to make it easier to test. That is a design change,
+and it is not yours to make at this stage.
+
 Name tests as sentences describing the behaviour, matching the convention already in the
-tree. Use only xUnit and what the workspace already references.
+tree.
+
+If your tests need a package the test project does not yet reference — the database driver
+the service uses, for instance — add it. Return the test project file
+(`tests/Service.Tests/Service.Tests.csproj`) as another `test-suite` document, and add the
+version to `Directory.Packages.props` if it is not already there. A test that cannot
+compile is worth less than no test, and the reference is part of the suite you are writing.
+
+**Any file you return replaces what is there.** There is no patch format: if you return the
+test project file, return the whole of it — every reference, every `Using`, every property
+already present, plus your addition. Returning only the part you changed deletes the rest,
+and the suite stops compiling for want of the xunit reference you never meant to remove.
+If you do not need to change a file, do not return it.
+
+Be economical. Your whole answer has to fit in one response: cover the behaviour that
+matters rather than every permutation, and do not write out reasoning before the JSON.
 
 Then write the `test-report` to `docs/mandate/test-report.md`: what you covered, what you
 deliberately did not, and where the suite is weakest. The weakest part is the useful part of
@@ -41,6 +74,12 @@ string between 0 and 1.
 
 Be accurate rather than flattering about coverage. A gate reads this number, and a stage that
 overstates it buys a pass it did not earn and spends it on everyone downstream.
+
+**This tree uses central package management.** Every package version lives in
+`Directory.Packages.props` as a `PackageVersion`, and a `PackageReference` in a `.csproj`
+must not carry a `Version` attribute. Adding one fails the restore with NU1008 before a
+single line is compiled. To add a package you write both files: the version in
+`Directory.Packages.props`, the reference in the project that needs it.
 
 ## How to answer
 

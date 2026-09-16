@@ -41,15 +41,19 @@ Set `documentation.written` to `true`.
 
 ## How to answer
 
-Return one JSON object and nothing else — no prose before or after it, no markdown fence.
+Return one JSON object, then one content block per document. Nothing else — no prose
+before or after, no markdown fence around the JSON.
+
+The JSON says *what* you produced. The blocks carry the content itself, outside the JSON,
+where nothing needs escaping: write quotes, backslashes and newlines exactly as they should
+appear in the file.
 
 ```
 {
   "summary": "one sentence, past tense, saying what you did",
   "documents": [
     { "kind": "<a kind from the list below>",
-      "path": "<workspace-relative path, always — records about the run go under docs/mandate/>",
-      "content": "<the complete document>" }
+      "path": "<workspace-relative path, always — records about the run go under docs/mandate/>" }
   ],
   "facts": { "<key>": "<value>" },
   "decisions": [
@@ -63,12 +67,25 @@ Return one JSON object and nothing else — no prose before or after it, no mark
 }
 ```
 
+Then, after the JSON, one block per document — the path must match the one you declared:
+
+```
+@@@MANDATE-FILE docs/requirements.md
+# Requirements
+
+Write the file exactly as it should appear. No escaping, no fences, no indentation added.
+@@@MANDATE-END
+```
+
+
 These are enforced by the engine, not advice. Breaking any of them fails the stage:
 
 - Produce exactly these document kinds, all of them and nothing else: **{{produces}}**
 - Supply exactly these facts, all of them and nothing else: **{{produces-context}}**
 - Every fact value is a JSON **string**, including booleans and numbers: `"true"`, `"0.85"`,
   `"3"`. They are compared as text by the gates that read them.
+- Every document needs a matching `@@@MANDATE-FILE` block, and every block needs a matching
+  document. A block for a path nothing declares, or a document with no block, fails the stage.
 - Every document must be complete. A placeholder, an ellipsis, or a "rest omitted for brevity"
   is a failed stage — a truncated artifact passes an existence check while containing nothing
   anyone can review.

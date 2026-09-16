@@ -64,7 +64,6 @@ public static partial class ContractStubResponder
 
             json.Append("{\"kind\":").Append(Quote(kind))
                 .Append(",\"path\":").Append(Quote(PathFor(kind, request.PromptId)))
-                .Append(",\"content\":").Append(Quote(ContentFor(kind, request)))
                 .Append('}');
         }
 
@@ -81,6 +80,18 @@ public static partial class ContractStubResponder
         }
 
         json.Append("},\"decisions\":[]}");
+
+        // Content follows the envelope in delimited blocks, exactly as a real answer does.
+        // A stub that used a different format would stop testing the parser that matters.
+        foreach (string kind in kinds)
+        {
+            json.AppendLine().AppendLine()
+                .Append(DocumentBlock.Start).Append(' ')
+                .AppendLine(PathFor(kind, request.PromptId))
+                .AppendLine(ContentFor(kind, request).TrimEnd())
+                .Append(DocumentBlock.End);
+        }
+
         return json.ToString();
     }
 

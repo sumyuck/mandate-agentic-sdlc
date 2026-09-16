@@ -75,7 +75,13 @@ string between 0 and 1.
 Be accurate rather than flattering about coverage. A gate reads this number, and a stage that
 overstates it buys a pass it did not earn and spends it on everyone downstream.
 
-**This tree uses central package management.** Every package version lives in
+**You should not need to touch a project file at all.** The workspace already references
+the packages this service needs, including its database driver, and a `.csproj` you rewrite
+unnecessarily is a `.csproj` you can break — the first live attempt at this put a `--`
+inside an XML comment and the whole tree stopped loading before a line was compiled. Only
+edit one if you genuinely need a package that is not there.
+
+**If you do: this tree uses central package management.** Every package version lives in
 `Directory.Packages.props` as a `PackageVersion`, and a `PackageReference` in a `.csproj`
 must not carry a `Version` attribute. Adding one fails the restore with NU1008 before a
 single line is compiled. To add a package you write both files: the version in
@@ -83,15 +89,19 @@ single line is compiled. To add a package you write both files: the version in
 
 ## How to answer
 
-Return one JSON object and nothing else — no prose before or after it, no markdown fence.
+Return one JSON object, then one content block per document. Nothing else — no prose
+before or after, no markdown fence around the JSON.
+
+The JSON says *what* you produced. The blocks carry the content itself, outside the JSON,
+where nothing needs escaping: write quotes, backslashes and newlines exactly as they should
+appear in the file.
 
 ```
 {
   "summary": "one sentence, past tense, saying what you did",
   "documents": [
     { "kind": "<a kind from the list below>",
-      "path": "<workspace-relative path, always — records about the run go under docs/mandate/>",
-      "content": "<the complete document>" }
+      "path": "<workspace-relative path, always — records about the run go under docs/mandate/>" }
   ],
   "facts": { "<key>": "<value>" },
   "decisions": [
@@ -105,12 +115,25 @@ Return one JSON object and nothing else — no prose before or after it, no mark
 }
 ```
 
+Then, after the JSON, one block per document — the path must match the one you declared:
+
+```
+@@@MANDATE-FILE docs/requirements.md
+# Requirements
+
+Write the file exactly as it should appear. No escaping, no fences, no indentation added.
+@@@MANDATE-END
+```
+
+
 These are enforced by the engine, not advice. Breaking any of them fails the stage:
 
 - Produce exactly these document kinds, all of them and nothing else: **{{produces}}**
 - Supply exactly these facts, all of them and nothing else: **{{produces-context}}**
 - Every fact value is a JSON **string**, including booleans and numbers: `"true"`, `"0.85"`,
   `"3"`. They are compared as text by the gates that read them.
+- Every document needs a matching `@@@MANDATE-FILE` block, and every block needs a matching
+  document. A block for a path nothing declares, or a document with no block, fails the stage.
 - Every document must be complete. A placeholder, an ellipsis, or a "rest omitted for brevity"
   is a failed stage — a truncated artifact passes an existence check while containing nothing
   anyone can review.

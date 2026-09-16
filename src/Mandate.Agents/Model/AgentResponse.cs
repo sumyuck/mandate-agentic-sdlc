@@ -44,6 +44,35 @@ public sealed record AgentResponse(
 /// <param name="Content">The document itself.</param>
 public sealed record AgentDocument(string Kind, string? Path, string Content);
 
+/// <summary>
+/// The markers that carry document content outside the JSON envelope.
+/// </summary>
+/// <remarks>
+/// <para>
+/// Content does not travel inside JSON, and this is the single most consequential format
+/// decision in the system. Every stage here returns source code or Markdown measured in
+/// kilobytes, and JSON requires all of it to be escaped: quotes, backslashes, newlines.
+/// Models get that wrong often enough that it was the dominant cause of failed stages —
+/// an unescaped quote 2.4 kB into a design document, a raw newline in twenty kilobytes of
+/// C#, a Windows path or a regular expression eating its own backslashes. Each one threw
+/// away a complete, correct answer and spent another prompt getting the same thing back.
+/// </para>
+/// <para>
+/// So the envelope stays JSON — it is short, structured, and models write short JSON
+/// reliably — and the content moves into delimited blocks where no escaping exists to get
+/// wrong. The marker is deliberately unlikely to occur in real content, and a block is
+/// matched to its document by path so the two cannot silently drift apart.
+/// </para>
+/// </remarks>
+public static class DocumentBlock
+{
+    /// <summary>Opens a content block. Followed by a space and the document's path.</summary>
+    public const string Start = "@@@MANDATE-FILE";
+
+    /// <summary>Closes a content block, alone on its line.</summary>
+    public const string End = "@@@MANDATE-END";
+}
+
 /// <summary>A choice a stage made.</summary>
 /// <param name="Id">Stable identifier for the decision.</param>
 /// <param name="Question">What was being decided.</param>
@@ -90,6 +119,7 @@ public static class AgentResponseParser
                 "The answer contained no JSON object. " + Excerpt(text));
 
         json = EscapeRawControlCharacters(json);
+        ImmutableDictionary<string, string> blocks = ReadContentBlocks(text);
 
         Payload? payload;
 
@@ -105,7 +135,7 @@ public static class AgentResponseParser
 
         return payload is null
             ? throw new AgentResponseException("The answer was the JSON literal null.")
-            : payload.Validate();
+            : payload.Validate(blocks);
     }
 
     /// <summary>
@@ -270,6 +300,69 @@ public static class AgentResponseParser
         return repaired.ToString();
     }
 
+    /// <summary>
+    /// Reads the delimited content blocks, keyed by the path each one declares.
+    /// </summary>
+    /// <remarks>
+    /// Line-oriented and unforgiving about the markers, because the whole point is that
+    /// nothing inside a block needs interpreting. A block's content is taken exactly as
+    /// written, newlines, quotes, backslashes and all.
+    /// </remarks>
+    public static ImmutableDictionary<string, string> ReadContentBlocks(string text)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+
+        ImmutableDictionary<string, string>.Builder blocks =
+            ImmutableDictionary.CreateBuilder<string, string>(StringComparer.Ordinal);
+
+        string[] lines = text.ReplaceLineEndings("\n").Split('\n');
+        string? openPath = null;
+        List<string> content = [];
+
+        foreach (string line in lines)
+        {
+            string trimmed = line.Trim();
+
+            if (openPath is null)
+            {
+                if (trimmed.StartsWith(DocumentBlock.Start, StringComparison.Ordinal))
+                {
+                    openPath = trimmed[DocumentBlock.Start.Length..].Trim();
+
+                    if (openPath.Length == 0)
+                    {
+                        throw new AgentResponseException(
+                            $"A '{DocumentBlock.Start}' marker named no path.");
+                    }
+
+                    content.Clear();
+                }
+
+                continue;
+            }
+
+            if (string.Equals(trimmed, DocumentBlock.End, StringComparison.Ordinal))
+            {
+                blocks[openPath] = string.Join("\n", content);
+                openPath = null;
+                continue;
+            }
+
+            content.Add(line);
+        }
+
+        if (openPath is not null)
+        {
+            // Almost always an answer that ran out of room mid-file. Guessing where it
+            // should have ended would mean committing a truncated source file.
+            throw new AgentResponseException(
+                $"The content block for '{openPath}' was never closed with "
+                + $"'{DocumentBlock.End}'. The answer was probably cut short.");
+        }
+
+        return blocks.ToImmutable();
+    }
+
     private static string Excerpt(string text) =>
         "First 200 characters: " + (text.Length <= 200 ? text : text[..200] + "…");
 
@@ -326,9 +419,29 @@ public static class AgentResponseParser
                 + $"{value.ValueKind.ToString().ToLowerInvariant()}: {Excerpt(value.GetRawText())}"),
         };
 
-        public AgentResponse Validate() => new(
+        public AgentResponse Validate(ImmutableDictionary<string, string> blocks)
+        {
+            ImmutableArray<AgentDocument> documents =
+                [.. (Documents ?? []).Select(document => document.Validate(blocks))];
+
+            foreach (string path in blocks.Keys.Order(StringComparer.Ordinal))
+            {
+                if (!documents.Any(document =>
+                    string.Equals(document.Path, path, StringComparison.Ordinal)))
+                {
+                    throw new AgentResponseException(
+                        $"A content block was supplied for '{path}', but no document in the "
+                        + "JSON declares that path. Content nothing declares would be written "
+                        + "into the tree with no artifact recording where it came from.");
+                }
+            }
+
+            return Build(documents);
+        }
+
+        private AgentResponse Build(ImmutableArray<AgentDocument> documents) => new(
             string.IsNullOrWhiteSpace(Summary) ? "(no summary)" : Summary.Trim(),
-            [.. (Documents ?? []).Select(document => document.Validate())],
+            documents,
             (Facts ?? []).ToImmutableDictionary(
                 pair => pair.Key, pair => AsText(pair.Value), StringComparer.Ordinal),
             [.. (Decisions ?? []).Select(decision => decision.Validate())]);
@@ -342,24 +455,34 @@ public static class AgentResponseParser
 
         public string? Content { get; set; }
 
-        public AgentDocument Validate()
+        public AgentDocument Validate(ImmutableDictionary<string, string> blocks)
         {
             if (string.IsNullOrWhiteSpace(Kind))
             {
                 throw new AgentResponseException("A document did not say what kind it is.");
             }
 
-            if (string.IsNullOrWhiteSpace(Content))
+            string? path = string.IsNullOrWhiteSpace(Path)
+                ? null
+                : Path.Trim().Replace('\\', '/');
+
+            // Content comes from the delimited block, where nothing needs escaping. An
+            // inline `content` field is still honoured — it is how the short documents and
+            // every test in the suite are written — but the block wins when both exist,
+            // because the block is the one that cannot have been mangled in transit.
+            string? content = path is not null && blocks.TryGetValue(path, out string? block)
+                ? block
+                : Content;
+
+            if (string.IsNullOrWhiteSpace(content))
             {
                 throw new AgentResponseException(
                     $"The '{Kind}' document is empty. An empty artifact would pass an "
-                    + "artifact-exists gate while containing nothing to review.");
+                    + $"artifact-exists gate while containing nothing to review. Supply its "
+                    + $"content in a '{DocumentBlock.Start} {path}' block.");
             }
 
-            return new AgentDocument(
-                Kind.Trim(),
-                string.IsNullOrWhiteSpace(Path) ? null : Path.Trim().Replace('\\', '/'),
-                Content);
+            return new AgentDocument(Kind.Trim(), path, content);
         }
     }
 

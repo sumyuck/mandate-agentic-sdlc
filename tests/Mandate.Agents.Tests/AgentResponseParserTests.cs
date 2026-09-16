@@ -292,4 +292,108 @@ public sealed class AgentResponseParserTests
         Should.Throw<AgentResponseException>(() => AgentResponseParser.Parse(
             """{ "documents": [ { "kind": "request", "content": "half" } """));
     }
+
+    [Fact]
+    public void Content_comes_from_a_delimited_block_where_nothing_needs_escaping()
+    {
+        // The format exists because of exactly this content: an unescaped quote 2.4 kB into
+        // a design document killed a real architecture stage, and a raw newline killed an
+        // implementation. Inside a block there is no escaping to get wrong.
+        const string answer = """
+            {
+              "summary": "Wrote it.",
+              "documents": [ { "kind": "source-patch", "path": "src/A.cs" } ],
+              "facts": {}
+            }
+
+            @@@MANDATE-FILE src/A.cs
+            var re = new Regex("\d+");
+            // a "quoted" word, a \ backslash, and a { brace
+            @@@MANDATE-END
+            """;
+
+        AgentDocument document = AgentResponseParser.Parse(answer).Documents.Single();
+
+        document.Path.ShouldBe("src/A.cs");
+        document.Content.ShouldContain("""var re = new Regex("\d+");""");
+        document.Content.ShouldContain("""a "quoted" word, a \ backslash, and a { brace""");
+    }
+
+    [Fact]
+    public void A_block_keeps_its_own_indentation_and_blank_lines()
+    {
+        const string answer = """
+            { "documents": [ { "kind": "source-patch", "path": "src/A.cs" } ] }
+
+            @@@MANDATE-FILE src/A.cs
+            class A
+            {
+                void M() { }
+            }
+            @@@MANDATE-END
+            """;
+
+        AgentResponseParser.Parse(answer).Documents.Single().Content
+            .ShouldBe("class A\n{\n    void M() { }\n}");
+    }
+
+    [Fact]
+    public void A_document_with_no_block_and_no_inline_content_is_refused()
+    {
+        Should.Throw<AgentResponseException>(() => AgentResponseParser.Parse(
+            """{ "documents": [ { "kind": "source-patch", "path": "src/A.cs" } ] }"""))
+            .Message.ShouldContain("@@@MANDATE-FILE src/A.cs");
+    }
+
+    [Fact]
+    public void A_block_for_a_path_nothing_declares_is_refused()
+    {
+        // Content nothing declares would be written into the tree with no artifact
+        // recording where it came from — provenance with a hole in it.
+        Should.Throw<AgentResponseException>(() => AgentResponseParser.Parse("""
+            {
+              "documents": [ { "kind": "source-patch", "path": "src/A.cs" } ]
+            }
+
+            @@@MANDATE-FILE src/A.cs
+            fine
+            @@@MANDATE-END
+
+            @@@MANDATE-FILE src/Sneaky.cs
+            not declared anywhere
+            @@@MANDATE-END
+            """))
+            .Message.ShouldContain("src/Sneaky.cs");
+    }
+
+    [Fact]
+    public void An_unclosed_block_is_refused_rather_than_truncated()
+    {
+        Should.Throw<AgentResponseException>(() => AgentResponseParser.Parse("""
+            { "documents": [ { "kind": "source-patch", "path": "src/A.cs" } ] }
+
+            @@@MANDATE-FILE src/A.cs
+            class A
+            """))
+            .Message.ShouldContain("never closed");
+    }
+
+    [Fact]
+    public void A_block_wins_over_inline_content_for_the_same_path()
+    {
+        // Both are accepted, because short documents and every test in this suite are
+        // written inline. The block wins because it is the one that cannot have been
+        // mangled in transit.
+        AgentResponseParser.Parse("""
+            {
+              "documents": [ { "kind": "source-patch", "path": "src/A.cs",
+                               "content": "the mangled inline copy" } ]
+            }
+
+            @@@MANDATE-FILE src/A.cs
+            the intact copy
+            @@@MANDATE-END
+            """)
+            .Documents.Single().Content.ShouldBe("the intact copy");
+    }
 }

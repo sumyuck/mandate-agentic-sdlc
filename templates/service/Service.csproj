@@ -7,6 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- The store the lifecycle's requirements call for, referenced up front so an
+         implementation stage never has to edit a project file to get one. -->
+    <PackageReference Include="Microsoft.Data.Sqlite" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!--
       The test project lives under this one's directory, so the SDK's default glob would
       compile its files into the service. Excluded rather than moved: keeping the service at

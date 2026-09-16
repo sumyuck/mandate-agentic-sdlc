@@ -33,6 +33,35 @@ internal static class Program
                 .WithExample("run", "\"Build a URL shortener\"", "--scenario", "greenfield")
                 .WithExample("run", "\"Add click analytics\"", "--scenario", "brownfield");
 
+            config.AddBranch("runs", runs =>
+            {
+                runs.SetDescription("Inspect and export recorded runs.");
+
+                runs.AddCommand<ListRunsCommand>("list")
+                    .WithDescription("List recorded runs, most recent first.")
+                    .WithExample("runs", "list")
+                    .WithExample("runs", "list", "--limit", "5");
+
+                runs.AddCommand<ShowRunCommand>("show")
+                    .WithDescription("Rebuild a run from its log and show where it stands.")
+                    .WithExample("runs", "show", "run_20260916T142500Z_a1b2c3")
+                    .WithExample("runs", "show", "run_20260916T142500Z_a1b2c3", "--events");
+
+                runs.AddCommand<ExportRunCommand>("export")
+                    .WithDescription("Write a run's evidence to a reviewable directory.")
+                    .WithExample("runs", "export", "run_20260916T142500Z_a1b2c3");
+            });
+
+            config.AddBranch("audit", audit =>
+            {
+                audit.SetDescription("Verify the integrity of recorded runs.");
+
+                audit.AddCommand<AuditVerifyCommand>("verify")
+                    .WithDescription("Prove a run's audit log has not been altered.")
+                    .WithExample("audit", "verify")
+                    .WithExample("audit", "verify", "run_20260916T142500Z_a1b2c3");
+            });
+
             config.AddBranch("workflow", workflow =>
             {
                 workflow.SetDescription("Inspect the declarative lifecycle definition.");

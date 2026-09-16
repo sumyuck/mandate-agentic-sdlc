@@ -23,14 +23,21 @@ namespace Mandate.Core.Execution;
 public interface IRunJournal
 {
     /// <summary>
-    /// Appends an event, linking it to the current tail of the chain.
+    /// Appends an event to a run, linking it to the current tail of that run's chain.
     /// </summary>
+    /// <param name="runId">
+    /// The run to append to. Passed explicitly because a store holds many runs and each has
+    /// its own chain: linking an event to the tail of some other run would produce a log that
+    /// verifies against nothing.
+    /// </param>
     /// <param name="build">
-    /// Builds the event, given the current tail. Called while the journal holds its write lock,
-    /// so appends from concurrently executing nodes cannot interleave and break the chain.
+    /// Builds the event, given that run's current tail. Called while the journal holds its
+    /// write lock, so appends from concurrently executing nodes cannot interleave and break
+    /// the chain.
     /// </param>
     /// <returns>The appended event, including its assigned sequence number and digest.</returns>
-    Task<RunEvent> AppendAsync(Func<RunEvent?, RunEvent> build, CancellationToken cancellationToken);
+    Task<RunEvent> AppendAsync(
+        RunId runId, Func<RunEvent?, RunEvent> build, CancellationToken cancellationToken);
 
     /// <summary>Reads a run's events in sequence order.</summary>
     Task<ImmutableArray<RunEvent>> ReadAsync(RunId runId, CancellationToken cancellationToken);

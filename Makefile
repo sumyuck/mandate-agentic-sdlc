@@ -9,7 +9,7 @@ SHELL := /bin/bash
 DOTNET ?= dotnet
 CLI := $(DOTNET) run --project src/Mandate.Cli --
 
-.PHONY: help doctor restore build test format lint info workflow diagram run clean verify
+.PHONY: help doctor restore build test format lint info workflow diagram run runs audit clean verify
 
 help: ## Show available targets
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -55,12 +55,18 @@ REQUEST ?= Build a URL shortener with create and redirect APIs
 run: ## Execute the lifecycle against scripted agents (SCENARIO=greenfield|brownfield|ambiguous)
 	@$(CLI) run "$(REQUEST)" --scenario $(SCENARIO)
 
+runs: ## List recorded runs
+	@$(CLI) runs list
+
+audit: ## Verify that no recorded run's audit log has been altered
+	@$(CLI) audit verify
+
 diagram: ## Regenerate the lifecycle diagram from the workflow definition
 	@$(CLI) workflow render -o docs/diagrams/sdlc.v1.mmd
 
 verify: doctor build test lint ## Full local gate: toolchain, build, test, style
 	@echo "verify: OK"
 
-clean: ## Remove build output and local run state
+clean: ## Remove build output and local run state (recorded runs are deleted)
 	$(DOTNET) clean --nologo >/dev/null
 	rm -rf .mandate

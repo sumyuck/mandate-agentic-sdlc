@@ -679,6 +679,7 @@ internal sealed class RunExecution(
         try
         {
             RunEvent appended = await journal.AppendAsync(
+                request.Id,
                 previous => RunEvent.Append(
                     previous ?? _tail,
                     request.Id,

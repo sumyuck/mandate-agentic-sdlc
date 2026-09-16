@@ -11,6 +11,7 @@ using Mandate.Core.Workflow;
 using Mandate.Orchestrator.Execution;
 using Mandate.Orchestrator.Gates;
 using Mandate.Persistence;
+using Mandate.Persistence.Sqlite;
 using Mandate.Workflows;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -58,6 +59,14 @@ internal sealed class RunCommand : AsyncCommand<RunCommand.Settings>
         [Description("Print the full audit log rather than the stage summary.")]
         public bool ShowEvents { get; init; }
 
+        [CommandOption("--store")]
+        [Description("Path to the run store. Defaults to .mandate/runs.db.")]
+        public string Store { get; init; } = SqliteRunJournal.DefaultPath;
+
+        [CommandOption("--ephemeral")]
+        [Description("Do not persist the run. Nothing to inspect, verify or resume afterwards.")]
+        public bool Ephemeral { get; init; }
+
         public override ValidationResult Validate() =>
             Enum.TryParse(Scenario, ignoreCase: true, out ScenarioKind parsed)
             && parsed != ScenarioKind.Unknown
@@ -90,7 +99,14 @@ internal sealed class RunCommand : AsyncCommand<RunCommand.Settings>
         // separately lets an ambiguous request concern existing code too.
         bool hasExistingCode = settings.ExistingCode || scenario == ScenarioKind.Brownfield;
 
-        InMemoryRunJournal journal = new();
+        // Runs persist by default. An unrecorded run cannot be inspected, verified or
+        // resumed, so not recording one has to be something you ask for.
+        SqliteRunJournal? store = settings.Ephemeral ? null : SqliteRunJournal.Open(settings.Store);
+        using IDisposable? storeLifetime = store;
+
+        InMemoryRunJournal? scratch = settings.Ephemeral ? new InMemoryRunJournal() : null;
+        IRunJournal journal = store is not null ? store : scratch!;
+
         SystemClock clock = SystemClock.Instance;
 
         RunId runId = RunId.New(clock.UtcNow, Guid.NewGuid().ToString("N")[..6]);
@@ -124,17 +140,29 @@ internal sealed class RunCommand : AsyncCommand<RunCommand.Settings>
 
         RunOutcome outcome = await engine.RunAsync(request, cancellationToken).ConfigureAwait(false);
 
+        ImmutableArray<RunEvent> events = await journal
+            .ReadAsync(runId, cancellationToken)
+            .ConfigureAwait(false);
+
         if (settings.ShowEvents)
         {
-            WriteEvents(journal.Events);
+            RunEventTable.Write(events);
         }
         else
         {
             WriteStages(graph, outcome);
         }
 
-        WriteAudit(runId, journal.Events);
+        WriteAudit(runId, events);
         WriteOutcome(outcome);
+
+        if (store is not null)
+        {
+            AnsiConsole.MarkupLine($"[grey]recorded in {settings.Store.EscapeMarkup()}[/]");
+
+            // Unwrapped, so it can be copied or piped. AnsiConsole would hard-wrap it.
+            Console.Out.WriteLine($"run id: {runId.Value}");
+        }
 
         return outcome.Status switch
         {
@@ -169,29 +197,6 @@ internal sealed class RunCommand : AsyncCommand<RunCommand.Settings>
                 (node.State == NodeState.Skipped ? "-" : declared.Model ?? "-").EscapeMarkup(),
                 elapsed,
                 Truncate(node.Detail).EscapeMarkup());
-        }
-
-        AnsiConsole.Write(table);
-    }
-
-    private static void WriteEvents(ImmutableArray<RunEvent> events)
-    {
-        Table table = new Table()
-            .Border(TableBorder.Rounded)
-            .AddColumn("[bold]#[/]", column => column.RightAligned())
-            .AddColumn("[bold]event[/]")
-            .AddColumn("[bold]node[/]")
-            .AddColumn("[bold]actor[/]")
-            .AddColumn("[bold]digest[/]");
-
-        foreach (RunEvent @event in events)
-        {
-            table.AddRow(
-                @event.Sequence.ToString(CultureInfo.InvariantCulture),
-                @event.Kind.ToString(),
-                (@event.NodeId?.Value ?? "-").EscapeMarkup(),
-                @event.Actor.Value.EscapeMarkup(),
-                @event.Hash.Abbreviated);
         }
 
         AnsiConsole.Write(table);

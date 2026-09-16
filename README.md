@@ -32,10 +32,11 @@ lands before the agents, so the orchestrator is defensible even at an intermedia
 | P1 | Core domain: graph, state machine, hash-chained events, artifact provenance, decisions, context | **done** |
 | P2 | Guard grammar, strict YAML loader, static validation, diagram renderer, the lifecycle itself | **done** |
 | P3 | Engine: scheduler, join policies, guard-driven skipping, gates, bounded concurrency | **done** |
-| P4 | Durable persistence, resume, replay, `audit verify` | next |
-| P5–P16 | Reliability, approvals, policy, re-planning, observability, model-backed agents, the three scenarios, documentation | planned |
+| P4 | Durable event store, run catalogue, `audit verify`, evidence export | **done** |
+| P5 | Reliability: bounded retries, fallback, rollback, safe-stop | next |
+| P6–P16 | Approvals and resume, policy, re-planning, observability, model-backed agents, the three scenarios, documentation | planned |
 
-**414 tests** currently pass, with warnings treated as errors across the solution.
+**436 tests** currently pass, with warnings treated as errors across the solution.
 
 The lifecycle runs end to end today against *scripted* agents — which produce real
 content-addressed artifacts with real provenance, contribute the context facts their nodes
@@ -44,9 +45,20 @@ stage; that arrives with the model-backed agents in P11. Runs stop at the first 
 checkpoint, because approvals land in P6.
 
 ```bash
-make run                                          # greenfield
-make run SCENARIO=brownfield                      # takes the impact-analysis path
-make run SCENARIO=ambiguous                       # diverts to a human, and refuses to design
+make run                                  # greenfield
+make run SCENARIO=brownfield              # takes the impact-analysis path
+make run SCENARIO=ambiguous               # diverts to a human, and refuses to design
+
+make runs                                 # list recorded runs
+make audit                                # prove no run's log has been altered
+```
+
+Runs persist by default to `.mandate/runs.db`. Inspect, verify or export one:
+
+```bash
+dotnet run --project src/Mandate.Cli -- runs show <runId>
+dotnet run --project src/Mandate.Cli -- audit verify <runId>
+dotnet run --project src/Mandate.Cli -- runs export <runId>   # -> runs/<runId>/
 ```
 
 Only the commands listed below exist today. Nothing in this README describes behaviour that
@@ -179,7 +191,13 @@ discipline:
   want of data is worse than no check.
 - **A run can be rebuilt from its log alone.** Live execution and replay go through the same
   reducer, so a rebuilt run cannot disagree with the one that was executed — asserted by a
-  test over the full lifecycle.
+  test over the full lifecycle, and again against the durable store.
+- **The log is append-only at the storage layer**, not merely by convention: database triggers
+  refuse an `UPDATE` or `DELETE` on the event table whoever issues it. A forged *insert* is
+  still possible through raw SQL — and that is what the hash chain catches, which a test
+  demonstrates by forging one.
+- **The run listing is a query over the events**, not a second table recording the same facts,
+  so there is no denormalised status that can drift away from the log.
 
 ## Design in one page
 

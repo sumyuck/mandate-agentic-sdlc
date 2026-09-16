@@ -32,14 +32,25 @@ public sealed class InMemoryRunJournal : IRunJournal
 
     /// <inheritdoc />
     public Task<RunEvent> AppendAsync(
-        Func<RunEvent?, RunEvent> build, CancellationToken cancellationToken)
+        RunId runId, Func<RunEvent?, RunEvent> build, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(build);
         cancellationToken.ThrowIfCancellationRequested();
 
         lock (_gate)
         {
-            RunEvent appended = build(_events.Count == 0 ? null : _events[^1]);
+            RunEvent? tail = null;
+
+            for (int index = _events.Count - 1; index >= 0; index--)
+            {
+                if (_events[index].RunId == runId)
+                {
+                    tail = _events[index];
+                    break;
+                }
+            }
+
+            RunEvent appended = build(tail);
             _events.Add(appended);
             return Task.FromResult(appended);
         }

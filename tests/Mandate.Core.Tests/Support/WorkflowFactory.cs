@@ -17,7 +17,9 @@ internal static class WorkflowFactory
         int quorumSize = 0,
         TimeSpan? timeout = null,
         IEnumerable<ApprovalRequirement>? approvals = null,
-        IEnumerable<GateCondition>? exitGate = null) =>
+        IEnumerable<GateCondition>? exitGate = null,
+        IEnumerable<string>? producesContext = null,
+        string? model = "claude-sonnet-5") =>
         new(
             NodeId.Parse(id),
             stage,
@@ -33,7 +35,9 @@ internal static class WorkflowFactory
             QuorumSize: quorumSize,
             Timeout: timeout ?? TimeSpan.FromMinutes(5),
             Compensation: compensation,
-            Produces: [ArtifactKind.SourcePatch]);
+            Model: model,
+            Produces: [ArtifactKind.SourcePatch],
+            ProducesContext: producesContext?.ToImmutableArray() ?? [$"{id}.done"]);
 
     public static WorkflowDefinition Definition(
         IEnumerable<WorkflowNode> nodes,

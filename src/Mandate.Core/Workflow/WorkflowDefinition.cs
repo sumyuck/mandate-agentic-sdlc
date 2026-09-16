@@ -22,7 +22,18 @@ namespace Mandate.Core.Workflow;
 /// Identifier of the action that undoes this node's effects, or <see langword="null"/> when
 /// the node has no external effect to undo.
 /// </param>
+/// <param name="Model">
+/// Identifier of the model the agent should use, or <see langword="null"/> to take the
+/// workflow's default. Declared per node so capability can be matched to the risk of the
+/// stage: a stage that interprets an ambiguous requirement warrants a stronger model than one
+/// that generates a test file, and the choice is recorded in the audit log either way.
+/// </param>
 /// <param name="Produces">Artifact kinds the node is expected to produce.</param>
+/// <param name="ProducesContext">
+/// Context keys this node contributes. Declared so that a guard referring to a key no stage
+/// produces is caught when the workflow is loaded, rather than as a stage mysteriously
+/// skipped part-way through a run.
+/// </param>
 public sealed record WorkflowNode(
     NodeId Id,
     SdlcStage Stage,
@@ -37,7 +48,9 @@ public sealed record WorkflowNode(
     int QuorumSize,
     TimeSpan Timeout,
     string? Compensation,
-    ImmutableArray<Artifacts.ArtifactKind> Produces)
+    string? Model,
+    ImmutableArray<Artifacts.ArtifactKind> Produces,
+    ImmutableArray<string> ProducesContext)
 {
     /// <summary>True when the node cannot complete without a human sign-off.</summary>
     public bool RequiresApproval => !Approvals.IsEmpty;

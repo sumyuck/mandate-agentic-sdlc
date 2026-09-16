@@ -332,4 +332,74 @@ public sealed class WorkflowGraphTests
         graph.Contains(Id("nope")).ShouldBeFalse();
         Should.Throw<KeyNotFoundException>(() => graph.Node(Id("nope")));
     }
+
+    [Fact]
+    public void A_guarded_edge_with_a_valid_expression_is_accepted()
+    {
+        WorkflowDefinition guarded = WorkflowFactory.Definition(
+            [WorkflowFactory.Node("a"), WorkflowFactory.Node("impact-analysis")],
+            [WorkflowEdge.Guarded(Id("a"), Id("impact-analysis"), "run.scenario == 'brownfield'")]);
+
+        Should.NotThrow(() => WorkflowGraph.Build(guarded));
+    }
+
+    [Fact]
+    public void A_guard_that_does_not_parse_is_rejected_at_load()
+    {
+        WorkflowDefinition broken = WorkflowFactory.Definition(
+            [WorkflowFactory.Node("a"), WorkflowFactory.Node("b")],
+            [WorkflowEdge.Guarded(Id("a"), Id("b"), "run.scenario = 'brownfield'")]);
+
+        WorkflowValidationException error =
+            Should.Throw<WorkflowValidationException>(() => WorkflowGraph.Build(broken));
+
+        error.Errors.ShouldContain(issue => issue.Code == "WF024");
+        error.Message.ShouldContain("Use '==' for equality");
+    }
+
+    [Fact]
+    public void A_guard_reading_a_context_key_nothing_produces_is_rejected_at_load()
+    {
+        // Completes the fail-closed story: because guards refuse to evaluate an absent key,
+        // the mistake has to be caught before a run exists rather than halting one midway.
+        WorkflowDefinition mistyped = WorkflowFactory.Definition(
+            [
+                WorkflowFactory.Node("a", producesContext: ["requirements.scope"]),
+                WorkflowFactory.Node("b"),
+            ],
+            [WorkflowEdge.Guarded(Id("a"), Id("b"), "requirements.scoop == 'wide'")]);
+
+        WorkflowValidationException error =
+            Should.Throw<WorkflowValidationException>(() => WorkflowGraph.Build(mistyped));
+
+        error.Errors.ShouldContain(issue => issue.Code == "WF034");
+        error.Message.ShouldContain("requirements.scoop");
+    }
+
+    [Fact]
+    public void Guards_may_read_the_run_level_facts_the_engine_supplies()
+    {
+        WorkflowDefinition guarded = WorkflowFactory.Definition(
+            [WorkflowFactory.Node("a", producesContext: []), WorkflowFactory.Node("b")],
+            [WorkflowEdge.Guarded(Id("a"), Id("b"), "run.has-existing-code == true")]);
+
+        Should.NotThrow(() => WorkflowGraph.Build(guarded));
+    }
+
+    [Fact]
+    public void A_guard_may_read_a_key_produced_by_any_node_not_only_its_source()
+    {
+        WorkflowDefinition guarded = WorkflowFactory.Definition(
+            [
+                WorkflowFactory.Node("a", producesContext: []),
+                WorkflowFactory.Node("b", producesContext: ["test.coverage"]),
+                WorkflowFactory.Node("c", producesContext: []),
+            ],
+            [
+                WorkflowEdge.Forward(Id("a"), Id("b")),
+                WorkflowEdge.Guarded(Id("b"), Id("c"), "test.coverage >= 0.8"),
+            ]);
+
+        Should.NotThrow(() => WorkflowGraph.Build(guarded));
+    }
 }

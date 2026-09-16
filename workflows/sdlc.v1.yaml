@@ -1,0 +1,479 @@
+# ---------------------------------------------------------------------------------------------
+# Mandate — the governed software development lifecycle.
+#
+# This file is the plan. The engine contains no lifecycle control flow of its own: it loads,
+# validates and interprets this graph (see docs/adr/0004-declarative-workflow.md). Changing
+# how software gets built here is a configuration change under review, not a code deployment.
+#
+# Read it as four claims about the lifecycle:
+#   1. The path is not linear. Ambiguous requirements divert to a human and loop back;
+#      brownfield work takes an extra analysis stage; failing tests return to implementation.
+#   2. Work fans out and re-synchronises. Test, review, security scan and documentation run
+#      in parallel and all four must land before release readiness is even considered.
+#   3. Every stage has an autonomy level, and the two irreversible decisions — the design
+#      that everything downstream is built on, and the release itself — require a named human.
+#   4. Nothing passes unchecked. Each stage declares what must be true to enter it and what
+#      must be true for its output to be accepted.
+# ---------------------------------------------------------------------------------------------
+
+name: sdlc
+version: v1
+description: >-
+  Requirement to release-readiness under governed agent autonomy, with human approval at the
+  two irreversible decisions and bounded recovery everywhere else.
+
+# Stages inherit this unless they name their own. Capability is matched to the risk of the
+# stage rather than applied uniformly; the model that ran each stage is recorded in the run's
+# audit log, so model provenance is part of the evidence.
+default-model: claude-sonnet-5
+
+nodes:
+  - id: intake
+    stage: intake
+    agent: intake
+    description: >-
+      Captures the request verbatim and establishes run context. Deliberately does no
+      interpretation, so that what was asked for stays separable from what we understood.
+    autonomy: act-and-auto-accept-low-risk
+    model: claude-haiku-4-5
+    timeout: 2m
+    retry:
+      max-attempts: 2
+      initial-backoff: 2s
+      backoff-multiplier: 2
+      max-backoff: 10s
+      jitter-ratio: 0.2
+      on-exhaustion: fail-node
+    exit-gate:
+      - kind: artifact-exists
+        expression: request
+        description: The original request has been recorded unaltered.
+    produces:
+      - request
+    produces-context:
+      - intake.recorded
+
+  - id: requirements
+    stage: requirements
+    agent: requirements-analyst
+    description: >-
+      Normalises intent into an engineering problem with acceptance criteria, and scores what
+      remains ambiguous. Detecting ambiguity is the deliverable here, not a side effect.
+    autonomy: act-in-sandbox
+    timeout: 10m
+    retry:
+      max-attempts: 3
+      initial-backoff: 4s
+      backoff-multiplier: 2
+      max-backoff: 30s
+      jitter-ratio: 0.2
+      on-exhaustion: human-handoff
+    entry-gate:
+      - kind: artifact-exists
+        expression: request
+        description: There is a request to interpret.
+    exit-gate:
+      - kind: artifact-exists
+        expression: requirement-spec
+        description: Scope, acceptance criteria and non-functional requirements are stated.
+      - kind: artifact-exists
+        expression: ambiguity-report
+        description: >-
+          Ambiguity has been assessed explicitly. An empty report is a finding; a missing one
+          means the question was never asked.
+    produces:
+      - requirement-spec
+      - ambiguity-report
+    produces-context:
+      - requirements.scope
+      - requirements.ambiguity-score
+      - requirements.acceptance-criteria
+
+  - id: clarification
+    stage: requirements
+    agent: clarification-broker
+    description: >-
+      Puts the open questions to a human, records the answers, and records an explicit
+      assumption wherever a question goes unanswered. An agent may not resolve a material
+      ambiguity by choosing for the requester.
+    autonomy: propose-only
+    model: claude-haiku-4-5
+    timeout: 1h
+    approvals:
+      - role: requester
+        reason: >-
+          The requirement has more than one defensible reading, and choosing between them
+          changes what gets built.
+        segregation-of-duties: true
+    exit-gate:
+      - kind: artifact-exists
+        expression: clarification-request
+        description: The questions put to the human are on the record.
+      - kind: any-artifact-exists
+        expression: clarification-response, assumption
+        description: >-
+          Every question was either answered or converted into a recorded assumption. Silence
+          is not allowed to pass as agreement.
+    produces:
+      - clarification-request
+      - clarification-response
+      - assumption
+    produces-context:
+      - requirements.clarified
+      - requirements.assumptions
+
+  - id: impact-analysis
+    stage: impact-analysis
+    agent: codebase-analyst
+    description: >-
+      For changes to existing code: identifies impacted modules, endpoints and data flows,
+      and states the blast radius. Skipped entirely on greenfield work.
+    autonomy: act-in-sandbox
+    timeout: 15m
+    retry:
+      max-attempts: 2
+      initial-backoff: 5s
+      backoff-multiplier: 2
+      max-backoff: 20s
+      jitter-ratio: 0.2
+      on-exhaustion: human-handoff
+    entry-gate:
+      - kind: artifact-exists
+        expression: requirement-spec
+        description: There is a normalised requirement to analyse against.
+    exit-gate:
+      - kind: artifact-exists
+        expression: impact-analysis
+        description: Impacted components and blast radius are stated.
+    produces:
+      - impact-analysis
+    produces-context:
+      - impact.blast-radius
+      - impact.affected-components
+
+  - id: architecture
+    stage: architecture
+    agent: architect
+    description: >-
+      Produces the design, the interface contracts and the decision records. Requires human
+      sign-off because every later stage is built on it: correcting a design after
+      implementation costs the implementation.
+    autonomy: act-in-sandbox
+    # Either requirements arrives directly (greenfield) or by way of impact analysis
+    # (brownfield). Exactly one of those paths is taken, so this stage joins on 'any';
+    # an 'all' join would wait forever for the path the guard excluded.
+    join: any
+    timeout: 20m
+    retry:
+      max-attempts: 2
+      initial-backoff: 5s
+      backoff-multiplier: 2
+      max-backoff: 30s
+      jitter-ratio: 0.2
+      on-exhaustion: human-handoff
+    approvals:
+      - role: tech-lead
+        reason: >-
+          The design constrains every downstream stage. Approving it after implementation
+          would make the approval ceremonial.
+        segregation-of-duties: true
+    exit-gate:
+      - kind: artifact-exists
+        expression: design-doc
+        description: There is a design to implement against.
+      - kind: artifact-exists
+        expression: architecture-decision-record
+        description: >-
+          Each significant choice is recorded with the options rejected, so the design can be
+          argued with rather than merely read.
+      - kind: approval-held
+        expression: tech-lead
+        description: A named human has signed off the design.
+    produces:
+      - design-doc
+      - architecture-decision-record
+      - api-contract
+    produces-context:
+      - architecture.approved
+      - architecture.components
+
+  - id: implement
+    stage: implementation
+    agent: implementer
+    description: >-
+      Writes the change into the run's git workspace as its own commit, which is what makes
+      the change reviewable per stage and genuinely revertible.
+    autonomy: act-in-sandbox
+    timeout: 30m
+    compensation: revert-node-commit
+    retry:
+      max-attempts: 3
+      initial-backoff: 5s
+      backoff-multiplier: 2
+      max-backoff: 60s
+      jitter-ratio: 0.2
+      on-exhaustion: compensate
+    entry-gate:
+      - kind: artifact-exists
+        expression: design-doc
+        description: There is an approved design to implement.
+      - kind: approval-held
+        expression: tech-lead
+        description: Implementation does not begin before the design is signed off.
+    exit-gate:
+      - kind: artifact-exists
+        expression: source-patch
+        description: A change was produced.
+      - kind: workspace-builds
+        expression: ""
+        description: >-
+          The workspace compiles. A patch that does not build is not a candidate for review.
+    produces:
+      - source-patch
+    produces-context:
+      - implementation.commit
+      - implementation.files-changed
+
+  - id: test
+    stage: testing
+    agent: test-engineer
+    description: >-
+      Generates tests and runs them. The gate depends on the recorded result of an actual
+      test run, never on an agent's assertion that the code works.
+    autonomy: act-and-auto-accept-low-risk
+    model: claude-haiku-4-5
+    timeout: 20m
+    compensation: discard-test-artifacts
+    retry:
+      max-attempts: 3
+      initial-backoff: 5s
+      backoff-multiplier: 2
+      max-backoff: 45s
+      jitter-ratio: 0.25
+      on-exhaustion: compensate
+    entry-gate:
+      - kind: artifact-exists
+        expression: source-patch
+        description: There is a change to test.
+    exit-gate:
+      - kind: tests-pass
+        expression: ""
+        description: Every test in the suite passed in this run.
+      - kind: coverage-at-least
+        expression: "0.75"
+        description: >-
+          Line coverage of the changed code meets the threshold. Passing tests that exercise
+          nothing are not evidence.
+    produces:
+      - test-suite
+      - test-report
+    produces-context:
+      - test.coverage
+      - test.failures
+
+  - id: code-review
+    stage: code-review
+    agent: reviewer
+    description: >-
+      Reviews the change against a checklist. Runs as a separate actor from the implementer,
+      which is what makes the segregation-of-duties rule enforceable rather than declared.
+    autonomy: act-and-auto-accept-low-risk
+    timeout: 15m
+    retry:
+      max-attempts: 2
+      initial-backoff: 5s
+      backoff-multiplier: 2
+      max-backoff: 20s
+      jitter-ratio: 0.2
+      on-exhaustion: human-handoff
+    entry-gate:
+      - kind: artifact-exists
+        expression: source-patch
+        description: There is a change to review.
+    exit-gate:
+      - kind: artifact-exists
+        expression: review-report
+        description: The review was actually performed and recorded.
+      - kind: no-findings-above
+        expression: high
+        description: No finding of high severity or worse is outstanding.
+    produces:
+      - review-report
+    produces-context:
+      - review.findings
+      - review.highest-severity
+
+  - id: security-scan
+    stage: security-scan
+    agent: security-scanner
+    description: >-
+      Scans the change for committed secrets, vulnerable dependencies and insecure patterns.
+      Runs in parallel with review because it answers a different question.
+    autonomy: act-and-auto-accept-low-risk
+    model: claude-haiku-4-5
+    timeout: 10m
+    retry:
+      max-attempts: 2
+      initial-backoff: 3s
+      backoff-multiplier: 2
+      max-backoff: 15s
+      jitter-ratio: 0.2
+      on-exhaustion: human-handoff
+    entry-gate:
+      - kind: artifact-exists
+        expression: source-patch
+        description: There is a change to scan.
+    exit-gate:
+      - kind: artifact-exists
+        expression: security-report
+        description: The scan ran and its findings are recorded.
+      - kind: no-secrets-committed
+        expression: ""
+        description: No credential material appears in the change.
+    produces:
+      - security-report
+    produces-context:
+      - security.findings
+      - security.secrets-found
+
+  - id: documentation
+    stage: documentation
+    agent: technical-writer
+    description: >-
+      Writes the operator- and user-facing documentation from the run's own artifacts and
+      recorded decisions, so documentation describes what was built rather than what was
+      planned.
+    autonomy: act-and-auto-accept-low-risk
+    model: claude-haiku-4-5
+    timeout: 15m
+    retry:
+      max-attempts: 2
+      initial-backoff: 3s
+      backoff-multiplier: 2
+      max-backoff: 15s
+      jitter-ratio: 0.2
+      on-exhaustion: fail-node
+    entry-gate:
+      - kind: artifact-exists
+        expression: source-patch
+        description: There is a change to document.
+    exit-gate:
+      - kind: artifact-exists
+        expression: documentation
+        description: Documentation was produced.
+    produces:
+      - documentation
+    produces-context:
+      - documentation.written
+
+  - id: release-readiness
+    stage: release-readiness
+    agent: release-manager
+    description: >-
+      Assembles the go/no-go evidence pack and puts it to a human. The agent may recommend;
+      it may not release. This is the one stage whose autonomy level is deliberately the
+      lowest in the lifecycle.
+    autonomy: propose-only
+    # The synchronising barrier: test, review, security scan and documentation must all have
+    # landed. This is the join that makes the parallel section a section rather than a race.
+    join: all
+    timeout: 30m
+    retry:
+      max-attempts: 1
+      on-exhaustion: human-handoff
+    entry-gate:
+      - kind: tests-pass
+        expression: ""
+        description: The test stage's recorded result is green.
+      - kind: no-findings-above
+        expression: high
+        description: No high-severity review finding is outstanding.
+      - kind: no-secrets-committed
+        expression: ""
+        description: The security scan found no credential material.
+      - kind: artifact-exists
+        expression: documentation
+        description: The change is documented.
+      - kind: policy-clean
+        expression: change-control
+        description: Every change-control rule evaluates clean.
+    approvals:
+      - role: release-approver
+        reason: >-
+          Release is the one action in this lifecycle that is not revertible by the engine.
+          A human owns it.
+        segregation-of-duties: true
+    exit-gate:
+      - kind: artifact-exists
+        expression: release-checklist
+        description: The evidence pack a human decided on is retained.
+      - kind: approval-held
+        expression: release-approver
+        description: A named human recorded a go decision.
+    produces:
+      - release-checklist
+      - metrics-report
+    produces-context:
+      - release.decision
+
+edges:
+  - from: intake
+    to: requirements
+
+  # Ambiguous requirements divert to a human rather than being resolved by an agent.
+  - from: requirements
+    to: clarification
+    guard: requirements.ambiguity-score > 0.3
+
+  # ...and the answers re-enter requirements, which is re-run against them. Bounded by the
+  # requirements stage's own retry budget, so this cannot cycle indefinitely.
+  - from: clarification
+    to: requirements
+    kind: loop-back
+
+  # Brownfield work earns an extra stage; greenfield skips straight to design. Exactly one of
+  # these two guards can hold, which is why 'architecture' joins on 'any'.
+  - from: requirements
+    to: impact-analysis
+    guard: run.has-existing-code == true
+
+  - from: requirements
+    to: architecture
+    guard: run.has-existing-code == false
+
+  - from: impact-analysis
+    to: architecture
+
+  - from: architecture
+    to: implement
+
+  # Fan-out: four independent questions about the same change, asked concurrently.
+  - from: implement
+    to: test
+
+  - from: implement
+    to: code-review
+
+  - from: implement
+    to: security-scan
+
+  - from: implement
+    to: documentation
+
+  # Failing tests return to implementation rather than failing the run outright.
+  - from: test
+    to: implement
+    kind: loop-back
+
+  # Fan-in: the synchronising barrier before any release decision.
+  - from: test
+    to: release-readiness
+
+  - from: code-review
+    to: release-readiness
+
+  - from: security-scan
+    to: release-readiness
+
+  - from: documentation
+    to: release-readiness

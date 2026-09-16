@@ -30,10 +30,11 @@ lands before the agents, so the orchestrator is defensible even at an intermedia
 |---|---|---|
 | P0 | Repository skeleton, build governance, ADRs | **done** |
 | P1 | Core domain: graph, state machine, hash-chained events, artifact provenance, decisions, context | **done** |
-| P2 | YAML workflow loader, static validator, diagram renderer | next |
-| P3–P16 | Engine, persistence, reliability, approvals, policy, re-planning, observability, agents, the three scenarios, documentation | planned |
+| P2 | Guard grammar, strict YAML loader, static validation, diagram renderer, the lifecycle itself | **done** |
+| P3 | Engine: scheduler, bounded parallelism, entry/exit gates | next |
+| P4–P16 | Persistence, reliability, approvals, policy, re-planning, observability, agents, the three scenarios, documentation | planned |
 
-**207 tests** currently pass, with warnings treated as errors across the solution.
+**340 tests** currently pass, with warnings treated as errors across the solution.
 
 Only the commands listed below exist today. Nothing in this README describes behaviour that
 is not yet implemented.
@@ -58,7 +59,15 @@ export PATH="$HOME/.dotnet:$PATH"
 make doctor     # confirm the toolchain matches global.json
 make verify     # toolchain, build (warnings are errors), all tests, code style
 make info       # print engine identity and host diagnostics
+make workflow   # validate the lifecycle definition and show its parallel structure
 make help       # list available targets
+```
+
+Inspect the lifecycle directly:
+
+```bash
+dotnet run --project src/Mandate.Cli -- workflow validate
+dotnet run --project src/Mandate.Cli -- workflow render --markdown
 ```
 
 Every target accepts a `DOTNET` override, e.g. `make verify DOTNET=$HOME/.dotnet/dotnet`.
@@ -91,6 +100,33 @@ tests/                    unit, architecture and integration tests
 docs/                     architecture, ADRs, scenarios, testing, traceability
 ```
 
+## The lifecycle
+
+[`workflows/sdlc.v1.yaml`](workflows/sdlc.v1.yaml) is the plan — the engine holds no lifecycle
+control flow of its own. The diagram in
+[`docs/diagrams/sdlc.v1.mmd`](docs/diagrams/sdlc.v1.mmd) is generated from that same file, so
+the two cannot drift apart.
+
+It is deliberately not a chain:
+
+- **Conditional paths.** Impact analysis runs only against existing code. Requirements whose
+  ambiguity score exceeds the threshold divert to a human and loop back.
+- **Parallel work with a synchronising barrier.** Test, code review, security scan and
+  documentation run concurrently from one implementation, and all four must land before a
+  release decision is even considered.
+- **Bounded returns.** A failing test returns to implementation along a declared loop-back
+  edge, bounded by that stage's retry budget — non-linear without being unbounded.
+- **Human checkpoints at the irreversible decisions.** The design everything is built on, and
+  the release itself. Both enforce segregation of duties: the participant that produced the
+  work cannot approve it.
+- **Autonomy declared per stage.** L0 to L2, matched to the risk of the stage. L3 (fully
+  autonomous) is representable and deliberately unassigned.
+- **Model capability matched to stage risk**, and recorded per stage in the audit log, so model
+  provenance is part of the evidence.
+
+Twenty-two tests in `ShippedWorkflowTests` guard these properties, because the lifecycle is
+configuration and nothing in the compiler stops someone weakening it.
+
 ## What the core model already guarantees
 
 The domain is built so that the governance properties are enforced by types rather than by
@@ -114,6 +150,13 @@ discipline:
 - **A workflow that cannot execute is rejected before a run exists**, with every problem
   reported at once — cycles in the forward graph, nodes wired into no path, contradictory
   autonomy, a compensation fallback with nothing to compensate, an attempt with no timeout.
+- **The workflow file cannot execute code.** Conditional paths use a closed predicate grammar
+  with no function calls, arithmetic, member access or interpolation, so a change-controlled
+  configuration file never becomes a code-execution surface. Guards fail closed, and a guard
+  reading a context key no stage produces is rejected at load rather than halting a run.
+- **Nothing is read loosely.** An unknown key, a misspelled enum, a malformed duration or a
+  duplicate mapping is an error naming the file, the line and the accepted values — never a
+  silently dropped setting.
 
 ## Design in one page
 

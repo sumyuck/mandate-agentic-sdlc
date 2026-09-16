@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using Mandate.Core.Identifiers;
+using Mandate.Core.Workflow.Guards;
 
 namespace Mandate.Core.Workflow;
 
@@ -135,6 +136,7 @@ public sealed class WorkflowGraph
         ValidateEdges(definition, declared, issues);
         ValidateAcyclic(definition, declared, issues);
         ValidateConnectivity(definition, declared, issues);
+        ValidateGuards(definition, issues);
 
         return issues.ToImmutable();
     }
@@ -559,6 +561,41 @@ public sealed class WorkflowGraph
         }
 
         return components.ToImmutable();
+    }
+
+    private static void ValidateGuards(
+        WorkflowDefinition definition, ImmutableArray<WorkflowIssue>.Builder issues)
+    {
+        // Every context key any stage says it contributes, plus the run-level facts the
+        // engine supplies itself.
+        ImmutableHashSet<string> available = WorkflowContextKeys.EngineProvided
+            .Union(definition.Nodes.SelectMany(node => node.ProducesContext));
+
+        foreach (WorkflowEdge edge in definition.Edges.Where(edge => edge.IsConditional))
+        {
+            if (!GuardExpression.TryParse(edge.Guard, out GuardExpression? guard, out string? error))
+            {
+                issues.Add(new WorkflowIssue(
+                    WorkflowIssueSeverity.Error,
+                    "WF024",
+                    $"The guard on '{edge.From}' -> '{edge.To}' is not a valid expression. {error}",
+                    edge.From));
+                continue;
+            }
+
+            foreach (string key in guard!.ReferencedKeys.Except(available)
+                         .OrderBy(key => key, StringComparer.Ordinal))
+            {
+                issues.Add(new WorkflowIssue(
+                    WorkflowIssueSeverity.Error,
+                    "WF034",
+                    $"The guard on '{edge.From}' -> '{edge.To}' reads context key '{key}', which "
+                    + "no node declares that it produces and which the engine does not supply. "
+                    + "Guards fail closed, so at run time this would stop the run rather than "
+                    + "route around it - the mistake is caught here instead.",
+                    edge.From));
+            }
+        }
     }
 
     private static ImmutableArray<NodeId> SortTopologically(

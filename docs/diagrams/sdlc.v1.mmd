@@ -1,0 +1,47 @@
+flowchart TD
+    intake["intake<br/><i>Intake</i><br/>L2 auto-accept"]
+    requirements["requirements<br/><i>Requirements</i><br/>L1 sandbox"]
+    clarification{{"clarification<br/><i>Requirements</i><br/>L0 propose<br/>⚑ requester"}}
+    impact_analysis["impact-analysis<br/><i>ImpactAnalysis</i><br/>L1 sandbox"]
+    architecture{{"architecture<br/><i>Architecture</i><br/>L1 sandbox<br/>⚑ tech-lead"}}
+    implement["implement<br/><i>Implementation</i><br/>L1 sandbox"]
+    code_review["code-review<br/><i>CodeReview</i><br/>L2 auto-accept"]
+    documentation["documentation<br/><i>Documentation</i><br/>L2 auto-accept"]
+    security_scan["security-scan<br/><i>SecurityScan</i><br/>L2 auto-accept"]
+    test["test<br/><i>Testing</i><br/>L2 auto-accept"]
+    release_readiness{{"release-readiness<br/><i>ReleaseReadiness</i><br/>L0 propose<br/>⚑ release-approver"}}
+
+    intake --> requirements
+    requirements -->|"requirements.ambiguity-score > 0.3"| clarification
+    clarification -.->|retry / re-plan| requirements
+    requirements -->|"run.has-existing-code == true"| impact_analysis
+    requirements -->|"run.has-existing-code == false"| architecture
+    impact_analysis --> architecture
+    architecture --> implement
+    implement --> test
+    implement --> code_review
+    implement --> security_scan
+    implement --> documentation
+    test -.->|retry / re-plan| implement
+    test --> release_readiness
+    code_review --> release_readiness
+    security_scan --> release_readiness
+    documentation --> release_readiness
+
+    classDef proposeOnly fill:#fff4e5,stroke:#b26a00,stroke-width:2px;
+    classDef sandbox fill:#e8f0fe,stroke:#1a56db,stroke-width:1px;
+    classDef autoAccept fill:#e9f7ef,stroke:#1e7e34,stroke-width:1px;
+    classDef autonomous fill:#fdecea,stroke:#b71c1c,stroke-width:2px;
+    class clarification,release_readiness proposeOnly;
+    class requirements,impact_analysis,architecture,implement sandbox;
+    class intake,code_review,documentation,security_scan,test autoAccept;
+
+    subgraph legend["legend"]
+        direction LR
+        l1["L2 — acts, low-risk output auto-accepted"]
+        l2["L1 — acts in the run workspace"]
+        l3{{"L0 — proposes only; a human decides"}}
+    end
+    class l1 autoAccept;
+    class l2 sandbox;
+    class l3 proposeOnly;

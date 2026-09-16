@@ -17,7 +17,8 @@ is made rather than reconstructed afterwards.
 | [0005](0005-event-sourced-state.md) | Run state is event-sourced in SQLite with a hash-chained audit log | Accepted |
 | [0006](0006-git-backed-workspace.md) | Agent output lands in a per-run git workspace; rollback is a real revert | Accepted |
 | [0007](0007-llm-record-replay.md) | LLM access sits behind a port with record/replay, so the submission runs offline | Accepted |
+| [0008](0008-restricted-guard-grammar.md) | Conditional paths use a closed predicate grammar, not an expression evaluator | Accepted |
 
-Enforcement: ADR-0001, 0002 and 0003 are asserted by
+Enforcement: ADR-0001, 0002, 0003 and 0008 are asserted by
 [`DependencyRuleTests`](../../tests/Mandate.Orchestrator.Tests/Architecture/DependencyRuleTests.cs),
 so breaking them fails the build rather than the review.

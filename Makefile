@@ -9,7 +9,7 @@ SHELL := /bin/bash
 DOTNET ?= dotnet
 CLI := $(DOTNET) run --project src/Mandate.Cli --
 
-.PHONY: help doctor restore build test format lint info clean verify
+.PHONY: help doctor restore build test format lint info workflow diagram clean verify
 
 help: ## Show available targets
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -44,6 +44,12 @@ lint: ## Verify code style without modifying files
 
 info: ## Print engine identity and host diagnostics
 	@$(CLI) info
+
+workflow: ## Validate the lifecycle definition and show its parallel structure
+	@$(CLI) workflow validate
+
+diagram: ## Regenerate the lifecycle diagram from the workflow definition
+	@$(CLI) workflow render -o docs/diagrams/sdlc.v1.mmd
 
 verify: doctor build test lint ## Full local gate: toolchain, build, test, style
 	@echo "verify: OK"

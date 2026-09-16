@@ -8,6 +8,7 @@
     <ProjectReference Include="..\Mandate.Persistence\Mandate.Persistence.csproj" />
     <ProjectReference Include="..\Mandate.Observability\Mandate.Observability.csproj" />
     <ProjectReference Include="..\Mandate.Llm\Mandate.Llm.csproj" />
+    <ProjectReference Include="..\Mandate.Workflows\Mandate.Workflows.csproj" />
   </ItemGroup>
 
   <ItemGroup>

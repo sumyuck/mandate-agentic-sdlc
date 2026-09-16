@@ -27,6 +27,21 @@ internal static class Program
                 .WithDescription("Show engine identity and host diagnostics.")
                 .WithExample("info")
                 .WithExample("info", "--json");
+
+            config.AddBranch("workflow", workflow =>
+            {
+                workflow.SetDescription("Inspect the declarative lifecycle definition.");
+
+                workflow.AddCommand<ValidateWorkflowCommand>("validate")
+                    .WithDescription("Check that a workflow file can be loaded and executed.")
+                    .WithExample("workflow", "validate")
+                    .WithExample("workflow", "validate", "workflows/sdlc.v1.yaml");
+
+                workflow.AddCommand<RenderWorkflowCommand>("render")
+                    .WithDescription("Render the lifecycle as a Mermaid diagram.")
+                    .WithExample("workflow", "render", "--markdown")
+                    .WithExample("workflow", "render", "-o", "docs/diagrams/sdlc.mmd");
+            });
         });
 
         return app.Run(args);

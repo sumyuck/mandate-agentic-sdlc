@@ -36,6 +36,7 @@ public sealed class DependencyRuleTests
     [InlineData("src/Mandate.Observability/Mandate.Observability.csproj")]
     [InlineData("src/Mandate.Llm/Mandate.Llm.csproj")]
     [InlineData("src/Mandate.Agents/Mandate.Agents.csproj")]
+    [InlineData("src/Mandate.Workflows/Mandate.Workflows.csproj")]
     public void Adapters_do_not_depend_on_the_orchestration_engine(string adapterProject)
     {
         XDocument project = XDocument.Parse(RepositoryLayout.ReadProject(adapterProject));
@@ -75,13 +76,21 @@ public sealed class DependencyRuleTests
         offenders.ShouldBeEmpty();
     }
 
-    /// <summary>ADR-0001: no third-party workflow or agent framework may creep in.</summary>
+    /// <summary>ADR-0001 and ADR-0008: no framework may supply the assessed capability, and no
+    /// expression evaluator may turn the workflow file into executable code.</summary>
     [Theory]
     [InlineData("LangChain")]
     [InlineData("Elsa")]
     [InlineData("WorkflowCore")]
     [InlineData("Temporalio")]
     [InlineData("Microsoft.SemanticKernel")]
+    // ADR-0008: no expression evaluator or scripting engine may become a dependency, or the
+    // workflow file stops being configuration and becomes a code-execution surface.
+    [InlineData("NCalc")]
+    [InlineData("DynamicExpresso")]
+    [InlineData("Jint")]
+    [InlineData("NLua")]
+    [InlineData("CS-Script")]
     public void No_orchestration_framework_is_taken_as_a_dependency(string forbiddenPackage)
     {
         string packages = File.ReadAllText(

@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The workflow file format is a separate, versioned contract: authored by humans, reviewed
+    under change control, and the one place a YAML parser is needed. Keeping it in its own
+    assembly stops that dependency leaking into the domain or the persistence layer, and makes
+    the format's surface area reviewable on its own.
+  -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\Mandate.Core\Mandate.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="YamlDotNet" />
+  </ItemGroup>
+
+</Project>

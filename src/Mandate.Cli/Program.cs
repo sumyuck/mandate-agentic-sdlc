@@ -28,6 +28,11 @@ internal static class Program
                 .WithExample("info")
                 .WithExample("info", "--json");
 
+            config.AddCommand<RunCommand>("run")
+                .WithDescription("Execute the lifecycle for a requirement.")
+                .WithExample("run", "\"Build a URL shortener\"", "--scenario", "greenfield")
+                .WithExample("run", "\"Add click analytics\"", "--scenario", "brownfield");
+
             config.AddBranch("workflow", workflow =>
             {
                 workflow.SetDescription("Inspect the declarative lifecycle definition.");

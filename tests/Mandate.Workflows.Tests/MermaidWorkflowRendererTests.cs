@@ -109,6 +109,10 @@ public sealed class MermaidWorkflowRendererTests
                 approvals:
                   - role: 'lead "the boss" | owner'
                     reason: Because.
+                exit-gate:
+                  - kind: approval-held
+                    expression: 'lead "the boss" | owner'
+                    description: Signed off.
             """);
 
         string diagram = MermaidWorkflowRenderer.Render(WorkflowGraph.Build(hostile));

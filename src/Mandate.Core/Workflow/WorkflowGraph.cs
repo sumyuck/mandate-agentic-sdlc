@@ -190,6 +190,34 @@ public sealed class WorkflowGraph
     }
 
     /// <summary>
+    /// Every node upstream of <paramref name="id"/> along forward edges.
+    /// </summary>
+    /// <remarks>
+    /// Used to derive what a stage is entitled to see. A stage may read the context and
+    /// artifacts of the work it actually depends on, and nothing else — least privilege taken
+    /// from the declared graph rather than from a second list someone has to maintain.
+    /// </remarks>
+    public ImmutableHashSet<NodeId> TransitiveDependenciesOf(NodeId id)
+    {
+        ImmutableHashSet<NodeId>.Builder reached = ImmutableHashSet.CreateBuilder<NodeId>();
+        Queue<NodeId> frontier = new();
+        frontier.Enqueue(id);
+
+        while (frontier.Count > 0)
+        {
+            foreach (WorkflowEdge edge in ForwardDependenciesOf(frontier.Dequeue()))
+            {
+                if (reached.Add(edge.From))
+                {
+                    frontier.Enqueue(edge.From);
+                }
+            }
+        }
+
+        return reached.ToImmutable();
+    }
+
+    /// <summary>
     /// Sets of nodes that may execute concurrently, in dependency order.
     /// </summary>
     /// <remarks>
@@ -336,6 +364,35 @@ public sealed class WorkflowGraph
                     $"Node '{node.Id}' is fully autonomous yet requires approval. One of the "
                     + "two is wrong, and guessing which would misstate the autonomy boundary.",
                     node.Id));
+            }
+
+            if (string.Equals(node.Id.Value, WorkflowContextKeys.EngineNodeId, StringComparison.Ordinal))
+            {
+                issues.Add(new WorkflowIssue(
+                    WorkflowIssueSeverity.Error,
+                    "WF013",
+                    $"'{WorkflowContextKeys.EngineNodeId}' is reserved: the engine attributes "
+                    + "run-level context facts to it before any stage executes. Choose another id.",
+                    node.Id));
+            }
+
+            foreach (ApprovalRequirement approval in node.Approvals)
+            {
+                bool enforced = node.ExitGate.Any(condition =>
+                    string.Equals(condition.Kind, WorkflowGateKinds.ApprovalHeld, StringComparison.Ordinal)
+                    && string.Equals(condition.Expression.Trim(), approval.Role, StringComparison.OrdinalIgnoreCase));
+
+                if (!enforced)
+                {
+                    issues.Add(new WorkflowIssue(
+                        WorkflowIssueSeverity.Error,
+                        "WF014",
+                        $"Node '{node.Id}' requires approval from '{approval.Role}' but no exit "
+                        + $"gate condition requires it. Add an '{WorkflowGateKinds.ApprovalHeld}' "
+                        + $"condition for '{approval.Role}', or the approval would be requested "
+                        + "and then ignored - a checkpoint in the audit log that nothing depended on.",
+                        node.Id));
+                }
             }
 
             if (node.ExitGate.IsEmpty)

@@ -9,7 +9,7 @@ SHELL := /bin/bash
 DOTNET ?= dotnet
 CLI := $(DOTNET) run --project src/Mandate.Cli --
 
-.PHONY: help doctor restore build test format lint info workflow diagram clean verify
+.PHONY: help doctor restore build test format lint info workflow diagram run clean verify
 
 help: ## Show available targets
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -47,6 +47,13 @@ info: ## Print engine identity and host diagnostics
 
 workflow: ## Validate the lifecycle definition and show its parallel structure
 	@$(CLI) workflow validate
+
+# Override the scenario, e.g. `make run SCENARIO=brownfield`.
+SCENARIO ?= greenfield
+REQUEST ?= Build a URL shortener with create and redirect APIs
+
+run: ## Execute the lifecycle against scripted agents (SCENARIO=greenfield|brownfield|ambiguous)
+	@$(CLI) run "$(REQUEST)" --scenario $(SCENARIO)
 
 diagram: ## Regenerate the lifecycle diagram from the workflow definition
 	@$(CLI) workflow render -o docs/diagrams/sdlc.v1.mmd

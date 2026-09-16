@@ -19,5 +19,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Mandate.Core\Mandate.Core.csproj" />
     <ProjectReference Include="..\..\src\Mandate.Orchestrator\Mandate.Orchestrator.csproj" />
+    <ProjectReference Include="..\..\src\Mandate.Agents\Mandate.Agents.csproj" />
+    <ProjectReference Include="..\..\src\Mandate.Persistence\Mandate.Persistence.csproj" />
+    <ProjectReference Include="..\..\src\Mandate.Workflows\Mandate.Workflows.csproj" />
   </ItemGroup>
 </Project>

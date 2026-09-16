@@ -31,4 +31,15 @@ public static class WorkflowContextKeys
     /// <summary>Every key the engine guarantees is present.</summary>
     public static ImmutableHashSet<string> EngineProvided { get; } =
         [RunId, Scenario, Workflow, InitiatedBy, HasExistingCode];
+
+    /// <summary>
+    /// The node id the engine attributes run-level facts to.
+    /// </summary>
+    /// <remarks>
+    /// Every context fact names the node that contributed it, so the facts the engine seeds
+    /// before any stage runs need an attributable source. A reserved id keeps that honest
+    /// rather than leaving those facts unattributed; workflow validation refuses to let a real
+    /// node take the name.
+    /// </remarks>
+    public const string EngineNodeId = "run";
 }

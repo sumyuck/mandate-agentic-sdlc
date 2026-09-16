@@ -76,6 +76,16 @@ public enum RunEventKind
     /// <summary>A human refused an exception to a policy rule.</summary>
     PolicyWaiverDenied = 25,
 
+    /// <summary>
+    /// A conditional path's guard was evaluated, deciding whether that path is taken.
+    /// </summary>
+    /// <remarks>
+    /// Recorded with the guard's own explanation of the values it compared, so a branch that
+    /// was <em>not</em> taken can still be accounted for months later. A skipped stage with no
+    /// record of why it was skipped is indistinguishable from a stage that was forgotten.
+    /// </remarks>
+    EdgeGuardEvaluated = 26,
+
     // ---- Human oversight ----
 
     /// <summary>A node parked and is awaiting a named human approval.</summary>

@@ -31,10 +31,23 @@ lands before the agents, so the orchestrator is defensible even at an intermedia
 | P0 | Repository skeleton, build governance, ADRs | **done** |
 | P1 | Core domain: graph, state machine, hash-chained events, artifact provenance, decisions, context | **done** |
 | P2 | Guard grammar, strict YAML loader, static validation, diagram renderer, the lifecycle itself | **done** |
-| P3 | Engine: scheduler, bounded parallelism, entry/exit gates | next |
-| P4–P16 | Persistence, reliability, approvals, policy, re-planning, observability, agents, the three scenarios, documentation | planned |
+| P3 | Engine: scheduler, join policies, guard-driven skipping, gates, bounded concurrency | **done** |
+| P4 | Durable persistence, resume, replay, `audit verify` | next |
+| P5–P16 | Reliability, approvals, policy, re-planning, observability, model-backed agents, the three scenarios, documentation | planned |
 
-**340 tests** currently pass, with warnings treated as errors across the solution.
+**414 tests** currently pass, with warnings treated as errors across the solution.
+
+The lifecycle runs end to end today against *scripted* agents — which produce real
+content-addressed artifacts with real provenance, contribute the context facts their nodes
+declare, and record decisions. What is not yet real is the engineering judgment inside each
+stage; that arrives with the model-backed agents in P11. Runs stop at the first human
+checkpoint, because approvals land in P6.
+
+```bash
+make run                                          # greenfield
+make run SCENARIO=brownfield                      # takes the impact-analysis path
+make run SCENARIO=ambiguous                       # diverts to a human, and refuses to design
+```
 
 Only the commands listed below exist today. Nothing in this README describes behaviour that
 is not yet implemented.
@@ -157,6 +170,16 @@ discipline:
 - **Nothing is read loosely.** An unknown key, a misspelled enum, a malformed duration or a
   duplicate mapping is an error naming the file, the line and the accepted values — never a
   silently dropped setting.
+- **The engine refuses to start a run it cannot finish.** An agent the workflow names but
+  nothing provides, or a gate condition nothing can judge, fails at construction with every
+  problem listed. An unjudgeable gate is the dangerous case: skipped, it would appear in the
+  audit log as a check that passed.
+- **Gates are evidence-based and fail closed.** `tests-pass` reads a recorded test result, not
+  an agent's opinion of its own code. Absent evidence fails, because a check that passes for
+  want of data is worse than no check.
+- **A run can be rebuilt from its log alone.** Live execution and replay go through the same
+  reducer, so a rebuilt run cannot disagree with the one that was executed — asserted by a
+  test over the full lifecycle.
 
 ## Design in one page
 

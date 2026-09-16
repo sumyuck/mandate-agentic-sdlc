@@ -114,6 +114,11 @@ nodes:
         description: >-
           Every question was either answered or converted into a recorded assumption. Silence
           is not allowed to pass as agreement.
+      - kind: approval-held
+        expression: requester
+        description: >-
+          The requester confirmed the reading we are proceeding on. Without this the stage
+          would merely have asked, which is not the same as having been answered.
     produces:
       - clarification-request
       - clarification-response
@@ -141,6 +146,12 @@ nodes:
       - kind: artifact-exists
         expression: requirement-spec
         description: There is a normalised requirement to analyse against.
+      - kind: ambiguity-below
+        expression: "0.3"
+        description: >-
+          The requirement carries no unresolved material ambiguity. Analysing the impact of a
+          change whose scope is still in question would produce a blast radius for the wrong
+          change.
     exit-gate:
       - kind: artifact-exists
         expression: impact-analysis
@@ -177,6 +188,16 @@ nodes:
           The design constrains every downstream stage. Approving it after implementation
           would make the approval ceremonial.
         segregation-of-duties: true
+    entry-gate:
+      - kind: artifact-exists
+        expression: requirement-spec
+        description: There is a normalised requirement to design against.
+      - kind: ambiguity-below
+        expression: "0.3"
+        description: >-
+          The requirement carries no unresolved material ambiguity. Designing against a
+          requirement the system has just flagged as ambiguous is precisely the mistake the
+          clarification stage exists to prevent - so this stage waits rather than guessing.
     exit-gate:
       - kind: artifact-exists
         expression: design-doc

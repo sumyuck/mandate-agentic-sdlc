@@ -26,8 +26,15 @@ internal static class WorkflowFactory
             Agent: $"{id}-agent",
             Description: $"Performs {id}.",
             EntryGate: [],
+            // Declared approvals are enforced by matching exit conditions, because validation
+            // rejects an approval nothing depends on (WF014). Fixtures stay terse without
+            // sidestepping the rule they are meant to be exercised under.
             ExitGate: exitGate?.ToImmutableArray()
-                      ?? [new GateCondition("artifact-exists", "*", "Produced something.")],
+                      ?? [
+                          new GateCondition("artifact-exists", "*", "Produced something."),
+                          .. (approvals ?? []).Select(approval => new GateCondition(
+                              "approval-held", approval.Role, $"{approval.Role} signed off.")),
+                      ],
             Retry: retry ?? RetryPolicy.Default,
             Autonomy: autonomy,
             Approvals: approvals?.ToImmutableArray() ?? [],

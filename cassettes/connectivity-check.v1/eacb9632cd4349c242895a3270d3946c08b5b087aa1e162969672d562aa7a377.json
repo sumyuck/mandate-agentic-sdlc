@@ -1,0 +1,28 @@
+{
+  "key": "eacb9632cd4349c242895a3270d3946c08b5b087aa1e162969672d562aa7a377",
+  "recordedAt": "2026-09-16T20:29:41.802328+00:00",
+  "request": {
+    "promptId": "connectivity-check",
+    "promptVersion": "v1",
+    "model": "claude-haiku-4-5",
+    "system": "You are verifying that a software system can reach you. Answer with nothing but the exact\ntext you are asked to echo. No preamble, no punctuation, no explanation.",
+    "messages": [
+      {
+        "role": "User",
+        "text": "Echo exactly this and nothing else: mandate-ok"
+      }
+    ],
+    "maxOutputTokens": 64
+  },
+  "response": {
+    "text": "mandate-ok",
+    "model": "claude-haiku-4-5-20251001",
+    "stopReason": "end_turn",
+    "usage": {
+      "inputTokens": 55,
+      "outputTokens": 6,
+      "cacheReadTokens": 0,
+      "cacheWriteTokens": 0
+    }
+  }
+}

@@ -4,12 +4,12 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
 
-# Override if your .NET 8 SDK is not first on PATH, e.g.
+# Override if your .NET 10 SDK is not first on PATH, e.g.
 #   make build DOTNET=$$HOME/.dotnet/dotnet
 DOTNET ?= dotnet
 CLI := $(DOTNET) run --project src/Mandate.Cli --
 
-.PHONY: help doctor restore build test format lint info workflow diagram run runs audit policy metrics report clean verify
+.PHONY: help doctor restore build test format lint info workflow diagram run runs audit policy metrics report llm prompts clean verify
 
 help: ## Show available targets
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -66,6 +66,15 @@ audit: ## Verify that no recorded run's audit log has been altered
 
 policy: ## List the security, compliance and change-control rules
 	@$(CLI) policy list
+
+# Replay by default: no key, no network, no spend. `make llm LLM=live` calls the provider.
+LLM ?= replay
+
+llm: ## Prove the model layer works (LLM=replay|stub|record|live)
+	@$(CLI) llm check --llm $(LLM)
+
+prompts: ## List the versioned prompts a run may issue, with their fingerprints
+	@$(CLI) llm prompts
 
 # Usage: make metrics RUN=run_20260916T142500Z_a1b2c3
 metrics: ## Show a run's reliability figures, derived from its log

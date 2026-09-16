@@ -126,6 +126,16 @@ public enum RunEventKind
     /// <summary>A node's commits were reverted, undoing its effect on the workspace.</summary>
     WorkspaceReverted = 44,
 
+    /// <summary>
+    /// A language model was called, with what it consumed and what it cost.
+    /// </summary>
+    /// <remarks>
+    /// Recorded for every call, including calls made by an attempt that then failed — the
+    /// spend happened whether or not the stage succeeded, and a cost figure that only counts
+    /// successful attempts would understate a run that retried three times.
+    /// </remarks>
+    ModelCalled = 45,
+
     // ---- Re-planning ----
 
     /// <summary>An input to an accepted node changed, invalidating its result.</summary>

@@ -107,15 +107,19 @@ is not yet implemented.
 
 ## Requirements
 
-- **.NET 8 SDK** (`8.0.425` or a later 8.0 feature band — pinned in [`global.json`](global.json))
+- **.NET 10 SDK** (pinned in [`global.json`](global.json))
 - `git`
 - `make` (optional — every target is a one-line `dotnet` command)
 
-.NET 8 is the current LTS release and the deliberate target; see
-[ADR-0002](docs/adr/0002-target-framework.md). If a newer SDK comes first on your `PATH`:
+**No API key is required.** Model calls replay from the recordings committed under
+[`cassettes/`](cassettes/); nothing reaches a provider unless you ask for a mode that does.
+
+.NET 10 is the current LTS release (supported to November 2028) and the deliberate target;
+in a regulated domain the support lifecycle is a compliance input, not a preference. See
+[ADR-0002](docs/adr/0002-target-framework.md). If it is not on your `PATH`:
 
 ```bash
-curl -fsSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 8.0
+curl -fsSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 10.0
 export PATH="$HOME/.dotnet:$PATH"
 ```
 
@@ -126,6 +130,7 @@ make doctor     # confirm the toolchain matches global.json
 make verify     # toolchain, build (warnings are errors), all tests, code style
 make info       # print engine identity and host diagnostics
 make workflow   # validate the lifecycle definition and show its parallel structure
+make llm        # prove the model layer works — offline, from the committed recordings
 make help       # list available targets
 ```
 
@@ -135,6 +140,17 @@ Inspect the lifecycle directly:
 dotnet run --project src/Mandate.Cli -- workflow validate
 dotnet run --project src/Mandate.Cli -- workflow render --markdown
 ```
+
+Inspect the model layer:
+
+```bash
+dotnet run --project src/Mandate.Cli -- llm prompts     # the versioned prompts, with hashes
+dotnet run --project src/Mandate.Cli -- llm check       # replay a recorded exchange, offline
+```
+
+To call a provider for real, set `ANTHROPIC_API_KEY` and add `--llm live` (or `--llm record`
+to keep the exchange). Spend is capped and every call is an audited event — see
+[ADR-0013](docs/adr/0013-model-spend-as-a-governed-budget.md).
 
 Every target accepts a `DOTNET` override, e.g. `make verify DOTNET=$HOME/.dotnet/dotnet`.
 
@@ -160,8 +176,10 @@ src/
   Mandate.Api/           read-only run inspection surface
 services/                 Product A: the URL shortener, produced by Mandate runs
 workflows/                the SDLC graph, policy packs, autonomy matrix
-prompts/                  versioned prompt templates and custom instructions
-runs/                     committed run evidence: events, artifacts, cassettes, metrics
+prompts/                  versioned prompt templates, one file per prompt per version
+cassettes/                recorded model exchanges, keyed by request content
+config/                   dated model price list, so a run can be costed
+runs/                     committed run evidence: events, artifacts, metrics
 tests/                    unit, architecture and integration tests
 docs/                     architecture, ADRs, scenarios, testing, traceability
 ```
@@ -329,7 +347,7 @@ Full decision log: [docs/adr](docs/adr/README.md). Build order and rationale: [P
 ## Engineering conventions
 
 - **Warnings are errors** in every project, with .NET analyzers at `latest-recommended`.
-- **One target framework** (.NET 8 LTS), declared once in `Directory.Build.props`.
+- **One target framework** (.NET 10 LTS), declared once in `Directory.Build.props`.
 - **Central package management** — every NuGet version in a single reviewable file.
 - **Architecture tests** assert the structural ADRs, so layering violations fail CI.
 - Underscored, sentence-shaped test names; the runner output reads as a specification.

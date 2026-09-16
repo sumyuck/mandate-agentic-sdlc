@@ -77,6 +77,27 @@ public sealed record DecisionRecordedPayload(
 public sealed record WorkspaceCommittedPayload(
     string Sha, int Attempt, int FilesChanged, ImmutableArray<string> Paths);
 
+/// <summary>Payload of <see cref="RunEventKind.ModelCalled"/>.</summary>
+/// <remarks>
+/// The four token counts are kept apart because they are billed at four different rates;
+/// a single total could not be re-priced later. <c>CostNanoUsd</c> is an integer count of
+/// billionths of a dollar rather than a decimal, because a decimal carries scale and
+/// <c>0.10</c> would hash differently from <c>0.1</c>.
+/// </remarks>
+public sealed record ModelCalledPayload(
+    string PromptId,
+    string PromptVersion,
+    string Model,
+    string Source,
+    string Fingerprint,
+    int InputTokens,
+    int OutputTokens,
+    int CacheReadTokens,
+    int CacheWriteTokens,
+    long? CostNanoUsd,
+    string StopReason,
+    long DurationMilliseconds);
+
 /// <summary>Payload of <see cref="RunEventKind.WorkspaceReverted"/>.</summary>
 public sealed record WorkspaceRevertedPayload(
     int CommitsReverted, string HeadSha, bool TreeClean, string Detail);

@@ -41,6 +41,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mandate.Cli.Tests", "tests\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mandate.Observability.Tests", "tests\Mandate.Observability.Tests\Mandate.Observability.Tests.csproj", "{81784E26-0684-4C1D-A89B-308FA3521884}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mandate.Llm.Tests", "tests\Mandate.Llm.Tests\Mandate.Llm.Tests.csproj", "{BF95E43D-F18F-4482-8FB7-745299F1DCB6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -255,6 +257,18 @@ Global
 		{81784E26-0684-4C1D-A89B-308FA3521884}.Release|x64.Build.0 = Release|Any CPU
 		{81784E26-0684-4C1D-A89B-308FA3521884}.Release|x86.ActiveCfg = Release|Any CPU
 		{81784E26-0684-4C1D-A89B-308FA3521884}.Release|x86.Build.0 = Release|Any CPU
+		{BF95E43D-F18F-4482-8FB7-745299F1DCB6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BF95E43D-F18F-4482-8FB7-745299F1DCB6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BF95E43D-F18F-4482-8FB7-745299F1DCB6}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{BF95E43D-F18F-4482-8FB7-745299F1DCB6}.Debug|x64.Build.0 = Debug|Any CPU
+		{BF95E43D-F18F-4482-8FB7-745299F1DCB6}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{BF95E43D-F18F-4482-8FB7-745299F1DCB6}.Debug|x86.Build.0 = Debug|Any CPU
+		{BF95E43D-F18F-4482-8FB7-745299F1DCB6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BF95E43D-F18F-4482-8FB7-745299F1DCB6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BF95E43D-F18F-4482-8FB7-745299F1DCB6}.Release|x64.ActiveCfg = Release|Any CPU
+		{BF95E43D-F18F-4482-8FB7-745299F1DCB6}.Release|x64.Build.0 = Release|Any CPU
+		{BF95E43D-F18F-4482-8FB7-745299F1DCB6}.Release|x86.ActiveCfg = Release|Any CPU
+		{BF95E43D-F18F-4482-8FB7-745299F1DCB6}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -277,5 +291,6 @@ Global
 		{0C427314-AD70-4C31-8780-F79C9B5C40C7} = {E1BA0EAD-7FCC-4D0B-9C12-E708A5344E09}
 		{28752F20-9436-458B-A809-52827A4E3EAD} = {E1BA0EAD-7FCC-4D0B-9C12-E708A5344E09}
 		{81784E26-0684-4C1D-A89B-308FA3521884} = {E1BA0EAD-7FCC-4D0B-9C12-E708A5344E09}
+		{BF95E43D-F18F-4482-8FB7-745299F1DCB6} = {E1BA0EAD-7FCC-4D0B-9C12-E708A5344E09}
 	EndGlobalSection
 EndGlobal

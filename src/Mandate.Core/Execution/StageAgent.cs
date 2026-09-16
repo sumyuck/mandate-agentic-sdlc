@@ -3,6 +3,7 @@ using Mandate.Core.Artifacts;
 using Mandate.Core.Context;
 using Mandate.Core.Decisions;
 using Mandate.Core.Identifiers;
+using Mandate.Core.Llm;
 using Mandate.Core.Workflow;
 
 namespace Mandate.Core.Execution;
@@ -41,27 +42,35 @@ public sealed record StageExecution(
 /// <param name="Facts">Context facts contributed for later stages and for guards.</param>
 /// <param name="Decisions">Choices made, with the options rejected and the rationale.</param>
 /// <param name="Failure">Why the stage did not complete, when it did not.</param>
+/// <param name="ModelCalls">
+/// Every language-model call the stage made, in order. Reported by the stage rather than
+/// observed by the engine, because the engine does not sit between an agent and its model —
+/// and carried on failed results too, since the spend happened either way.
+/// </param>
 public sealed record StageResult(
     bool Succeeded,
     ImmutableArray<WorkspaceFile> Files,
     ImmutableArray<Artifact> Artifacts,
     ImmutableArray<ContextFact> Facts,
     ImmutableArray<Decision> Decisions,
-    string? Failure)
+    string? Failure,
+    ImmutableArray<ModelCall> ModelCalls)
 {
     /// <summary>A successful result.</summary>
     public static StageResult Success(
         IEnumerable<Artifact>? artifacts = null,
         IEnumerable<ContextFact>? facts = null,
         IEnumerable<Decision>? decisions = null,
-        IEnumerable<WorkspaceFile>? files = null) =>
+        IEnumerable<WorkspaceFile>? files = null,
+        IEnumerable<ModelCall>? modelCalls = null) =>
         new(
             Succeeded: true,
             Files: files is null ? [] : [.. files],
             Artifacts: artifacts is null ? [] : [.. artifacts],
             Facts: facts is null ? [] : [.. facts],
             Decisions: decisions is null ? [] : [.. decisions],
-            Failure: null);
+            Failure: null,
+            ModelCalls: modelCalls is null ? [] : [.. modelCalls]);
 
     /// <summary>
     /// A failed result.
@@ -73,7 +82,8 @@ public sealed record StageResult(
     public static StageResult Failed(
         string failure,
         IEnumerable<Artifact>? artifacts = null,
-        IEnumerable<Decision>? decisions = null)
+        IEnumerable<Decision>? decisions = null,
+        IEnumerable<ModelCall>? modelCalls = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(failure);
 
@@ -86,7 +96,10 @@ public sealed record StageResult(
             Artifacts: artifacts is null ? [] : [.. artifacts],
             Facts: [],
             Decisions: decisions is null ? [] : [.. decisions],
-            Failure: failure);
+            Failure: failure,
+            // Spend is not undone by failure. Dropping the calls here would make a run that
+            // burned its retry budget look cheaper than one that succeeded first time.
+            ModelCalls: modelCalls is null ? [] : [.. modelCalls]);
     }
 }
 

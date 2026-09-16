@@ -9,6 +9,12 @@
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
   <ItemGroup>
+    <!--
+      The official Anthropic SDK. Referenced by exactly one project (Mandate.Llm) and used
+      by exactly one class inside it, so the vendor surface the rest of the system compiles
+      against is zero. See docs/adr/0003-hexagonal-layering.md.
+    -->
+    <PackageVersion Include="Anthropic" Version="12.48.0" />
     <PackageVersion Include="coverlet.collector" Version="10.0.1">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>

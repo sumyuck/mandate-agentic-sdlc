@@ -1,0 +1,37 @@
+# What a model call costs, per million tokens, in US dollars.
+#
+# Data, not code, and dated. Vendor prices change; a rate compiled into an assembly goes
+# stale silently and misreports every run afterwards. Here, a stale rate is a diff someone
+# has to approve, and `mandate llm check` prints the as-of date next to every figure it
+# reports so a reader can tell current numbers from historical ones.
+#
+# A model absent from this file is not priced. The system reports its cost as unknown
+# rather than as zero — see docs/adr/0013-model-spend-as-a-governed-budget.md.
+
+as-of: 2026-09-16
+source: https://platform.claude.com/docs/en/about-claude/pricing
+
+models:
+  # Cache rates follow the published multipliers: reads at 0.1x base input, 5-minute
+  # writes at 1.25x. Stated in full rather than computed, so the file can be checked
+  # against the price page line by line.
+  claude-sonnet-5:
+    input-per-mtok: 2.00
+    output-per-mtok: 10.00
+    cache-read-per-mtok: 0.20
+    cache-write-per-mtok: 2.50
+
+  claude-haiku-4-5:
+    input-per-mtok: 1.00
+    output-per-mtok: 5.00
+    cache-read-per-mtok: 0.10
+    cache-write-per-mtok: 1.25
+
+  # The dated snapshot behind the `claude-haiku-4-5` alias. The provider reports the
+  # resolved id on the response, and it is the resolved id that gets costed, so both
+  # forms have to be present or every Haiku call would come back unpriced.
+  claude-haiku-4-5-20251001:
+    input-per-mtok: 1.00
+    output-per-mtok: 5.00
+    cache-read-per-mtok: 0.10
+    cache-write-per-mtok: 1.25

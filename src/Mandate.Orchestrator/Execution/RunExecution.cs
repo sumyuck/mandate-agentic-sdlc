@@ -6,6 +6,7 @@ using Mandate.Core.Decisions;
 using Mandate.Core.Events;
 using Mandate.Core.Execution;
 using Mandate.Core.Identifiers;
+using Mandate.Core.Llm;
 using Mandate.Core.Policies;
 using Mandate.Core.Runs;
 using Mandate.Core.Time;
@@ -627,7 +628,8 @@ internal sealed class RunExecution(
                 // The stage said it succeeded, but what it proposed could not be applied. That
                 // is a failed stage, not a failed engine: it belongs in the same retry,
                 // fallback and compensation machinery as any other failure.
-                result = StageResult.Failed(refusal, result.Artifacts, result.Decisions);
+                result = StageResult.Failed(
+                    refusal, result.Artifacts, result.Decisions, result.ModelCalls);
             }
 
             // A failed attempt may have left half-written files. They are not a change any
@@ -1538,6 +1540,28 @@ internal sealed class RunExecution(
                 RunEventKind.ContextFactAdded, node.Id, actor,
                 new ContextFactAddedPayload(
                     fact.Key, fact.Value, [.. fact.Evidence.Select(hash => hash.Hex)]),
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        // Recorded on both the success and the failure path, because this method is called
+        // on both: what a run spent is not conditional on whether the stage worked.
+        foreach (ModelCall call in result.ModelCalls)
+        {
+            await AppendAsync(
+                RunEventKind.ModelCalled, node.Id, actor,
+                new ModelCalledPayload(
+                    call.PromptId,
+                    call.PromptVersion,
+                    call.Model,
+                    call.Source.ToString(),
+                    call.Fingerprint.Hex,
+                    call.Usage.InputTokens,
+                    call.Usage.OutputTokens,
+                    call.Usage.CacheReadTokens,
+                    call.Usage.CacheWriteTokens,
+                    call.CostNanoUsd,
+                    call.StopReason,
+                    call.DurationMilliseconds),
                 cancellationToken).ConfigureAwait(false);
         }
     }

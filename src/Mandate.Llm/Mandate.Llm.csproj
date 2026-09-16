@@ -2,6 +2,11 @@
 
 
   <ItemGroup>
+    <PackageReference Include="Anthropic" />
+    <PackageReference Include="YamlDotNet" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Mandate.Core\Mandate.Core.csproj" />
   </ItemGroup>
 </Project>

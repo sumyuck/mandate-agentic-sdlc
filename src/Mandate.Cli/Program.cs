@@ -124,6 +124,20 @@ internal static class Program
                 .WithExample("runs", "export", "run_20260916T142500Z_a1b2c3");
         });
 
+        config.AddBranch("llm", llm =>
+        {
+            llm.SetDescription("Inspect and verify the model layer.");
+
+            llm.AddCommand<LlmCheckCommand>("check")
+                .WithDescription("Prove the model layer works, with one small call.")
+                .WithExample("llm", "check")
+                .WithExample("llm", "check", "--llm", "live");
+
+            llm.AddCommand<LlmPromptsCommand>("prompts")
+                .WithDescription("List the versioned prompts a run may issue.")
+                .WithExample("llm", "prompts");
+        });
+
         config.AddBranch("audit", audit =>
         {
             audit.SetDescription("Verify the integrity of recorded runs.");

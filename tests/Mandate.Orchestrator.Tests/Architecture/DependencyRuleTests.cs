@@ -98,4 +98,27 @@ public sealed class DependencyRuleTests
 
         packages.ShouldNotContain(forbiddenPackage, Case.Insensitive);
     }
+
+    /// <summary>
+    /// ADR-0003 and ADR-0007: exactly one project may know a model vendor exists.
+    /// </summary>
+    /// <remarks>
+    /// The claim that swapping providers, or replacing live calls with recordings, touches
+    /// one adapter and the composition root is only true while this holds. A second
+    /// reference to the SDK would be an easy, reasonable-looking change that quietly makes
+    /// the claim false — so it fails the build instead.
+    /// </remarks>
+    [Fact]
+    public void Only_the_model_adapter_references_the_vendor_sdk()
+    {
+        IReadOnlyList<string> referencing = RepositoryLayout
+            .ProjectFiles("src", "tests", "services")
+            .Where(path => RepositoryLayout.ReadProject(path)
+                .Contains("PackageReference Include=\"Anthropic\"", StringComparison.Ordinal))
+            .Select(path => Path.GetFileName(path))
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToList();
+
+        referencing.ShouldBe(["Mandate.Llm.csproj"]);
+    }
 }

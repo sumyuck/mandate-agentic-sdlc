@@ -22,6 +22,7 @@ is made rather than reconstructed afterwards.
 | [0010](0010-policy-as-data-waivers-on-the-record.md) | Policy is declarative data, and a waiver overrides without silencing | Accepted |
 | [0011](0011-incremental-replanning.md) | Re-planning is incremental and lazy, and withdraws the approvals it invalidates | Accepted |
 | [0012](0012-metrics-derived-not-recorded.md) | Reliability metrics are derived from the log, never recorded alongside it | Accepted |
+| [0013](0013-model-spend-as-a-governed-budget.md) | Model spend is a governed budget that refuses calls, and every call is an audited event | Accepted |
 
 Enforcement: ADR-0001, 0002, 0003 and 0008 are asserted by
 [`DependencyRuleTests`](../../tests/Mandate.Orchestrator.Tests/Architecture/DependencyRuleTests.cs),

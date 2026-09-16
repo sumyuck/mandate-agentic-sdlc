@@ -34,10 +34,11 @@ lands before the agents, so the orchestrator is defensible even at an intermedia
 | P3 | Engine: scheduler, join policies, guard-driven skipping, gates, bounded concurrency | **done** |
 | P4 | Durable event store, run catalogue, `audit verify`, evidence export | **done** |
 | P5 | Reliability: git workspace, bounded retries, fallback, real rollback, safe-stop | **done** |
-| P6 | Human approvals and resume | next |
-| P7–P16 | Policy, re-planning, observability, model-backed agents, the three scenarios, documentation | planned |
+| P6 | Human approvals, refusals, and resume from the log | **done** |
+| P7 | Policy guardrails: security, compliance, change control | next |
+| P8–P16 | Re-planning, observability, model-backed agents, the three scenarios, documentation | planned |
 
-**527 tests** currently pass, with warnings treated as errors across the solution — including
+**557 tests** currently pass, with warnings treated as errors across the solution — including
 40 that drive the CLI end to end through the same command definitions the binary exposes, and
 a set that exercise rollback against real git rather than a stub.
 
@@ -57,6 +58,14 @@ make audit                                # prove no run's log has been altered
 
 # Exercise the reliability machinery: retry, backoff, exhaustion, handoff.
 make run FAIL=requirements-analyst
+```
+
+Close the human loop on a parked run:
+
+```bash
+dotnet run --project src/Mandate.Cli -- approve <runId> --role tech-lead --as alex --note "..."
+dotnet run --project src/Mandate.Cli -- deny    <runId> --role tech-lead --as alex --note "..."
+dotnet run --project src/Mandate.Cli -- resume  <runId>
 ```
 
 Runs persist by default to `.mandate/runs.db`. Inspect, verify or export one:
@@ -216,6 +225,22 @@ discipline:
   stages that failed together do not retry together against whatever was already struggling.
 - **A stop halts at a coherent boundary**, between stages rather than mid-stage, and preserves
   completed work rather than relabelling it.
+- **An approved stage completes without being re-run.** The work was finished before the
+  approval was sought; re-executing on the strength of a signature would mean the human
+  approved something other than what ships. Enforced by the state machine, which also makes
+  it impossible to park a stage *before* it has run — that would open a path to success that
+  never executed anything.
+- **The person who asks for the work cannot sign it off.** In an agent-driven lifecycle the
+  producer is almost always an agent, so comparing approver to producer alone would be close
+  to vacuous. The control that bites is maker-checker against the run's initiator — with one
+  deliberate exception, the clarification, where the question is being put back to the
+  requester and anyone else would be the wrong person.
+- **A refusal is not the same as silence.** "Nobody has looked at this" and "somebody looked
+  and said no" are tracked separately, so a resumed run never waits on a decision that has
+  already been made.
+- **A resumed run is reconstructed entirely from its own log** — state and original request
+  both — so resuming cannot quietly change what was asked for, and the run is never re-planned
+  or re-seeded.
 - **Exit codes distinguish "failed" from "needs a human."** A run waiting on an approval
   returns `3`, not `1`, because a CI job or a demo script has to tell them apart — treating a
   human checkpoint as an error would misrepresent the thing the system is built to do.

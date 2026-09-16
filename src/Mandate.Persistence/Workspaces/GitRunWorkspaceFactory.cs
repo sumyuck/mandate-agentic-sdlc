@@ -20,9 +20,23 @@ public sealed class GitRunWorkspaceFactory(string root, string? templatePath)
     public const string DefaultTemplate = "templates/service";
 
     /// <inheritdoc />
+    /// <remarks>
+    /// An existing workspace is reopened rather than recreated. A resumed run must continue
+    /// in the tree its earlier stages wrote into — seeding a fresh one would silently discard
+    /// their work while the audit log went on claiming it existed.
+    /// </remarks>
     public async Task<IRunWorkspace> CreateAsync(
-        RunId runId, CancellationToken cancellationToken) =>
-        await GitRunWorkspace.CreateAsync(
-            Path.Combine(root, runId.Value), runId, templatePath, cancellationToken)
+        RunId runId, CancellationToken cancellationToken)
+    {
+        string path = Path.Combine(root, runId.Value);
+
+        if (Directory.Exists(Path.Combine(path, ".git")))
+        {
+            return GitRunWorkspace.Open(path, runId);
+        }
+
+        return await GitRunWorkspace
+            .CreateAsync(path, runId, templatePath, cancellationToken)
             .ConfigureAwait(false);
+    }
 }

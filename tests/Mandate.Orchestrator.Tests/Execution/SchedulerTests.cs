@@ -464,7 +464,7 @@ public sealed class SchedulerTests
     {
         EngineHarness harness = EngineHarness.For(Chain());
 
-        await harness.RunAsync();
+        RunOutcome outcome = await harness.RunAsync();
 
         harness.EventsOfKind(RunEventKind.ArtifactProduced)
             .ShouldAllBe(@event => @event.Actor.Kind == ActorKind.Agent);
@@ -472,6 +472,8 @@ public sealed class SchedulerTests
         harness.EventsOfKind(RunEventKind.NodeStateChanged)
             .Where(@event => @event.Payload<NodeStateChangedPayload>().To == "Succeeded")
             .ShouldAllBe(@event => @event.Actor.Kind == ActorKind.Agent);
+
+        outcome.State.ProducerOf(Id("a")).ShouldBe(Actor.Agent("a-agent"));
 
         harness.EventsOfKind(RunEventKind.EntryGateEvaluated)
             .ShouldAllBe(@event => @event.Actor == Actor.Engine);

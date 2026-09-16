@@ -308,6 +308,9 @@ public sealed class GateEvaluatorTests
 
         public ImmutableDictionary<string, Actor> HeldApprovals { get; }
 
+        public ImmutableDictionary<string, Actor> DeniedApprovals { get; } =
+            ImmutableDictionary<string, Actor>.Empty;
+
         public NodeState StateOf(NodeId nodeId) => NodeState.Running;
 
         public Actor? ProducerOf(NodeId nodeId) => _producer;

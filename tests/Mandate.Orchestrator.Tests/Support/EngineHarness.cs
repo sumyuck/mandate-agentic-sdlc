@@ -116,8 +116,59 @@ internal sealed class EngineHarness
             Actor.Human("tester"),
             hasExistingCode);
 
+        LastRun = runRequest.Id;
+
         RunOutcome outcome = await engine.RunAsync(runRequest, CancellationToken.None);
         Workspace = recording.Created;
+
+        return outcome;
+    }
+
+    /// <summary>The run most recently executed by this harness.</summary>
+    public RunId? LastRun { get; private set; }
+
+    /// <summary>Records a human decision against the parked run, as the CLI would.</summary>
+    public async Task DecideAsync(string role, string by, bool granted, string note = "")
+    {
+        RunId runId = LastRun ?? throw new InvalidOperationException("No run has executed yet.");
+
+        await Journal.AppendAsync(
+            runId,
+            previous => RunEvent.Append(
+                previous,
+                runId,
+                Clock.UtcNow,
+                granted ? RunEventKind.ApprovalGranted : RunEventKind.ApprovalDenied,
+                null,
+                Actor.Human(by),
+                new ApprovalDecidedPayload(role, note)),
+            CancellationToken.None);
+    }
+
+    /// <summary>Continues the parked run from its recorded log.</summary>
+    public async Task<RunOutcome> ResumeAsync()
+    {
+        RunId runId = LastRun ?? throw new InvalidOperationException("No run has executed yet.");
+
+        RecordingWorkspaceFactory recording = new(_workspaces);
+
+        WorkflowEngine engine = new(
+            _graph,
+            _agents,
+            BuiltInGateEvaluators.CreateRegistry(),
+            Journal,
+            Clock,
+            _options,
+            CompensationRegistry.BuiltIn(),
+            recording,
+            Delay,
+            _safeStop);
+
+        ImmutableArray<RunEvent> events =
+            await Journal.ReadAsync(runId, CancellationToken.None);
+
+        RunOutcome outcome = await engine.ResumeAsync(runId, events, CancellationToken.None);
+        Workspace = recording.Created ?? Workspace;
 
         return outcome;
     }

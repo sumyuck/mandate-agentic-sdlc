@@ -75,6 +75,16 @@ public interface IRunView
     /// <summary>Approvals granted so far, by role, with the human who granted each.</summary>
     ImmutableDictionary<string, Actor> HeldApprovals { get; }
 
+    /// <summary>
+    /// Approvals a human refused, by role.
+    /// </summary>
+    /// <remarks>
+    /// Kept distinct from simply not having been granted. "Nobody has looked at this yet" and
+    /// "somebody looked and said no" call for different handling, and collapsing them would
+    /// let a resumed run sit waiting for a decision that has already been made.
+    /// </remarks>
+    ImmutableDictionary<string, Actor> DeniedApprovals { get; }
+
     /// <summary>The current state of a node.</summary>
     NodeState StateOf(NodeId nodeId);
 

@@ -46,6 +46,23 @@ internal static class Program
             .WithExample("run", "\"Build a URL shortener\"", "--scenario", "greenfield")
             .WithExample("run", "\"Add click analytics\"", "--scenario", "brownfield");
 
+        config.AddCommand<ApproveCommand>("approve")
+            .WithDescription("Record a human approval against a parked stage.")
+            .WithExample("approve", "run_20260916T142500Z_a1b2c3", "--role", "tech-lead")
+            .WithExample(
+                "approve", "run_20260916T142500Z_a1b2c3", "--role", "tech-lead",
+                "--as", "alex", "--note", "Design matches the agreed scope.");
+
+        config.AddCommand<DenyCommand>("deny")
+            .WithDescription("Refuse a parked stage, with a reason.")
+            .WithExample(
+                "deny", "run_20260916T142500Z_a1b2c3", "--role", "tech-lead",
+                "--note", "Blast radius is larger than the requirement justifies.");
+
+        config.AddCommand<ResumeCommand>("resume")
+            .WithDescription("Continue a run that stopped, from its recorded log.")
+            .WithExample("resume", "run_20260916T142500Z_a1b2c3");
+
         config.AddCommand<StopRunCommand>("stop")
             .WithDescription("Ask a run to halt at its next safe boundary.")
             .WithExample("stop", "run_20260916T142500Z_a1b2c3")

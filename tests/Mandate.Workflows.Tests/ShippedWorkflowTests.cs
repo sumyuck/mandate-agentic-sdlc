@@ -123,15 +123,35 @@ public sealed class ShippedWorkflowTests
     }
 
     [Fact]
-    public void Every_approval_enforces_segregation_of_duties()
+    public void The_irreversible_decisions_enforce_segregation_of_duties()
+    {
+        // The person who asks for the work is not the person who signs it off.
+        foreach (string gated in new[] { "architecture", "release-readiness" })
+        {
+            Graph.Node(Id(gated)).Approvals
+                .ShouldAllBe(approval => approval.SegregationOfDuties);
+        }
+    }
+
+    [Fact]
+    public void The_clarification_is_deliberately_not_segregated()
+    {
+        // The question is being put back to the person who asked for the work, so they are
+        // precisely the right person to answer it. Requiring someone else would make the
+        // stage unanswerable, which is a worse failure than the one segregation prevents.
+        Graph.Node(Id("clarification")).Approvals
+            .ShouldAllBe(approval => !approval.SegregationOfDuties);
+    }
+
+    [Fact]
+    public void Every_approval_states_why_it_is_needed()
     {
         foreach (WorkflowNode node in Graph.Nodes.Where(node => node.RequiresApproval))
         {
             foreach (ApprovalRequirement approval in node.Approvals)
             {
-                approval.SegregationOfDuties.ShouldBeTrue(
-                    $"'{node.Id}' lets the producer of the work approve it.");
-                approval.Reason.ShouldNotBeNullOrWhiteSpace();
+                approval.Reason.ShouldNotBeNullOrWhiteSpace(
+                    $"'{node.Id}' asks for a signature without saying why.");
             }
         }
     }
@@ -240,5 +260,45 @@ public sealed class ShippedWorkflowTests
         Graph.EntryNodes.Select(node => node.Value).ShouldBe(["intake"]);
         Graph.TerminalNodes.Select(node => node.Value)
             .ShouldBe(["clarification", "release-readiness"], ignoreOrder: true);
+    }
+
+    [Fact]
+    public void Every_evidence_backed_gate_has_a_stage_that_produces_its_evidence()
+    {
+        // Gates fail closed, so a gate reading a context key no stage declares would always
+        // fail - for want of data rather than because anything was wrong. That is correct
+        // behaviour and a useless check, so the workflow must not contain one.
+        Dictionary<string, string> evidenceFor = new(StringComparer.Ordinal)
+        {
+            ["tests-pass"] = "test.failures",
+            ["coverage-at-least"] = "test.coverage",
+            ["no-findings-above"] = "review.highest-severity",
+            ["no-secrets-committed"] = "security.secrets-found",
+            ["workspace-builds"] = "implementation.builds",
+            ["ambiguity-below"] = "requirements.ambiguity-score",
+        };
+
+        HashSet<string> produced =
+        [
+            .. Graph.Nodes.SelectMany(node => node.ProducesContext),
+        ];
+
+        List<string> missing = [];
+
+        foreach (WorkflowNode node in Graph.Nodes)
+        {
+            foreach (GateCondition condition in node.EntryGate.Concat(node.ExitGate))
+            {
+                if (evidenceFor.TryGetValue(condition.Kind, out string? key)
+                    && !produced.Contains(key))
+                {
+                    missing.Add($"'{node.Id}' gate '{condition.Kind}' reads '{key}'");
+                }
+            }
+        }
+
+        missing.ShouldBeEmpty(
+            "these gates read evidence no stage declares it produces: "
+            + string.Join("; ", missing));
     }
 }

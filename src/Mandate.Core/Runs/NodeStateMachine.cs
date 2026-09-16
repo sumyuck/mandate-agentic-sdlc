@@ -20,6 +20,7 @@ namespace Mandate.Core.Runs;
 /// <item><description><c>Succeeded → Invalidated</c> is dynamic re-planning: an accepted result stops being valid when an input changes.</description></item>
 /// <item><description><c>AwaitingApproval → Invalidated</c> covers an upstream change landing while a human is still deliberating. Approving stale work must be impossible.</description></item>
 /// <item><description><c>Blocked → Ready</c> requires a human act (a waiver or a fix); the engine can never clear its own policy block.</description></item>
+/// <item><description><c>AwaitingApproval → Succeeded</c> completes an approved node without re-running it. The work was finished before the approval was sought; re-executing on the strength of a signature would mean the human approved something other than what ships.</description></item>
 /// </list>
 /// </para>
 /// <para>
@@ -43,7 +44,12 @@ public static class NodeStateMachine
             ],
             [NodeState.Ready] =
             [
-                NodeState.Running, NodeState.AwaitingApproval, NodeState.Blocked,
+                // Deliberately not AwaitingApproval. Parking happens after the work is done,
+                // never before it starts: with AwaitingApproval able to reach Succeeded, a
+                // Ready -> AwaitingApproval -> Succeeded path would let a node succeed
+                // without ever having run. A stage that must not start until someone says so
+                // expresses that as an entry gate, which holds it Pending instead.
+                NodeState.Running, NodeState.Blocked,
                 NodeState.Skipped, NodeState.Cancelled, NodeState.Invalidated,
             ],
             [NodeState.Running] =
@@ -53,7 +59,8 @@ public static class NodeStateMachine
             ],
             [NodeState.AwaitingApproval] =
             [
-                NodeState.Running, NodeState.Blocked, NodeState.Cancelled, NodeState.Invalidated,
+                NodeState.Succeeded, NodeState.Running, NodeState.Blocked,
+                NodeState.Cancelled, NodeState.Invalidated,
             ],
             [NodeState.Blocked] =
             [

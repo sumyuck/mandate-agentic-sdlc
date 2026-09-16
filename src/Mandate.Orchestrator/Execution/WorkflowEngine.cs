@@ -1,6 +1,8 @@
 using System.Collections.Immutable;
 using Mandate.Core.Diagnostics;
+using Mandate.Core.Events;
 using Mandate.Core.Execution;
+using Mandate.Core.Identifiers;
 using Mandate.Core.Time;
 using Mandate.Core.Workflow;
 
@@ -92,6 +94,30 @@ public sealed class WorkflowEngine
         using RunExecution execution = new(
             _graph, _agents, _gates, _journal, _clock, _options, request,
             _compensations, _workspaces, _delay, _safeStop);
+
+        return await execution.ExecuteAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Continues a run that stopped, from its own recorded log.
+    /// </summary>
+    /// <remarks>
+    /// The run's state and its original request are both reconstructed from the events, so
+    /// resuming cannot quietly change what the run was asked to do. Approvals recorded while
+    /// it was parked are acted on first; nothing is re-executed on the strength of a
+    /// signature.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">The log does not describe a resumable run.</exception>
+    public async Task<RunOutcome> ResumeAsync(
+        RunId runId,
+        ImmutableArray<RunEvent> events,
+        CancellationToken cancellationToken = default)
+    {
+        ResumePoint resume = ResumePoint.FromEvents(runId, events);
+
+        using RunExecution execution = new(
+            _graph, _agents, _gates, _journal, _clock, _options, resume.Request,
+            _compensations, _workspaces, _delay, _safeStop, resume);
 
         return await execution.ExecuteAsync(cancellationToken).ConfigureAwait(false);
     }

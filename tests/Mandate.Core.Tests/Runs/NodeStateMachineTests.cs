@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using Mandate.Core.Runs;
 
 namespace Mandate.Core.Tests.Runs;
@@ -39,17 +40,32 @@ public sealed class NodeStateMachineTests
     [Fact]
     public void A_node_cannot_skip_execution_and_report_success()
     {
-        // Guards the central integrity property: success is only reachable by running.
-        foreach (NodeState state in Enum.GetValues<NodeState>())
-        {
-            if (state is NodeState.Running or NodeState.Unknown)
-            {
-                continue;
-            }
+        // The central integrity property, stated transitively because an approved node
+        // completes from AwaitingApproval rather than by running a second time. Every path
+        // into Succeeded must still pass through Running.
+        ImmutableHashSet<NodeState> intoSucceeded =
+        [
+            .. Enum.GetValues<NodeState>()
+                .Where(state => NodeStateMachine.CanTransition(state, NodeState.Succeeded)),
+        ];
 
-            NodeStateMachine.CanTransition(state, NodeState.Succeeded).ShouldBeFalse(
-                $"{state} must not reach Succeeded without running.");
-        }
+        intoSucceeded.ShouldBe([NodeState.Running, NodeState.AwaitingApproval], ignoreOrder: true);
+
+        // ...and the only way into AwaitingApproval is from Running, so there is no route to
+        // success that avoids executing the stage.
+        Enum.GetValues<NodeState>()
+            .Where(state => NodeStateMachine.CanTransition(state, NodeState.AwaitingApproval))
+            .ShouldBe([NodeState.Running]);
+    }
+
+    [Fact]
+    public void A_stage_cannot_be_parked_for_approval_before_it_has_run()
+    {
+        // A stage that must not start until someone says so expresses that as an entry gate,
+        // which holds it Pending. Parking a Ready node would open a path to success that
+        // never executed anything.
+        NodeStateMachine.CanTransition(NodeState.Ready, NodeState.AwaitingApproval).ShouldBeFalse();
+        NodeStateMachine.CanTransition(NodeState.Pending, NodeState.AwaitingApproval).ShouldBeFalse();
     }
 
     [Fact]

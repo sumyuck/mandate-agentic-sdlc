@@ -104,7 +104,10 @@ nodes:
         reason: >-
           The requirement has more than one defensible reading, and choosing between them
           changes what gets built.
-        segregation-of-duties: true
+        # The one approval in this lifecycle that is deliberately not segregated. The question
+        # is being put back to the person who asked for the work, so they are precisely the
+        # right person to answer it; requiring someone else would make the stage unanswerable.
+        segregation-of-duties: false
     exit-gate:
       - kind: artifact-exists
         expression: clarification-request
@@ -254,6 +257,10 @@ nodes:
     produces-context:
       - implementation.commit
       - implementation.files-changed
+      # The exit gate reads this. A gate whose evidence no stage declares would fail closed
+      # for want of data rather than because the code was wrong - correct behaviour, and a
+      # useless check. Declaring it here is what makes the gate mean something.
+      - implementation.builds
 
   - id: test
     stage: testing

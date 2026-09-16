@@ -21,8 +21,14 @@ namespace Mandate.Persistence.Workspaces;
 /// auditable trail, destroying history to tidy up is the wrong instinct.
 /// </para>
 /// </remarks>
-public sealed class GitRunWorkspace : IRunWorkspace
+public sealed class GitRunWorkspace : IRunWorkspace, IDisposable
 {
+    // Stages run concurrently; a git repository has one index and one HEAD. Committing,
+    // reverting and cleaning are therefore serialised here rather than left to race on
+    // index.lock — the parallelism worth having is in the work the stages do, not in the
+    // handful of milliseconds it takes to record the result.
+    private readonly SemaphoreSlim _treeLock = new(1, 1);
+
     private const string NodeTrailer = "Mandate-Node";
     private const string AttemptTrailer = "Mandate-Attempt";
 
@@ -98,6 +104,21 @@ public sealed class GitRunWorkspace : IRunWorkspace
         return new GitRunWorkspace(root, runId);
     }
 
+    /// <summary>Reopens an existing workspace.</summary>
+    /// <exception cref="DirectoryNotFoundException">There is no repository at that path.</exception>
+    public static GitRunWorkspace Open(string root, RunId runId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(root);
+
+        if (!Directory.Exists(Path.Combine(root, ".git")))
+        {
+            throw new DirectoryNotFoundException(
+                $"There is no workspace repository at '{root}'.");
+        }
+
+        return new GitRunWorkspace(root, runId);
+    }
+
     /// <inheritdoc />
     public async Task<WorkspaceCommit?> CommitAsync(
         NodeId nodeId,
@@ -108,6 +129,26 @@ public sealed class GitRunWorkspace : IRunWorkspace
     {
         ArgumentNullException.ThrowIfNull(files);
 
+        await _treeLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+
+        try
+        {
+            return await CommitCoreAsync(nodeId, attempt, files, message, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        finally
+        {
+            _treeLock.Release();
+        }
+    }
+
+    private async Task<WorkspaceCommit?> CommitCoreAsync(
+        NodeId nodeId,
+        int attempt,
+        IReadOnlyCollection<WorkspaceFile> files,
+        string message,
+        CancellationToken cancellationToken)
+    {
         foreach (WorkspaceFile file in files)
         {
             if (!WorkspaceFile.IsSafeRelativePath(file.RelativePath))
@@ -159,6 +200,20 @@ public sealed class GitRunWorkspace : IRunWorkspace
     /// <inheritdoc />
     public async Task<int> RevertNodeAsync(NodeId nodeId, CancellationToken cancellationToken)
     {
+        await _treeLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+
+        try
+        {
+            return await RevertNodeCoreAsync(nodeId, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            _treeLock.Release();
+        }
+    }
+
+    private async Task<int> RevertNodeCoreAsync(NodeId nodeId, CancellationToken cancellationToken)
+    {
         ImmutableArray<WorkspaceCommit> commits =
             await CommitsForAsync(nodeId, cancellationToken).ConfigureAwait(false);
 
@@ -196,12 +251,24 @@ public sealed class GitRunWorkspace : IRunWorkspace
     /// <inheritdoc />
     public async Task DiscardUncommittedAsync(CancellationToken cancellationToken)
     {
-        await GitCommand.RunAsync(Root, ["reset", "--hard", "HEAD"], cancellationToken)
-            .ConfigureAwait(false);
+        await _treeLock.WaitAsync(cancellationToken).ConfigureAwait(false);
 
-        await GitCommand.RunAsync(Root, ["clean", "-fd"], cancellationToken)
-            .ConfigureAwait(false);
+        try
+        {
+            await GitCommand.RunAsync(Root, ["reset", "--hard", "HEAD"], cancellationToken)
+                .ConfigureAwait(false);
+
+            await GitCommand.RunAsync(Root, ["clean", "-fd"], cancellationToken)
+                .ConfigureAwait(false);
+        }
+        finally
+        {
+            _treeLock.Release();
+        }
     }
+
+    /// <summary>Releases the tree lock.</summary>
+    public void Dispose() => _treeLock.Dispose();
 
     /// <inheritdoc />
     public async Task<WorkspaceStatus> StatusAsync(CancellationToken cancellationToken)

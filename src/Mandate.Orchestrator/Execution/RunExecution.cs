@@ -32,7 +32,8 @@ internal sealed class RunExecution(
     ICompensationRegistry compensations,
     IRunWorkspaceFactory workspaces,
     IDelay delay,
-    ISafeStopMonitor safeStop) : IDisposable
+    ISafeStopMonitor safeStop,
+    ResumePoint? resumeFrom = null) : IDisposable
 {
     private static readonly NodeId EngineNode = NodeId.Parse(WorkflowContextKeys.EngineNodeId);
 
@@ -48,23 +49,35 @@ internal sealed class RunExecution(
     // without re-recording the same failure on every scheduling pass.
     private readonly Dictionary<NodeId, string> _unmetPreconditions = [];
 
-    private RunState _state = RunState.Empty(request.Id);
-    private RunEvent? _tail;
+    private RunState _state = resumeFrom?.State ?? RunState.Empty(request.Id);
+    private RunEvent? _tail = resumeFrom?.Tail;
     private IRunWorkspace _workspace = null!;
     private NodeId? _rollbackTrigger;
     private bool _safeStopped;
 
     public async Task<RunOutcome> ExecuteAsync(CancellationToken cancellationToken)
     {
-        await RecordPlanAsync(cancellationToken).ConfigureAwait(false);
-        await SeedRunContextAsync(cancellationToken).ConfigureAwait(false);
+        bool resuming = resumeFrom is not null;
+
+        if (!resuming)
+        {
+            await RecordPlanAsync(cancellationToken).ConfigureAwait(false);
+            await SeedRunContextAsync(cancellationToken).ConfigureAwait(false);
+        }
 
         await AppendAsync(
             RunEventKind.RunStarted, null, Actor.Engine,
-            new RunStartedPayload(Resumed: false), cancellationToken).ConfigureAwait(false);
+            new RunStartedPayload(resuming), cancellationToken).ConfigureAwait(false);
 
         _workspace = await workspaces.CreateAsync(request.Id, cancellationToken)
             .ConfigureAwait(false);
+
+        if (resuming)
+        {
+            // An approval that arrived while the run was parked has to be acted on before any
+            // scheduling: the nodes it unblocks are the reason the run is being resumed.
+            await ReconcileApprovalsAsync(cancellationToken).ConfigureAwait(false);
+        }
 
         await ScheduleUntilQuiescentAsync(cancellationToken).ConfigureAwait(false);
 
@@ -83,6 +96,59 @@ internal sealed class RunExecution(
             .ConfigureAwait(false);
 
         return new RunOutcome(request.Id, _state.Status, reason, _state, _state.LastSequence);
+    }
+
+    /// <summary>
+    /// Completes or blocks nodes whose approval arrived while the run was parked.
+    /// </summary>
+    /// <remarks>
+    /// The exit gate is re-evaluated, but the stage is not re-run. The work was finished
+    /// before the approval was sought, and re-executing on the strength of a signature would
+    /// mean the human approved something other than what ships.
+    /// </remarks>
+    private async Task ReconcileApprovalsAsync(CancellationToken cancellationToken)
+    {
+        foreach (NodeId nodeId in graph.TopologicalOrder)
+        {
+            if (_state.StateOf(nodeId) != NodeState.AwaitingApproval)
+            {
+                continue;
+            }
+
+            WorkflowNode node = graph.Node(nodeId);
+
+            GateResult gate = await EvaluateGateAsync(
+                node, GatePosition.Exit, node.ExitGate, cancellationToken).ConfigureAwait(false);
+
+            await AppendAsync(
+                RunEventKind.ExitGateEvaluated, nodeId, Actor.Engine,
+                ToPayload(gate), cancellationToken).ConfigureAwait(false);
+
+            if (gate.Passed)
+            {
+                Actor producer = _state.ProducerOf(nodeId) ?? Actor.Agent(node.Agent);
+
+                await TransitionAsync(
+                    nodeId, NodeState.Succeeded, producer,
+                    "Approved; exit gate passed without re-running the stage.", cancellationToken)
+                    .ConfigureAwait(false);
+
+                continue;
+            }
+
+            bool denied = node.Approvals.Any(approval =>
+                _state.DeniedApprovals.ContainsKey(approval.Role));
+
+            if (denied)
+            {
+                await TransitionAsync(
+                    nodeId, NodeState.Blocked, Actor.Engine, gate.Summary, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+
+            // Otherwise the node stays parked: the approval it needs has not arrived, and
+            // resuming is not the same as approving.
+        }
     }
 
     // ---- scheduling ----

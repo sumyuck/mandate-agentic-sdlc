@@ -60,6 +60,7 @@ public sealed class RunState : IRunView
         RunContext context,
         ImmutableArray<Artifact> artifacts,
         ImmutableDictionary<string, Actor> heldApprovals,
+        ImmutableDictionary<string, Actor> deniedApprovals,
         ImmutableDictionary<NodeId, Actor> producers,
         long lastSequence)
     {
@@ -69,6 +70,7 @@ public sealed class RunState : IRunView
         Context = context;
         Artifacts = artifacts;
         HeldApprovals = heldApprovals;
+        DeniedApprovals = deniedApprovals;
         Producers = producers;
         LastSequence = lastSequence;
     }
@@ -91,6 +93,9 @@ public sealed class RunState : IRunView
     /// <inheritdoc />
     public ImmutableDictionary<string, Actor> HeldApprovals { get; }
 
+    /// <inheritdoc />
+    public ImmutableDictionary<string, Actor> DeniedApprovals { get; }
+
     /// <summary>The actor that produced each node's output.</summary>
     public ImmutableDictionary<NodeId, Actor> Producers { get; }
 
@@ -104,6 +109,7 @@ public sealed class RunState : IRunView
         ImmutableDictionary<NodeId, NodeExecutionState>.Empty,
         RunContext.Empty,
         [],
+        ImmutableDictionary<string, Actor>.Empty.WithComparers(StringComparer.OrdinalIgnoreCase),
         ImmutableDictionary<string, Actor>.Empty.WithComparers(StringComparer.OrdinalIgnoreCase),
         ImmutableDictionary<NodeId, Actor>.Empty,
         0);
@@ -147,6 +153,7 @@ public sealed class RunState : IRunView
             RunEventKind.ArtifactProduced => ApplyArtifactProduced(@event),
             RunEventKind.ContextFactAdded => ApplyContextFactAdded(@event),
             RunEventKind.ApprovalGranted => ApplyApprovalGranted(@event),
+            RunEventKind.ApprovalDenied => ApplyApprovalDenied(@event),
 
             // Recorded for the audit trail; they carry no state change of their own.
             _ => this,
@@ -233,7 +240,12 @@ public sealed class RunState : IRunView
             LastTransitionAt = @event.OccurredAt,
         };
 
-        return With(nodes: Nodes.SetItem(nodeId, updated));
+        // The producer is recorded when the work starts, not when it succeeds. A node parked
+        // for approval has not succeeded yet, and that is exactly when the segregation-of-
+        // duties check needs to know who produced the work it is being asked to sign off.
+        return With(
+            nodes: Nodes.SetItem(nodeId, updated),
+            producers: Producers.SetItem(nodeId, Actor.Agent(payload.Agent)));
     }
 
     private RunState ApplyArtifactProduced(RunEvent @event)
@@ -292,7 +304,20 @@ public sealed class RunState : IRunView
     {
         ApprovalDecidedPayload payload = @event.Payload<ApprovalDecidedPayload>();
 
-        return With(heldApprovals: HeldApprovals.SetItem(payload.Role, @event.Actor));
+        // Granting clears any earlier refusal: a human who changes their mind should not have
+        // to contend with their own previous answer.
+        return With(
+            heldApprovals: HeldApprovals.SetItem(payload.Role, @event.Actor),
+            deniedApprovals: DeniedApprovals.Remove(payload.Role));
+    }
+
+    private RunState ApplyApprovalDenied(RunEvent @event)
+    {
+        ApprovalDecidedPayload payload = @event.Payload<ApprovalDecidedPayload>();
+
+        return With(
+            heldApprovals: HeldApprovals.Remove(payload.Role),
+            deniedApprovals: DeniedApprovals.SetItem(payload.Role, @event.Actor));
     }
 
     private RunState With(
@@ -301,6 +326,7 @@ public sealed class RunState : IRunView
         RunContext? context = null,
         ImmutableArray<Artifact>? artifacts = null,
         ImmutableDictionary<string, Actor>? heldApprovals = null,
+        ImmutableDictionary<string, Actor>? deniedApprovals = null,
         ImmutableDictionary<NodeId, Actor>? producers = null,
         long? lastSequence = null) =>
         new(
@@ -310,6 +336,7 @@ public sealed class RunState : IRunView
             context ?? Context,
             artifacts ?? Artifacts,
             heldApprovals ?? HeldApprovals,
+            deniedApprovals ?? DeniedApprovals,
             producers ?? Producers,
             lastSequence ?? LastSequence);
 

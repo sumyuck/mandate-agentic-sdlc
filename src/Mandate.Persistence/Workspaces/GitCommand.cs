@@ -109,8 +109,12 @@ internal static class GitCommand
 
         if (process.ExitCode != 0)
         {
+            // Some git failures report on stdout rather than stderr, and an exception whose
+            // message is just an exit code tells whoever hits it nothing.
+            string detail = error.Length > 0 ? error.ToString() : output.ToString();
+
             throw new GitCommandException(
-                string.Join(' ', arguments), process.ExitCode, error.ToString());
+                string.Join(' ', arguments), process.ExitCode, detail);
         }
 
         return output.ToString();

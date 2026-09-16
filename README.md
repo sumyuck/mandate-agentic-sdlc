@@ -37,10 +37,11 @@ lands before the agents, so the orchestrator is defensible even at an intermedia
 | P6 | Human approvals, refusals, and resume from the log | **done** |
 | P7 | Policy guardrails: security, compliance, change control, audited waivers | **done** |
 | P8 | Dynamic re-planning: lazy invalidation, loop-backs, governance re-applied | **done** |
-| P9 | Observability: structured logs, traces, reliability metrics, run reports | next |
-| P10–P16 | Model-backed agents, the three scenarios, documentation | planned |
+| P9 | Observability: derived metrics, traces, structured logs, HTML run report | **done** |
+| P10 | Model-backed agents: LLM port, prompts, record/replay cassettes | next |
+| P11–P16 | The three scenarios, the URL shortener, documentation | planned |
 
-**640 tests** currently pass, with warnings treated as errors across the solution — including
+**678 tests** currently pass, with warnings treated as errors across the solution — including
 40 that drive the CLI end to end through the same command definitions the binary exposes, and
 a set that exercise rollback against real git rather than a stub.
 
@@ -60,6 +61,13 @@ make audit                                # prove no run's log has been altered
 
 # Exercise the reliability machinery: retry, backoff, exhaustion, handoff.
 make run FAIL=requirements-analyst
+```
+
+See how a run actually went:
+
+```bash
+dotnet run --project src/Mandate.Cli -- runs metrics <runId>          # derived figures
+dotnet run --project src/Mandate.Cli -- runs report  <runId>          # one HTML page
 ```
 
 Inspect and evaluate the guardrails:
@@ -281,6 +289,13 @@ discipline:
 - **Loop-backs declare which outcome fires them.** A clarification returns to requirements when
   it *succeeds*; a test returns to implementation when it *fails*. Defaulting this was a real
   bug: the test loop-back re-planned the implementation every time the tests passed.
+- **No metric is stored.** Success rate, retry and rollback frequency, MTTR, stage latency,
+  gate block rate, approval wait and autonomy ratio are all computed by folding over the event
+  log. They cannot be set, only caused — and anyone holding the exported log can recompute
+  them and get the same answer.
+- **The run report is one self-contained HTML file** — no network, no script, no CDN. Evidence
+  that only renders with network access is evidence with a dependency it should not have, and
+  it has to keep working years from now in an archive.
 - **Exit codes distinguish "failed" from "needs a human."** A run waiting on an approval
   returns `3`, not `1`, because a CI job or a demo script has to tell them apart — treating a
   human checkpoint as an error would misrepresent the thing the system is built to do.

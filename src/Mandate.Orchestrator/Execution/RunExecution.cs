@@ -65,6 +65,9 @@ internal sealed class RunExecution(
 
     public async Task<RunOutcome> ExecuteAsync(CancellationToken cancellationToken)
     {
+        using Activity? runSpan = RunActivity.StartRun(
+            request.Id, graph.Definition.Identity, request.Scenario.ToString());
+
         bool resuming = resumeFrom is not null;
 
         if (!resuming)
@@ -590,9 +593,16 @@ internal sealed class RunExecution(
                 cancellationToken).ConfigureAwait(false);
 
             long startedTicks = Stopwatch.GetTimestamp();
+
+            using Activity? span = RunActivity.StartAttempt(
+                request.Id, node.Id.Value, node.Stage.ToString(), node.Agent, node.Model,
+                node.Autonomy.ToString(), attempt);
+
             StageResult result = await InvokeAgentAsync(node, attempt, actor, cancellationToken)
                 .ConfigureAwait(false);
             long elapsedMilliseconds = (long)Stopwatch.GetElapsedTime(startedTicks).TotalMilliseconds;
+
+            RunActivity.RecordOutcome(span, result.Succeeded, result.Failure);
 
             await AppendAsync(
                 RunEventKind.NodeAttemptFinished, node.Id, Actor.Engine,

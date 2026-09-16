@@ -110,6 +110,15 @@ internal static class Program
                 .WithExample("runs", "show", "run_20260916T142500Z_a1b2c3")
                 .WithExample("runs", "show", "run_20260916T142500Z_a1b2c3", "--events");
 
+            runs.AddCommand<MetricsCommand>("metrics")
+                .WithDescription("Report a run's reliability figures, derived from its log.")
+                .WithExample("runs", "metrics", "run_20260916T142500Z_a1b2c3")
+                .WithExample("runs", "metrics", "run_20260916T142500Z_a1b2c3", "--json");
+
+            runs.AddCommand<ReportCommand>("report")
+                .WithDescription("Write a run as a self-contained HTML page.")
+                .WithExample("runs", "report", "run_20260916T142500Z_a1b2c3");
+
             runs.AddCommand<ExportRunCommand>("export")
                 .WithDescription("Write a run's evidence to a reviewable directory.")
                 .WithExample("runs", "export", "run_20260916T142500Z_a1b2c3");

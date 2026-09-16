@@ -21,6 +21,7 @@ is made rather than reconstructed afterwards.
 | [0009](0009-agents-propose-the-engine-applies.md) | Agents propose file changes; the engine applies them, and rollback reverts | Accepted |
 | [0010](0010-policy-as-data-waivers-on-the-record.md) | Policy is declarative data, and a waiver overrides without silencing | Accepted |
 | [0011](0011-incremental-replanning.md) | Re-planning is incremental and lazy, and withdraws the approvals it invalidates | Accepted |
+| [0012](0012-metrics-derived-not-recorded.md) | Reliability metrics are derived from the log, never recorded alongside it | Accepted |
 
 Enforcement: ADR-0001, 0002, 0003 and 0008 are asserted by
 [`DependencyRuleTests`](../../tests/Mandate.Orchestrator.Tests/Architecture/DependencyRuleTests.cs),

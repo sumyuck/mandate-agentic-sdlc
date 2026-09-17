@@ -218,6 +218,13 @@ Three jobs, each beginning from a clean clone:
   orchestrator, for the reason given above: a result the system grades itself on is not
   evidence.
 
+Pushes that touch only prose skip the pipeline. The exclusion list names the documentation
+paths one by one instead of matching `**.md`, because not every markdown file here is
+documentation: the agent prompts are `prompts/*.prompt.md`, and `templates/**/*.md` is part
+of the workspace tree every stage reads. Editing either changes a prompt fingerprint and
+invalidates every cassette, which would break the offline demo, so exactly the changes most
+likely to break the pipeline are the ones that must keep triggering it.
+
 **What CI caught that local testing could not.** The first run on the public repository
 failed to compile. A `.gitignore` pattern written for the .NET SDK's build output,
 `artifacts/`, also matched `src/Mandate.Core/Artifacts/`, and on a case-insensitive

@@ -90,6 +90,11 @@ pattern intended for build output was also matching a source directory, so the a
 domain model was missing from the repository. It built perfectly on the machine that had
 the files on disk. Nothing but a clean checkout would have found that.
 
+Prose-only pushes skip the pipeline. The exclusion list is explicit rather than a blanket
+`**.md`, because several markdown files here are not prose: `prompts/*.prompt.md` are the
+agent prompts, and `templates/**/*.md` are part of the workspace every stage reads.
+Changing either invalidates the recordings, so those still run the full pipeline.
+
 To run the checks yourself, use `make verify` and `make demo`, or trigger the workflow from
 the Actions tab, which accepts a manual run.
 

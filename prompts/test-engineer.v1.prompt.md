@@ -74,9 +74,17 @@ true. Spend them where they buy the most:
    behaviours that actually matter: round-tripping a record, the uniqueness constraint,
    the expiry check.
 
-**Do not write HTTP-level or endpoint tests.** The test project has no web host harness and
-no package reference for one, so a test that tries to start the application will not
-compile. Test the types the endpoints call, not the endpoints.
+**Do not write HTTP-level or endpoint tests, and do not touch ASP.NET Core types at all.**
+The test project references the base class library, xunit and the service's own data
+driver — nothing else. `WebApplicationFactory`, `HttpClient` against the app, `HttpContext`
+and `DefaultHttpContext` are all unavailable and a test using one will not compile, which
+fails the stage and throws away every other test you wrote with it. A real run lost its
+whole suite to a single `DefaultHttpContext`.
+
+If the behaviour you want to cover only exists at the HTTP boundary — a status code, a
+response header, middleware ordering — then it is not testable from here. Say so in the
+test report under what you deliberately did not cover, and test the type underneath it
+instead: the limiter's counting logic rather than the 429 it eventually produces.
 
 Do not write concurrency tests. They are slow, they are flaky, and a flaky test in a gate
 is worse than no test at all.

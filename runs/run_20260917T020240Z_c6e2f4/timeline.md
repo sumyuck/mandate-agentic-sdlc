@@ -1,4 +1,4 @@
-# Run `run_20260917T015141Z_def060`
+# Run `run_20260917T020240Z_c6e2f4`
 
 - **Request:** The shortener needs rate limiting so one client cannot flood it.
 
@@ -7,8 +7,8 @@ rather than taking the service down for everyone else.
 - **Workflow:** `sdlc@v1`
 - **Scenario:** Ambiguous
 - **Status:** Failed
-- **Events:** 314
-- **Audit chain:** run_20260917T015141Z_def060: chain intact across 314 event(s).
+- **Events:** 228
+- **Audit chain:** run_20260917T020240Z_c6e2f4: chain intact across 228 event(s).
 
 ## Stages
 
@@ -16,16 +16,16 @@ rather than taking the service down for everyone else.
 |---|---|---:|---|
 | `architecture` | Succeeded | 1 | Approved; exit gate passed without re-running the stage. |
 | `clarification` | Skipped | 1 | Join policy 'All' cannot be satisfied: 'requirements' (guard false). The stage is not required on this path. |
-| `code-review` | Succeeded | 2 | Exit gate passed. |
-| `documentation` | Succeeded | 2 | Exit gate passed. |
+| `code-review` | Succeeded | 1 | Exit gate passed. |
+| `documentation` | Succeeded | 1 | Exit gate passed. |
 | `impact-analysis` | Succeeded | 1 | Exit gate passed. |
-| `implement` | Succeeded | 4 | Exit gate passed. |
+| `implement` | Succeeded | 2 | Exit gate passed. |
 | `intake` | Succeeded | 1 | Exit gate passed. |
 | `release-readiness` | Pending | 0 |  |
 | `requirements` | Succeeded | 2 | Exit gate passed. |
-| `security-scan` | Succeeded | 2 | Exit gate passed. |
-| `test` | Failed | 4 | Verification ran but produced no figure for test.failures or test.coverage. The toolchain reported: No tests ran (tests/Service.Tests/RateLimiterIntegrationTests.cs(193,20): error CS0246: The type or namespace name 'DefaultHt...). Output: tests/Service.Tests/RateLimiterIntegrationTests.cs(193,20): error CS0246: The type or namespace name 'DefaultHttpContext' could not be found (are you missing a using directive or an assembly reference?) [tests/Service.Tests/Service.Tests.csproj]
-tests/Service.Tests/RateLimiterIntegrationTests.cs(200,20): error CS0246: The type or namespace name 'DefaultHttpContext' could not be found (are you missing a using directive or an assembly reference?) [tests/Service.Tests/Service.Tests.csproj] |
+| `security-scan` | Succeeded | 1 | Exit gate passed. |
+| `test` | Failed | 3 | Verification ran but produced no figure for test.failures or test.coverage. The toolchain reported: No tests ran (tests/Service.Tests/RateLimitPolicyTests.cs(3,24): error CS0234: The type or namespace name 'RateLimiting' does...). Output: tests/Service.Tests/RateLimitPolicyTests.cs(3,24): error CS0234: The type or namespace name 'RateLimiting' does not exist in the namespace 'System.Threading' (are you missing an assembly reference?) [tests/Service.Tests/Service.Tests.csproj]
+tests/Service.Tests/ClientKeyResolverTests.cs(20,59): error CS0234: The type or namespace name 'Extensions' does not exist in the namespace 'Microsoft' (are you missing an assembly reference?) [tests/Service.Tests/Service.Tests.csproj] |
 
 ## Decisions
 
@@ -88,28 +88,4 @@ It ships in the shared framework (no new package), its FixedWindowRateLimiter is
 Rate limiting is about a caller's request rate, not about the validity of the link being created — it belongs with the other HTTP-layer-only decision in this codebase (status-code selection), keeps LinkService's existing test suite and behavior stable, and matches the requirement's exact scope (this one route only).
 
 - Rejected **Inside LinkService.CreateAsync, via a new parameter and CreateOutcomeKind.RateLimited member**: Breaks the signature of a method all 11 existing LinkServiceTests call directly with a single argument, forcing every test to change for a concern (client identity, request timing) that has nothing to do with link-creation domain rules; it also mixes an HTTP/transport concern (who is calling, how fast) into a layer that the existing design explicitly keeps HTTP-agnostic.
-
-### `security-scan-api-key-validation` — Should API key values be validated or authenticated in the rate limiter?
-
-**Chosen:** Accept any API key value as-is (chosen) (confidence 0.95, by agent:security-scanner)
-
-This aligns with the explicit requirement scope ('not an authentication mechanism') and the 'no new external dependencies' constraint. The design doc (§7) acknowledges this is a known gap and documents it as a limitation for any future security requirement that does want authentication.
-
-- Rejected **Validate/authenticate API keys**: The requirement and clarification explicitly state this is a client-identification signal only, not an authorization mechanism. Validating keys would be solving a different problem (authentication) than what was asked for (rate limiting). It would also require new infrastructure (a secrets store) that the requirement forbids.
-
-### `security-scan-client-ip-extraction` — Should the rate limiter trust X-Forwarded-For or other proxy headers when extracting client IP?
-
-**Chosen:** Use RemoteIpAddress only (chosen) (confidence 0.9, by agent:security-scanner)
-
-Simplest and safest given the absence of existing precedent. The design doc and README both flag this as a known limitation for deployments behind a proxy, so it is transparent rather than silent.
-
-- Rejected **Trust X-Forwarded-For and similar headers**: The recorded assumption (docs/requirements.md §6) says to 'reuse whatever mechanism the existing codebase currently uses' — but the impact analysis confirms no such mechanism exists anywhere in this tree. Implementing trusted-proxy-header handling from scratch introduces a new spoofing surface if the trust boundary is misconfigured. This is a deployment-specific decision left to later, with the gap documented in the design (§7) and README.
-
-### `implement-key-caching` — How to avoid computing the client key twice per rejected request
-
-**Chosen:** Store resolved key in HttpContext.Items during partitioning, read it back in OnRejected (confidence 0.85, by agent:implementer)
-
-Addresses the recorded review finding directly without changing external behavior
-
-- Rejected **Leave duplicate Resolve() calls as-is**: Flagged as a low-severity review finding; cheap but unnecessary duplication and a future divergence risk
 

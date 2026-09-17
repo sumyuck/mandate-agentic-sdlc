@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Run run_20260917T020240Z_c6e2f4</title>
+<style>:root {
+  --ink: #1a1d21; --muted: #5b6570; --line: #dfe3e8; --panel: #f7f8fa;
+  --good: #1e7e34; --warn: #b26a00; --bad: #b3261e; --info: #1a56db;
+  --skip: #8a9199;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 2rem clamp(1rem, 4vw, 3.5rem);
+  font: 15px/1.6 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--ink); background: #fff; max-width: 1200px;
+}
+h1 { font-size: 1.5rem; margin: 0 0 .25rem; }
+h2 { font-size: 1.05rem; margin: 2.5rem 0 .75rem; padding-bottom: .35rem;
+     border-bottom: 1px solid var(--line); }
+h3 { font-size: .95rem; margin: 1.5rem 0 .4rem; }
+code, pre, .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .85em; }
+.subtitle { color: var(--muted); margin: 0 0 1.5rem; }
+.request { background: var(--panel); border-left: 3px solid var(--info);
+           padding: .75rem 1rem; margin: 0 0 1.5rem; }
+.cards { display: grid; gap: .75rem;
+         grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); }
+.card { border: 1px solid var(--line); border-radius: 6px; padding: .7rem .85rem; }
+.card .value { font-size: 1.35rem; font-weight: 600; line-height: 1.2; }
+.card .label { color: var(--muted); font-size: .78rem; text-transform: uppercase;
+               letter-spacing: .04em; }
+.card .note { color: var(--muted); font-size: .78rem; margin-top: .2rem; }
+table { border-collapse: collapse; width: 100%; margin: .5rem 0 1rem; }
+th, td { text-align: left; padding: .45rem .6rem; border-bottom: 1px solid var(--line);
+         vertical-align: top; }
+th { font-size: .78rem; text-transform: uppercase; letter-spacing: .04em;
+     color: var(--muted); font-weight: 600; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.pill { display: inline-block; padding: .08rem .45rem; border-radius: 999px;
+        font-size: .76rem; font-weight: 600; white-space: nowrap; }
+.ok { background: #e7f4ea; color: var(--good); }
+.warn { background: #fdf2e2; color: var(--warn); }
+.bad { background: #fdecea; color: var(--bad); }
+.neutral { background: #eef1f4; color: var(--skip); }
+.info { background: #e8f0fe; color: var(--info); }
+details { margin: .5rem 0; }
+summary { cursor: pointer; color: var(--muted); font-size: .9rem; }
+.decision { border: 1px solid var(--line); border-radius: 6px; padding: .8rem 1rem;
+            margin: .6rem 0; }
+.decision .q { font-weight: 600; }
+.decision ul { margin: .4rem 0 0; padding-left: 1.1rem; color: var(--muted); }
+.muted { color: var(--muted); }
+.footnote { color: var(--muted); font-size: .82rem; margin-top: 3rem;
+            border-top: 1px solid var(--line); padding-top: 1rem; }
+svg { max-width: 100%; height: auto; }</style>
+</head><body>
+<h1>Run <span class="mono">run_20260917T020240Z_c6e2f4</span></h1>
+<p class="subtitle">sdlc@v1 &middot; ambiguous &middot; started 2026-09-17 02:02:40Z &middot; <span class="pill bad">failed</span> <span class="pill ok">chain intact</span></p>
+<p class="request"><strong>Requested:</strong> The shortener needs rate limiting so one client cannot flood it.
+
+Add sensible limits to the create endpoint and make sure abusive clients get throttled
+rather than taking the service down for everyone else.</p>
+<h2>Reliability</h2>
+<p class="muted">Every figure below is computed from the run's event log. None of them is stored, so none of them can be set &mdash; only caused.</p>
+<div class="cards">
+<div class="card"><div class="label">success rate</div><div class="value">88.9%</div><div class="note">8 of 9 attempted</div></div>
+<div class="card"><div class="label">end to end</div><div class="value">3.6m</div><div class="note">228 events</div></div>
+<div class="card"><div class="label">stages run</div><div class="value">10</div><div class="note">1 not required on this path</div></div>
+<div class="card"><div class="label">retry rate</div><div class="value">28.6%</div><div class="note">4 of 14 attempts</div></div>
+<div class="card"><div class="label">mttr</div><div class="value">&mdash;</div><div class="note">1 never recovered</div></div>
+<div class="card"><div class="label">rollback rate</div><div class="value">0%</div><div class="note">0 compensation(s)</div></div>
+<div class="card"><div class="label">gate block rate</div><div class="value">7%</div><div class="note">3 of 43 conditions</div></div>
+<div class="card"><div class="label">stage p50 / p95</div><div class="value">52ms / 3.2m</div><div class="note">per stage</div></div>
+<div class="card"><div class="label">approval wait</div><div class="value">2.92s</div><div class="note">2 granted, 0 refused</div></div>
+<div class="card"><div class="label">autonomy ratio</div><div class="value">87.5%</div><div class="note">14 agent attempt(s) vs human decisions</div></div>
+<div class="card"><div class="label">re-plans</div><div class="value">3</div><div class="note">plan recomputed</div></div>
+<div class="card"><div class="label">policy</div><div class="value">0</div><div class="note">0 blocked, 0 waived</div></div>
+</div>
+<h2>Timeline</h2>
+<svg viewBox="0 0 814 302" role="img" aria-label="Stage timeline" xmlns="http://www.w3.org/2000/svg"><text x="12" y="27" font-size="12" fill="#1a1d21" font-family="ui-monospace, Menlo, monospace">intake</text><rect x="170" y="17" width="620" height="14" fill="#f2f4f6" rx="3"/><rect x="170" y="17" width="3" height="14" fill="#2e9e52" rx="3"><title>intake: Succeeded, 76ms, 1 attempt(s)</title></rect><text x="179" y="28" font-size="11" fill="#5b6570">76ms</text><text x="12" y="53" font-size="12" fill="#1a1d21" font-family="ui-monospace, Menlo, monospace">requirements</text><rect x="170" y="43" width="620" height="14" fill="#f2f4f6" rx="3"/><rect x="170" y="43" width="18" height="14" fill="#2e9e52" rx="3"><title>requirements: Succeeded, 5.7s, 2 attempt(s)</title></rect><text x="194" y="54" font-size="11" fill="#5b6570">5.7s  (2 attempts)</text><text x="12" y="79" font-size="12" fill="#1a1d21" font-family="ui-monospace, Menlo, monospace">clarification</text><rect x="170" y="69" width="620" height="14" fill="#f2f4f6" rx="3"/><rect x="170" y="69" width="3" height="14" fill="#c3c9d0" rx="3"><title>clarification: Skipped, 6ms, 1 attempt(s)</title></rect><text x="179" y="80" font-size="11" fill="#5b6570">6ms</text><text x="12" y="105" font-size="12" fill="#1a1d21" font-family="ui-monospace, Menlo, monospace">impact-analysis</text><rect x="170" y="95" width="620" height="14" fill="#f2f4f6" rx="3"/><rect x="170" y="95" width="3" height="14" fill="#2e9e52" rx="3"><title>impact-analysis: Succeeded, 12ms, 1 attempt(s)</title></rect><text x="179" y="106" font-size="11" fill="#5b6570">12ms</text><text x="12" y="131" font-size="12" fill="#1a1d21" font-family="ui-monospace, Menlo, monospace">architecture</text><rect x="170" y="121" width="620" height="14" fill="#f2f4f6" rx="3"/><rect x="170" y="121" width="3" height="14" fill="#2e9e52" rx="3"><title>architecture: Succeeded, 6ms, 1 attempt(s)</title></rect><text x="179" y="132" font-size="11" fill="#5b6570">6ms</text><text x="12" y="157" font-size="12" fill="#1a1d21" font-family="ui-monospace, Menlo, monospace">implement</text><rect x="170" y="147" width="620" height="14" fill="#f2f4f6" rx="3"/><rect x="170" y="147" width="620" height="14" fill="#2e9e52" rx="3"><title>implement: Succeeded, 194.96s, 2 attempt(s)</title></rect><text x="796" y="158" font-size="11" fill="#5b6570">194.96s  (2 attempts)</text><text x="12" y="183" font-size="12" fill="#1a1d21" font-family="ui-monospace, Menlo, monospace">code-review</text><rect x="170" y="173" width="620" height="14" fill="#f2f4f6" rx="3"/><rect x="170" y="173" width="3" height="14" fill="#2e9e52" rx="3"><title>code-review: Succeeded, 25ms, 1 attempt(s)</title></rect><text x="179" y="184" font-size="11" fill="#5b6570">25ms</text><text x="12" y="209" font-size="12" fill="#1a1d21" font-family="ui-monospace, Menlo, monospace">documentation</text><rect x="170" y="199" width="620" height="14" fill="#f2f4f6" rx="3"/><rect x="170" y="199" width="3" height="14" fill="#2e9e52" rx="3"><title>documentation: Succeeded, 52ms, 1 attempt(s)</title></rect><text x="179" y="210" font-size="11" fill="#5b6570">52ms</text><text x="12" y="235" font-size="12" fill="#1a1d21" font-family="ui-monospace, Menlo, monospace">security-scan</text><rect x="170" y="225" width="620" height="14" fill="#f2f4f6" rx="3"/><rect x="170" y="225" width="118" height="14" fill="#2e9e52" rx="3"><title>security-scan: Succeeded, 37.26s, 1 attempt(s)</title></rect><text x="294" y="236" font-size="11" fill="#5b6570">37.26s</text><text x="12" y="261" font-size="12" fill="#1a1d21" font-family="ui-monospace, Menlo, monospace">test</text><rect x="170" y="251" width="620" height="14" fill="#f2f4f6" rx="3"/><rect x="170" y="251" width="539" height="14" fill="#b3261e" rx="3"><title>test: Failed, 169.66s, 3 attempt(s)</title></rect><text x="715" y="262" font-size="11" fill="#5b6570">169.66s  (3 attempts)</text><text x="12" y="298" font-size="11" fill="#5b6570">Bars are scaled to the longest stage, not to wall-clock time.</text></svg>
+<h2>Stages</h2>
+<table><thead><tr><th>stage</th><th>outcome</th><th class="num">attempts</th><th class="num">duration</th></tr></thead><tbody>
+<tr><td class="mono">intake</td><td><span class="pill ok">succeeded</span></td><td class="num">1</td><td class="num">76ms</td></tr>
+<tr><td class="mono">requirements</td><td><span class="pill ok">succeeded</span></td><td class="num">2</td><td class="num">5.7s</td></tr>
+<tr><td class="mono">clarification</td><td><span class="pill neutral">not required</span></td><td class="num">1</td><td class="num">6ms</td></tr>
+<tr><td class="mono">impact-analysis</td><td><span class="pill ok">succeeded</span></td><td class="num">1</td><td class="num">12ms</td></tr>
+<tr><td class="mono">architecture</td><td><span class="pill ok">succeeded</span></td><td class="num">1</td><td class="num">6ms</td></tr>
+<tr><td class="mono">implement</td><td><span class="pill ok">succeeded</span></td><td class="num">2</td><td class="num">3.2m</td></tr>
+<tr><td class="mono">code-review</td><td><span class="pill ok">succeeded</span></td><td class="num">1</td><td class="num">25ms</td></tr>
+<tr><td class="mono">documentation</td><td><span class="pill ok">succeeded</span></td><td class="num">1</td><td class="num">52ms</td></tr>
+<tr><td class="mono">security-scan</td><td><span class="pill ok">succeeded</span></td><td class="num">1</td><td class="num">37.26s</td></tr>
+<tr><td class="mono">test</td><td><span class="pill bad">failed</span></td><td class="num">3</td><td class="num">2.8m</td></tr>
+</tbody></table>
+<h2>Where a human intervened</h2>
+<table><thead><tr><th>when</th><th>what</th><th>who</th><th>detail</th></tr></thead><tbody>
+<tr><td class="mono">02:02:41</td><td><span class="pill info">asked</span></td><td class="mono">engine:orchestrator</td><td>requester: The requirement has more than one defensible reading, and choosing between them changes what gets built.</td></tr>
+<tr><td class="mono">02:02:43</td><td><span class="pill ok">approved</span></td><td class="mono">human:muskan</td><td>requester: Fixed window of 60 create requests per API key per minute. Over the limit returns 429 with a Retry-After header. Counters live in process; no shared store, no distributed coordination. Only POST /api/v1/links is limited. Requests without an API key are limited by client IP on the same terms.</td></tr>
+<tr><td class="mono">02:02:47</td><td><span class="pill info">asked</span></td><td class="mono">engine:orchestrator</td><td>tech-lead: The design constrains every downstream stage. Approving it after implementation would make the approval ceremonial.</td></tr>
+<tr><td class="mono">02:02:50</td><td><span class="pill ok">approved</span></td><td class="mono">human:alex</td><td>tech-lead: In-process fixed-window limiter is proportionate; revisit if the service is ever run multi-instance.</td></tr>
+</tbody></table>
+<h2>Policy</h2>
+<p class="muted">No policy pack was evaluated.</p>
+<h2>Re-planning</h2>
+<p class="muted">What each re-plan undid, and what it deliberately left alone because its input had not changed.</p>
+<div class="decision">
+<div class="q"><span class="pill info">re-plan 1</span> triggered by <span class="mono">clarification</span>, by <span class="mono">engine:orchestrator</span></div>
+<p>'clarification' completed and returns control to 'requirements', which is re-run against what it produced.</p>
+<ul>
+<li><strong>Redone:</strong> requirements</li>
+<li><strong>Left alone:</strong> clarification, intake</li>
+</ul></div>
+<div class="decision">
+<div class="q"><span class="pill info">re-plan 2</span> triggered by <span class="mono">requirements</span>, by <span class="mono">engine:orchestrator</span></div>
+<p>'requirements' re-ran and produced different output, so work built on it is no longer valid.</p>
+<ul>
+<li><strong>Redone:</strong> clarification</li>
+<li><strong>Left alone:</strong> intake, requirements</li>
+<li><strong>Approvals withdrawn:</strong> requester</li>
+</ul></div>
+<div class="decision">
+<div class="q"><span class="pill info">re-plan 3</span> triggered by <span class="mono">test</span>, by <span class="mono">engine:orchestrator</span></div>
+<p>'test' failed after 3 attempt(s), so 'implement' is redone: Verification ran but produced no figure for test.failures or test.coverage. The toolchain reported: No tests ran (tests/Service.Tests/RateLimitPolicyTests.cs(3,24): error CS0234: The type or namespace name 'RateLimiting' does...). Output: tests/Service.Tests/RateLimitPolicyTests.cs(3,24): error CS0234: The type or namespace name 'RateLimiting' does not exist in the namespace 'System.Threading' (are you missing an assembly reference?) [tests/Service.Tests/Service.Tests.csproj]
+tests/Service.Tests/ClientKeyResolverTests.cs(20,59): error CS0234: The type or namespace name 'Extensions' does not exist in the namespace 'Microsoft' (are you missing an assembly reference?) [tests/Service.Tests/Service.Tests.csproj]</p>
+<ul>
+<li><strong>Redone:</strong> implement</li>
+<li><strong>Left alone:</strong> architecture, code-review, documentation, impact-analysis, intake, requirements, security-scan</li>
+</ul></div>
+<h2>Decisions</h2>
+<div class="decision">
+<div class="q">How should &quot;one client&quot; be identified for the purpose of rate limiting the create endpoint?</div>
+<p><strong>IP address</strong> &mdash; IP-based limiting is the safe default for a public create endpoint and does not presuppose infrastructure (auth) that isn't confirmed to exist; documented as an assumption to be revisited if the endpoint is or becomes authenticated.</p>
+<p class="muted">by agent:requirements-analyst, confidence 0.6</p>
+<ul>
+<li>Rejected <strong>API key / authenticated account id</strong>: No evidence in the request or its framing that the create endpoint requires authentication; assuming an auth layer that may not exist risks building a limiter with no key to read.</li>
+</ul></div>
+<div class="decision">
+<div class="q">Which rate-limiting algorithm should govern the create endpoint?</div>
+<p><strong>Fixed window counter</strong> &mdash; The requester's recorded clarification explicitly says 'Fixed window of 60 create requests per API key per minute,' so this is not a judgment call, it is a given.</p>
+<p class="muted">by agent:requirements-analyst, confidence 0.97</p>
+<ul>
+<li>Rejected <strong>Sliding window log/counter</strong>: Not what the requester specified, and adds implementation complexity (timestamp tracking or interpolation) the clarification did not ask for.</li>
+<li>Rejected <strong>Token bucket</strong>: Permits bursts above the flat 60/window figure the requester gave, which would silently change the guarantee they asked for.</li>
+</ul></div>
+<div class="decision">
+<div class="q">How should a 'client' be identified for the purpose of counting requests?</div>
+<p><strong>API key, with client IP as fallback for unkeyed requests</strong> &mdash; Directly matches the recorded clarification: 'Only POST /api/v1/links is limited. Requests without an API key are limited by client IP on the same terms.'</p>
+<p class="muted">by agent:requirements-analyst, confidence 0.95</p>
+<ul>
+<li>Rejected <strong>API key only, unkeyed requests unlimited</strong>: Leaves the exact flood vector the request describes — an anonymous client hammering the endpoint — completely unthrottled, defeating the stated purpose.</li>
+<li>Rejected <strong>IP only for all requests, ignore API key</strong>: Punishes multiple distinct keyed clients sharing an egress IP (e.g. behind NAT or a corporate proxy) as one client, which the requester did not ask for and which is a worse default than keying by identity when identity is available.</li>
+</ul></div>
+<div class="decision">
+<div class="q">Where should rate-limit counters be stored?</div>
+<p><strong>In-process memory, per instance</strong> &mdash; The clarification states this directly. The known consequence — that a client's effective limit multiplies with instance count — is recorded as an explicit out-of-scope limitation, not silently absorbed.</p>
+<p class="muted">by agent:requirements-analyst, confidence 0.95</p>
+<ul>
+<li>Rejected <strong>Shared external store (e.g. Redis, database)</strong>: Explicitly excluded by the requester's clarification ('no shared store, no distributed coordination'); would also add an infrastructure dependency and failure mode out of scope for this change.</li>
+</ul></div>
+<div class="decision">
+<div class="q">Whether this change is medium or high blast radius</div>
+<p><strong>high</strong> &mdash; The rubric defines high as 'a public contract... or anything on a path where failure is not locally contained.' Both conditions are met here independently: the create endpoint's documented response contract gains a new status and header, and the mechanism (HTTP middleware or endpoint-level policy) sits on the shared ASP.NET Core pipeline where a scoping error bleeds into every other route.</p>
+<p class="muted">by agent:codebase-analyst, confidence 0.75</p>
+<ul>
+<li>Rejected <strong>medium</strong>: It still adds a new HTTP status code (429) and a new response header (Retry-After) to a documented, versioned contract in contracts/openapi.yaml, and — per the rubric's own definition — a public contract change is high regardless of how few files are touched. It also sits on a path (the request-handling pipeline in Program.cs) where a scoping mistake does not stay local: ASP.NET Core rate-limiting middleware applied incorrectly affects every route mapped after it, not just the create endpoint.</li>
+</ul></div>
+<div class="decision">
+<div class="q">What mechanism enforces the 60-requests-per-60-seconds-per-client cap, given it must be concurrency-safe, memory-bounded, and use no external store?</div>
+<p><strong>ASP.NET Core built-in RateLimiter middleware (fixed-window, partitioned by client key)</strong> &mdash; It ships in the shared framework (no new package), its FixedWindowRateLimiter is a proven, race-free primitive that satisfies AC10 by construction rather than by careful hand-written locking, it produces Retry-After metadata on rejection for free (AC5), and per-route attachment via RequireRateLimiting keeps every other endpoint (AC8) untouched without relying on careful middleware ordering.</p>
+<p class="muted">by agent:architect, confidence 0.85</p>
+<ul>
+<li>Rejected <strong>Hand-rolled ConcurrentDictionary&lt;string, WindowState&gt; counter</strong>: Duplicates a primitive the framework already implements correctly under concurrency; a naive read-then-write increment is exactly the race the impact analysis flags as the highest-risk bug (AC10), and eviction/expiry would need to be built and tested from scratch.</li>
+<li>Rejected <strong>External store (Redis / distributed cache) backed counter</strong>: Explicitly out of scope: the clarification states 'no shared store, no distributed coordination,' and the NFRs forbid new external dependencies.</li>
+<li>Rejected <strong>Sliding-window or token-bucket algorithm</strong>: The requirement specifies a fixed window with no burst allowance; this out-of-scope algorithm class is explicitly excluded in docs/requirements.md §3.</li>
+</ul></div>
+<div class="decision">
+<div class="q">Where does the rate-limit decision happen: inside the HTTP layer before LinkService is invoked, or inside LinkService itself?</div>
+<p><strong>HTTP layer (Program.cs / middleware), before LinkService.CreateAsync is ever called</strong> &mdash; Rate limiting is about a caller's request rate, not about the validity of the link being created — it belongs with the other HTTP-layer-only decision in this codebase (status-code selection), keeps LinkService's existing test suite and behavior stable, and matches the requirement's exact scope (this one route only).</p>
+<p class="muted">by agent:architect, confidence 0.85</p>
+<ul>
+<li>Rejected <strong>Inside LinkService.CreateAsync, via a new parameter and CreateOutcomeKind.RateLimited member</strong>: Breaks the signature of a method all 11 existing LinkServiceTests call directly with a single argument, forcing every test to change for a concern (client identity, request timing) that has nothing to do with link-creation domain rules; it also mixes an HTTP/transport concern (who is calling, how fast) into a layer that the existing design explicitly keeps HTTP-agnostic.</li>
+</ul></div>
+<h2>Audit log</h2>
+<details><summary>228 events, each committing to its predecessor</summary>
+<table><thead><tr><th class="num">#</th><th>event</th><th>stage</th><th>actor</th><th>digest</th></tr></thead><tbody>
+<tr><td class="num">1</td><td>RunPlanned</td><td class="mono">&amp;mdash;</td><td class="mono">engine:orchestrator</td><td class="mono">5f56d16d</td></tr>
+<tr><td class="num">2</td><td>ContextFactAdded</td><td class="mono">run</td><td class="mono">engine:orchestrator</td><td class="mono">79a2da55</td></tr>
+<tr><td class="num">3</td><td>ContextFactAdded</td><td class="mono">run</td><td class="mono">engine:orchestrator</td><td class="mono">94be2703</td></tr>
+<tr><td class="num">4</td><td>ContextFactAdded</td><td class="mono">run</td><td class="mono">engine:orchestrator</td><td class="mono">dbe8f1a1</td></tr>
+<tr><td class="num">5</td><td>ContextFactAdded</td><td class="mono">run</td><td class="mono">engine:orchestrator</td><td class="mono">4a9a67f4</td></tr>
+<tr><td class="num">6</td><td>ContextFactAdded</td><td class="mono">run</td><td class="mono">engine:orchestrator</td><td class="mono">be96b4f4</td></tr>
+<tr><td class="num">7</td><td>ContextFactAdded</td><td class="mono">run</td><td class="mono">engine:orchestrator</td><td class="mono">6a02fe74</td></tr>
+<tr><td class="num">8</td><td>RunStarted</td><td class="mono">&amp;mdash;</td><td class="mono">engine:orchestrator</td><td class="mono">4ecaa7ba</td></tr>
+<tr><td class="num">9</td><td>EntryGateEvaluated</td><td class="mono">intake</td><td class="mono">engine:orchestrator</td><td class="mono">b7ea7aed</td></tr>
+<tr><td class="num">10</td><td>NodeStateChanged</td><td class="mono">intake</td><td class="mono">engine:orchestrator</td><td class="mono">93f19878</td></tr>
+<tr><td class="num">11</td><td>NodeStateChanged</td><td class="mono">intake</td><td class="mono">engine:orchestrator</td><td class="mono">31ba6ae9</td></tr>
+<tr><td class="num">12</td><td>NodeAttemptStarted</td><td class="mono">intake</td><td class="mono">engine:orchestrator</td><td class="mono">a47a43d9</td></tr>
+<tr><td class="num">13</td><td>NodeAttemptFinished</td><td class="mono">intake</td><td class="mono">engine:orchestrator</td><td class="mono">ec67791a</td></tr>
+<tr><td class="num">14</td><td>WorkspaceCommitted</td><td class="mono">intake</td><td class="mono">agent:intake</td><td class="mono">c717c1a0</td></tr>
+<tr><td class="num">15</td><td>ArtifactProduced</td><td class="mono">intake</td><td class="mono">agent:intake</td><td class="mono">a0f3ef93</td></tr>
+<tr><td class="num">16</td><td>ContextFactAdded</td><td class="mono">intake</td><td class="mono">agent:intake</td><td class="mono">39a2b750</td></tr>
+<tr><td class="num">17</td><td>ModelCalled</td><td class="mono">intake</td><td class="mono">agent:intake</td><td class="mono">2be2f041</td></tr>
+<tr><td class="num">18</td><td>ExitGateEvaluated</td><td class="mono">intake</td><td class="mono">engine:orchestrator</td><td class="mono">cebfe446</td></tr>
+<tr><td class="num">19</td><td>NodeStateChanged</td><td class="mono">intake</td><td class="mono">agent:intake</td><td class="mono">2362fc02</td></tr>
+<tr><td class="num">20</td><td>EntryGateEvaluated</td><td class="mono">requirements</td><td class="mono">engine:orchestrator</td><td class="mono">0b682e6e</td></tr>
+<tr><td class="num">21</td><td>NodeStateChanged</td><td class="mono">requirements</td><td class="mono">engine:orchestrator</td><td class="mono">9d6ce461</td></tr>
+<tr><td class="num">22</td><td>NodeStateChanged</td><td class="mono">requirements</td><td class="mono">engine:orchestrator</td><td class="mono">8b117cc8</td></tr>
+<tr><td class="num">23</td><td>NodeAttemptStarted</td><td class="mono">requirements</td><td class="mono">engine:orchestrator</td><td class="mono">58fb806c</td></tr>
+<tr><td class="num">24</td><td>NodeAttemptFinished</td><td class="mono">requirements</td><td class="mono">engine:orchestrator</td><td class="mono">7e0944a6</td></tr>
+<tr><td class="num">25</td><td>WorkspaceCommitted</td><td class="mono">requirements</td><td class="mono">agent:requirements-analyst</td><td class="mono">e525cc37</td></tr>
+<tr><td class="num">26</td><td>ArtifactProduced</td><td class="mono">requirements</td><td class="mono">agent:requirements-analyst</td><td class="mono">9a957b38</td></tr>
+<tr><td class="num">27</td><td>ArtifactProduced</td><td class="mono">requirements</td><td class="mono">agent:requirements-analyst</td><td class="mono">8cd8755e</td></tr>
+<tr><td class="num">28</td><td>DecisionRecorded</td><td class="mono">requirements</td><td class="mono">agent:requirements-analyst</td><td class="mono">4ba4fd0a</td></tr>
+<tr><td class="num">29</td><td>ContextFactAdded</td><td class="mono">requirements</td><td class="mono">agent:requirements-analyst</td><td class="mono">379f77cc</td></tr>
+<tr><td class="num">30</td><td>ContextFactAdded</td><td class="mono">requirements</td><td class="mono">agent:requirements-analyst</td><td class="mono">c360d675</td></tr>
+<tr><td class="num">31</td><td>ContextFactAdded</td><td class="mono">requirements</td><td class="mono">agent:requirements-analyst</td><td class="mono">02949d43</td></tr>
+<tr><td class="num">32</td><td>ModelCalled</td><td class="mono">requirements</td><td class="mono">agent:requirements-analyst</td><td class="mono">6b15ff75</td></tr>
+<tr><td class="num">33</td><td>ExitGateEvaluated</td><td class="mono">requirements</td><td class="mono">engine:orchestrator</td><td class="mono">a522ef2d</td></tr>
+<tr><td class="num">34</td><td>NodeStateChanged</td><td class="mono">requirements</td><td class="mono">agent:requirements-analyst</td><td class="mono">ac0d9b6b</td></tr>
+<tr><td class="num">35</td><td>EdgeGuardEvaluated</td><td class="mono">requirements</td><td class="mono">engine:orchestrator</td><td class="mono">720ce218</td></tr>
+<tr><td class="num">36</td><td>EdgeGuardEvaluated</td><td class="mono">requirements</td><td class="mono">engine:orchestrator</td><td class="mono">13dd6d01</td></tr>
+<tr><td class="num">37</td><td>EdgeGuardEvaluated</td><td class="mono">requirements</td><td class="mono">engine:orchestrator</td><td class="mono">1b82ea32</td></tr>
+<tr><td class="num">38</td><td>EntryGateEvaluated</td><td class="mono">clarification</td><td class="mono">engine:orchestrator</td><td class="mono">2f54e9fc</td></tr>
+<tr><td class="num">39</td><td>NodeStateChanged</td><td class="mono">clarification</td><td class="mono">engine:orchestrator</td><td class="mono">e174a639</td></tr>
+<tr><td class="num">40</td><td>EntryGateEvaluated</td><td class="mono">impact-analysis</td><td class="mono">engine:orchestrator</td><td class="mono">afd2ba33</td></tr>
+<tr><td class="num">41</td><td>NodeStateChanged</td><td class="mono">clarification</td><td class="mono">engine:orchestrator</td><td class="mono">3de5ccd9</td></tr>
+<tr><td class="num">42</td><td>NodeAttemptStarted</td><td class="mono">clarification</td><td class="mono">engine:orchestrator</td><td class="mono">eb813581</td></tr>
+<tr><td class="num">43</td><td>NodeAttemptFinished</td><td class="mono">clarification</td><td class="mono">engine:orchestrator</td><td class="mono">1598a0f4</td></tr>
+<tr><td class="num">44</td><td>WorkspaceCommitted</td><td class="mono">clarification</td><td class="mono">agent:clarification-broker</td><td class="mono">54c3e591</td></tr>
+<tr><td class="num">45</td><td>ArtifactProduced</td><td class="mono">clarification</td><td class="mono">agent:clarification-broker</td><td class="mono">6135513a</td></tr>
+<tr><td class="num">46</td><td>ArtifactProduced</td><td class="mono">clarification</td><td class="mono">agent:clarification-broker</td><td class="mono">690201d5</td></tr>
+<tr><td class="num">47</td><td>ArtifactProduced</td><td class="mono">clarification</td><td class="mono">agent:clarification-broker</td><td class="mono">1cf19c9a</td></tr>
+<tr><td class="num">48</td><td>ContextFactAdded</td><td class="mono">clarification</td><td class="mono">agent:clarification-broker</td><td class="mono">356c1dd3</td></tr>
+<tr><td class="num">49</td><td>ContextFactAdded</td><td class="mono">clarification</td><td class="mono">agent:clarification-broker</td><td class="mono">be7b9c44</td></tr>
+<tr><td class="num">50</td><td>ModelCalled</td><td class="mono">clarification</td><td class="mono">agent:clarification-broker</td><td class="mono">843eb4c8</td></tr>
+<tr><td class="num">51</td><td>ExitGateEvaluated</td><td class="mono">clarification</td><td class="mono">engine:orchestrator</td><td class="mono">57fae46e</td></tr>
+<tr><td class="num">52</td><td>ApprovalRequested</td><td class="mono">clarification</td><td class="mono">engine:orchestrator</td><td class="mono">7470626e</td></tr>
+<tr><td class="num">53</td><td>NodeStateChanged</td><td class="mono">clarification</td><td class="mono">engine:orchestrator</td><td class="mono">8ad5b4e2</td></tr>
+<tr><td class="num">54</td><td>NodeStateChanged</td><td class="mono">impact-analysis</td><td class="mono">engine:orchestrator</td><td class="mono">ace28a32</td></tr>
+<tr><td class="num">55</td><td>RunCompleted</td><td class="mono">&amp;mdash;</td><td class="mono">engine:orchestrator</td><td class="mono">0dfbd945</td></tr>
+<tr><td class="num">56</td><td>ApprovalGranted</td><td class="mono">clarification</td><td class="mono">human:muskan</td><td class="mono">ccea463e</td></tr>
+<tr><td class="num">57</td><td>RunStarted</td><td class="mono">&amp;mdash;</td><td class="mono">engine:orchestrator</td><td class="mono">35474068</td></tr>
+<tr><td class="num">58</td><td>NodeStateChanged</td><td class="mono">impact-analysis</td><td class="mono">engine:orchestrator</td><td class="mono">c6380465</td></tr>
+<tr><td class="num">59</td><td>NodeStateChanged</td><td class="mono">impact-analysis</td><td class="mono">engine:orchestrator</td><td class="mono">5379cd04</td></tr>
+<tr><td class="num">60</td><td>NodeStateChanged</td><td class="mono">impact-analysis</td><td class="mono">engine:orchestrator</td><td class="mono">ccaaa78b</td></tr>
+<tr><td class="num">61</td><td>ExitGateEvaluated</td><td class="mono">clarification</td><td class="mono">engine:orchestrator</td><td class="mono">32fa42fe</td></tr>
+<tr><td class="num">62</td><td>ContextFactAdded</td><td class="mono">run</td><td class="mono">engine:orchestrator</td><td class="mono">05caeb84</td></tr>
+<tr><td class="num">63</td><td>NodeStateChanged</td><td class="mono">clarification</td><td class="mono">agent:clarification-broker</td><td class="mono">e3987222</td></tr>
+<tr><td class="num">64</td><td>NodeInvalidated</td><td class="mono">requirements</td><td class="mono">engine:orchestrator</td><td class="mono">8935f03c</td></tr>
+<tr><td class="num">65</td><td>NodeStateChanged</td><td class="mono">requirements</td><td class="mono">engine:orchestrator</td><td class="mono">8c7d28b8</td></tr>
+<tr><td class="num">66</td><td>NodeStateChanged</td><td class="mono">requirements</td><td class="mono">engine:orchestrator</td><td class="mono">380a81a8</td></tr>
+<tr><td class="num">67</td><td>ReplanPerformed</td><td class="mono">clarification</td><td class="mono">engine:orchestrator</td><td class="mono">116b11b4</td></tr>
+<tr><td class="num">68</td><td>EntryGateEvaluated</td><td class="mono">requirements</td><td class="mono">engine:orchestrator</td><td class="mono">e85cb8fd</td></tr>
+<tr><td class="num">69</td><td>NodeStateChanged</td><td class="mono">requirements</td><td class="mono">engine:orchestrator</td><td class="mono">b13509c3</td></tr>
+<tr><td class="num">70</td><td>NodeStateChanged</td><td class="mono">requirements</td><td class="mono">engine:orchestrator</td><td class="mono">d1af90b7</td></tr>
+<tr><td class="num">71</td><td>NodeAttemptStarted</td><td class="mono">requirements</td><td class="mono">engine:orchestrator</td><td class="mono">48ce6087</td></tr>
+<tr><td class="num">72</td><td>NodeAttemptFinished</td><td class="mono">requirements</td><td class="mono">engine:orchestrator</td><td class="mono">11a27407</td></tr>
+<tr><td class="num">73</td><td>WorkspaceCommitted</td><td class="mono">requirements</td><td class="mono">agent:requirements-analyst</td><td class="mono">9ecd1011</td></tr>
+<tr><td class="num">74</td><td>ArtifactProduced</td><td class="mono">requirements</td><td class="mono">agent:requirements-analyst</td><td class="mono">2c53404d</td></tr>
+<tr><td class="num">75</td><td>ArtifactProduced</td><td class="mono">requirements</td><td class="mono">agent:requirements-analyst</td><td class="mono">c1abb39a</td></tr>
+<tr><td class="num">76</td><td>DecisionRecorded</td><td class="mono">requirements</td><td class="mono">agent:requirements-analyst</td><td class="mono">ae63c31e</td></tr>
+<tr><td class="num">77</td><td>DecisionRecorded</td><td class="mono">requirements</td><td class="mono">agent:requirements-analyst</td><td class="mono">e4eeb373</td></tr>
+<tr><td class="num">78</td><td>DecisionRecorded</td><td class="mono">requirements</td><td class="mono">agent:requirements-analyst</td><td class="mono">3f416a62</td></tr>
+<tr><td class="num">79</td><td>ContextFactAdded</td><td class="mono">requirements</td><td class="mono">agent:requirements-analyst</td><td class="mono">91255f60</td></tr>
+<tr><td class="num">80</td><td>ContextFactAdded</td><td class="mono">requirements</td><td class="mono">agent:requirements-analyst</td><td class="mono">54a06a2d</td></tr>
+<tr><td class="num">81</td><td>ContextFactAdded</td><td class="mono">requirements</td><td class="mono">agent:requirements-analyst</td><td class="mono">76f44dd8</td></tr>
+<tr><td class="num">82</td><td>ModelCalled</td><td class="mono">requirements</td><td class="mono">agent:requirements-analyst</td><td class="mono">8d7a7a71</td></tr>
+<tr><td class="num">83</td><td>ExitGateEvaluated</td><td class="mono">requirements</td><td class="mono">engine:orchestrator</td><td class="mono">1fcff06f</td></tr>
+<tr><td class="num">84</td><td>NodeStateChanged</td><td class="mono">requirements</td><td class="mono">agent:requirements-analyst</td><td class="mono">df483491</td></tr>
+<tr><td class="num">85</td><td>NodeInvalidated</td><td class="mono">clarification</td><td class="mono">engine:orchestrator</td><td class="mono">028d5b4d</td></tr>
+<tr><td class="num">86</td><td>NodeStateChanged</td><td class="mono">clarification</td><td class="mono">engine:orchestrator</td><td class="mono">e771f56f</td></tr>
+<tr><td class="num">87</td><td>NodeStateChanged</td><td class="mono">clarification</td><td class="mono">engine:orchestrator</td><td class="mono">2940ed91</td></tr>
+<tr><td class="num">88</td><td>ReplanPerformed</td><td class="mono">requirements</td><td class="mono">engine:orchestrator</td><td class="mono">46498dff</td></tr>
+<tr><td class="num">89</td><td>EdgeGuardEvaluated</td><td class="mono">requirements</td><td class="mono">engine:orchestrator</td><td class="mono">8670ebac</td></tr>
+<tr><td class="num">90</td><td>EdgeGuardEvaluated</td><td class="mono">requirements</td><td class="mono">engine:orchestrator</td><td class="mono">39af3a26</td></tr>
+<tr><td class="num">91</td><td>EdgeGuardEvaluated</td><td class="mono">requirements</td><td class="mono">engine:orchestrator</td><td class="mono">fce513db</td></tr>
+<tr><td class="num">92</td><td>NodeStateChanged</td><td class="mono">clarification</td><td class="mono">engine:orchestrator</td><td class="mono">406fdafe</td></tr>
+<tr><td class="num">93</td><td>EntryGateEvaluated</td><td class="mono">impact-analysis</td><td class="mono">engine:orchestrator</td><td class="mono">08efe107</td></tr>
+<tr><td class="num">94</td><td>NodeStateChanged</td><td class="mono">impact-analysis</td><td class="mono">engine:orchestrator</td><td class="mono">0d60444b</td></tr>
+<tr><td class="num">95</td><td>NodeStateChanged</td><td class="mono">impact-analysis</td><td class="mono">engine:orchestrator</td><td class="mono">3bc11644</td></tr>
+<tr><td class="num">96</td><td>NodeAttemptStarted</td><td class="mono">impact-analysis</td><td class="mono">engine:orchestrator</td><td class="mono">7aff39e8</td></tr>
+<tr><td class="num">97</td><td>NodeAttemptFinished</td><td class="mono">impact-analysis</td><td class="mono">engine:orchestrator</td><td class="mono">437fbf2d</td></tr>
+<tr><td class="num">98</td><td>WorkspaceCommitted</td><td class="mono">impact-analysis</td><td class="mono">agent:codebase-analyst</td><td class="mono">7554f544</td></tr>
+<tr><td class="num">99</td><td>ArtifactProduced</td><td class="mono">impact-analysis</td><td class="mono">agent:codebase-analyst</td><td class="mono">1cd1dc12</td></tr>
+<tr><td class="num">100</td><td>DecisionRecorded</td><td class="mono">impact-analysis</td><td class="mono">agent:codebase-analyst</td><td class="mono">a54055bd</td></tr>
+<tr><td class="num">101</td><td>ContextFactAdded</td><td class="mono">impact-analysis</td><td class="mono">agent:codebase-analyst</td><td class="mono">cc5862a0</td></tr>
+<tr><td class="num">102</td><td>ContextFactAdded</td><td class="mono">impact-analysis</td><td class="mono">agent:codebase-analyst</td><td class="mono">c60c5191</td></tr>
+<tr><td class="num">103</td><td>ModelCalled</td><td class="mono">impact-analysis</td><td class="mono">agent:codebase-analyst</td><td class="mono">e9f4f286</td></tr>
+<tr><td class="num">104</td><td>ExitGateEvaluated</td><td class="mono">impact-analysis</td><td class="mono">engine:orchestrator</td><td class="mono">894a87ed</td></tr>
+<tr><td class="num">105</td><td>NodeStateChanged</td><td class="mono">impact-analysis</td><td class="mono">agent:codebase-analyst</td><td class="mono">7e654e4f</td></tr>
+<tr><td class="num">106</td><td>EntryGateEvaluated</td><td class="mono">architecture</td><td class="mono">engine:orchestrator</td><td class="mono">3ff495da</td></tr>
+<tr><td class="num">107</td><td>NodeStateChanged</td><td class="mono">architecture</td><td class="mono">engine:orchestrator</td><td class="mono">dae0c5f9</td></tr>
+<tr><td class="num">108</td><td>NodeStateChanged</td><td class="mono">architecture</td><td class="mono">engine:orchestrator</td><td class="mono">b66d31c6</td></tr>
+<tr><td class="num">109</td><td>NodeAttemptStarted</td><td class="mono">architecture</td><td class="mono">engine:orchestrator</td><td class="mono">fa35985d</td></tr>
+<tr><td class="num">110</td><td>NodeAttemptFinished</td><td class="mono">architecture</td><td class="mono">engine:orchestrator</td><td class="mono">ef73eec6</td></tr>
+<tr><td class="num">111</td><td>WorkspaceCommitted</td><td class="mono">architecture</td><td class="mono">agent:architect</td><td class="mono">c45ee32b</td></tr>
+<tr><td class="num">112</td><td>ArtifactProduced</td><td class="mono">architecture</td><td class="mono">agent:architect</td><td class="mono">43f6c001</td></tr>
+<tr><td class="num">113</td><td>ArtifactProduced</td><td class="mono">architecture</td><td class="mono">agent:architect</td><td class="mono">6445392a</td></tr>
+<tr><td class="num">114</td><td>ArtifactProduced</td><td class="mono">architecture</td><td class="mono">agent:architect</td><td class="mono">d3ab9251</td></tr>
+<tr><td class="num">115</td><td>DecisionRecorded</td><td class="mono">architecture</td><td class="mono">agent:architect</td><td class="mono">f16af3dd</td></tr>
+<tr><td class="num">116</td><td>DecisionRecorded</td><td class="mono">architecture</td><td class="mono">agent:architect</td><td class="mono">2ee86ad5</td></tr>
+<tr><td class="num">117</td><td>ContextFactAdded</td><td class="mono">architecture</td><td class="mono">agent:architect</td><td class="mono">e0530b47</td></tr>
+<tr><td class="num">118</td><td>ModelCalled</td><td class="mono">architecture</td><td class="mono">agent:architect</td><td class="mono">c121170c</td></tr>
+<tr><td class="num">119</td><td>ExitGateEvaluated</td><td class="mono">architecture</td><td class="mono">engine:orchestrator</td><td class="mono">df9e06a4</td></tr>
+<tr><td class="num">120</td><td>ApprovalRequested</td><td class="mono">architecture</td><td class="mono">engine:orchestrator</td><td class="mono">bfcdbfa0</td></tr>
+<tr><td class="num">121</td><td>NodeStateChanged</td><td class="mono">architecture</td><td class="mono">engine:orchestrator</td><td class="mono">75b463e6</td></tr>
+<tr><td class="num">122</td><td>RunCompleted</td><td class="mono">&amp;mdash;</td><td class="mono">engine:orchestrator</td><td class="mono">b9be8712</td></tr>
+<tr><td class="num">123</td><td>ApprovalGranted</td><td class="mono">architecture</td><td class="mono">human:alex</td><td class="mono">0c8c1b8d</td></tr>
+<tr><td class="num">124</td><td>RunStarted</td><td class="mono">&amp;mdash;</td><td class="mono">engine:orchestrator</td><td class="mono">15923236</td></tr>
+<tr><td class="num">125</td><td>ExitGateEvaluated</td><td class="mono">architecture</td><td class="mono">engine:orchestrator</td><td class="mono">d1ef59f0</td></tr>
+<tr><td class="num">126</td><td>ContextFactAdded</td><td class="mono">run</td><td class="mono">engine:orchestrator</td><td class="mono">2b28eae8</td></tr>
+<tr><td class="num">127</td><td>NodeStateChanged</td><td class="mono">architecture</td><td class="mono">agent:architect</td><td class="mono">86518cca</td></tr>
+<tr><td class="num">128</td><td>EdgeGuardEvaluated</td><td class="mono">requirements</td><td class="mono">engine:orchestrator</td><td class="mono">dc80d692</td></tr>
+<tr><td class="num">129</td><td>EdgeGuardEvaluated</td><td class="mono">requirements</td><td class="mono">engine:orchestrator</td><td class="mono">8c080c7f</td></tr>
+<tr><td class="num">130</td><td>EdgeGuardEvaluated</td><td class="mono">requirements</td><td class="mono">engine:orchestrator</td><td class="mono">b3fe6f07</td></tr>
+<tr><td class="num">131</td><td>EntryGateEvaluated</td><td class="mono">implement</td><td class="mono">engine:orchestrator</td><td class="mono">32212d82</td></tr>
+<tr><td class="num">132</td><td>NodeStateChanged</td><td class="mono">implement</td><td class="mono">engine:orchestrator</td><td class="mono">b41914a6</td></tr>
+<tr><td class="num">133</td><td>NodeStateChanged</td><td class="mono">implement</td><td class="mono">engine:orchestrator</td><td class="mono">e537cf7d</td></tr>
+<tr><td class="num">134</td><td>NodeAttemptStarted</td><td class="mono">implement</td><td class="mono">engine:orchestrator</td><td class="mono">c1d6edec</td></tr>
+<tr><td class="num">135</td><td>NodeAttemptFinished</td><td class="mono">implement</td><td class="mono">engine:orchestrator</td><td class="mono">e98d9c33</td></tr>
+<tr><td class="num">136</td><td>WorkspaceCommitted</td><td class="mono">implement</td><td class="mono">agent:implementer</td><td class="mono">5100d906</td></tr>
+<tr><td class="num">137</td><td>ArtifactProduced</td><td class="mono">implement</td><td class="mono">agent:implementer</td><td class="mono">aeaa2f8b</td></tr>
+<tr><td class="num">138</td><td>ArtifactProduced</td><td class="mono">implement</td><td class="mono">agent:implementer</td><td class="mono">70b8395c</td></tr>
+<tr><td class="num">139</td><td>ArtifactProduced</td><td class="mono">implement</td><td class="mono">agent:implementer</td><td class="mono">d2e42885</td></tr>
+<tr><td class="num">140</td><td>ContextFactAdded</td><td class="mono">implement</td><td class="mono">agent:implementer</td><td class="mono">849a2e15</td></tr>
+<tr><td class="num">141</td><td>ContextFactAdded</td><td class="mono">implement</td><td class="mono">agent:implementer</td><td class="mono">4df13708</td></tr>
+<tr><td class="num">142</td><td>ContextFactAdded</td><td class="mono">implement</td><td class="mono">agent:implementer</td><td class="mono">b7ad68b0</td></tr>
+<tr><td class="num">143</td><td>ModelCalled</td><td class="mono">implement</td><td class="mono">agent:implementer</td><td class="mono">e5b49946</td></tr>
+<tr><td class="num">144</td><td>ExitGateEvaluated</td><td class="mono">implement</td><td class="mono">engine:orchestrator</td><td class="mono">406351d8</td></tr>
+<tr><td class="num">145</td><td>NodeStateChanged</td><td class="mono">implement</td><td class="mono">agent:implementer</td><td class="mono">aee6f47d</td></tr>
+<tr><td class="num">146</td><td>EntryGateEvaluated</td><td class="mono">code-review</td><td class="mono">engine:orchestrator</td><td class="mono">e6fa85aa</td></tr>
+<tr><td class="num">147</td><td>NodeStateChanged</td><td class="mono">code-review</td><td class="mono">engine:orchestrator</td><td class="mono">884c3f6d</td></tr>
+<tr><td class="num">148</td><td>EntryGateEvaluated</td><td class="mono">documentation</td><td class="mono">engine:orchestrator</td><td class="mono">8facf75e</td></tr>
+<tr><td class="num">149</td><td>NodeStateChanged</td><td class="mono">documentation</td><td class="mono">engine:orchestrator</td><td class="mono">e3d92c2f</td></tr>
+<tr><td class="num">150</td><td>EntryGateEvaluated</td><td class="mono">security-scan</td><td class="mono">engine:orchestrator</td><td class="mono">3817869a</td></tr>
+<tr><td class="num">151</td><td>NodeStateChanged</td><td class="mono">security-scan</td><td class="mono">engine:orchestrator</td><td class="mono">4551448f</td></tr>
+<tr><td class="num">152</td><td>EntryGateEvaluated</td><td class="mono">test</td><td class="mono">engine:orchestrator</td><td class="mono">018e8ff6</td></tr>
+<tr><td class="num">153</td><td>NodeStateChanged</td><td class="mono">test</td><td class="mono">engine:orchestrator</td><td class="mono">464a6010</td></tr>
+<tr><td class="num">154</td><td>NodeStateChanged</td><td class="mono">code-review</td><td class="mono">engine:orchestrator</td><td class="mono">03fc5fed</td></tr>
+<tr><td class="num">155</td><td>NodeAttemptStarted</td><td class="mono">code-review</td><td class="mono">engine:orchestrator</td><td class="mono">373a12c1</td></tr>
+<tr><td class="num">156</td><td>NodeStateChanged</td><td class="mono">documentation</td><td class="mono">engine:orchestrator</td><td class="mono">bffe4062</td></tr>
+<tr><td class="num">157</td><td>NodeAttemptStarted</td><td class="mono">documentation</td><td class="mono">engine:orchestrator</td><td class="mono">be1248c0</td></tr>
+<tr><td class="num">158</td><td>NodeAttemptFinished</td><td class="mono">code-review</td><td class="mono">engine:orchestrator</td><td class="mono">a410e15c</td></tr>
+<tr><td class="num">159</td><td>NodeStateChanged</td><td class="mono">security-scan</td><td class="mono">engine:orchestrator</td><td class="mono">d26c52f9</td></tr>
+<tr><td class="num">160</td><td>NodeAttemptStarted</td><td class="mono">security-scan</td><td class="mono">engine:orchestrator</td><td class="mono">a9a35a4d</td></tr>
+<tr><td class="num">161</td><td>NodeAttemptFinished</td><td class="mono">documentation</td><td class="mono">engine:orchestrator</td><td class="mono">e8825ec5</td></tr>
+<tr><td class="num">162</td><td>WorkspaceCommitted</td><td class="mono">code-review</td><td class="mono">agent:reviewer</td><td class="mono">391ff917</td></tr>
+<tr><td class="num">163</td><td>ArtifactProduced</td><td class="mono">code-review</td><td class="mono">agent:reviewer</td><td class="mono">c149da56</td></tr>
+<tr><td class="num">164</td><td>ContextFactAdded</td><td class="mono">code-review</td><td class="mono">agent:reviewer</td><td class="mono">cbc45916</td></tr>
+<tr><td class="num">165</td><td>ContextFactAdded</td><td class="mono">code-review</td><td class="mono">agent:reviewer</td><td class="mono">dfa03d7a</td></tr>
+<tr><td class="num">166</td><td>ModelCalled</td><td class="mono">code-review</td><td class="mono">agent:reviewer</td><td class="mono">7e00f4fe</td></tr>
+<tr><td class="num">167</td><td>ExitGateEvaluated</td><td class="mono">code-review</td><td class="mono">engine:orchestrator</td><td class="mono">f318ed16</td></tr>
+<tr><td class="num">168</td><td>NodeStateChanged</td><td class="mono">code-review</td><td class="mono">agent:reviewer</td><td class="mono">7687036a</td></tr>
+<tr><td class="num">169</td><td>NodeStateChanged</td><td class="mono">test</td><td class="mono">engine:orchestrator</td><td class="mono">3bbeb92c</td></tr>
+<tr><td class="num">170</td><td>NodeAttemptStarted</td><td class="mono">test</td><td class="mono">engine:orchestrator</td><td class="mono">6b073331</td></tr>
+<tr><td class="num">171</td><td>WorkspaceCommitted</td><td class="mono">documentation</td><td class="mono">agent:technical-writer</td><td class="mono">7e588240</td></tr>
+<tr><td class="num">172</td><td>ArtifactProduced</td><td class="mono">documentation</td><td class="mono">agent:technical-writer</td><td class="mono">7269dd58</td></tr>
+<tr><td class="num">173</td><td>ContextFactAdded</td><td class="mono">documentation</td><td class="mono">agent:technical-writer</td><td class="mono">dd883eea</td></tr>
+<tr><td class="num">174</td><td>ModelCalled</td><td class="mono">documentation</td><td class="mono">agent:technical-writer</td><td class="mono">a6143dae</td></tr>
+<tr><td class="num">175</td><td>ExitGateEvaluated</td><td class="mono">documentation</td><td class="mono">engine:orchestrator</td><td class="mono">1d5112e0</td></tr>
+<tr><td class="num">176</td><td>NodeStateChanged</td><td class="mono">documentation</td><td class="mono">agent:technical-writer</td><td class="mono">f1f47a6f</td></tr>
+<tr><td class="num">177</td><td>NodeAttemptFinished</td><td class="mono">security-scan</td><td class="mono">engine:orchestrator</td><td class="mono">209d03f0</td></tr>
+<tr><td class="num">178</td><td>WorkspaceCommitted</td><td class="mono">security-scan</td><td class="mono">agent:security-scanner</td><td class="mono">c054abd1</td></tr>
+<tr><td class="num">179</td><td>ArtifactProduced</td><td class="mono">security-scan</td><td class="mono">agent:security-scanner</td><td class="mono">0e29a521</td></tr>
+<tr><td class="num">180</td><td>ContextFactAdded</td><td class="mono">security-scan</td><td class="mono">agent:security-scanner</td><td class="mono">1a56ece4</td></tr>
+<tr><td class="num">181</td><td>ContextFactAdded</td><td class="mono">security-scan</td><td class="mono">agent:security-scanner</td><td class="mono">deae5d40</td></tr>
+<tr><td class="num">182</td><td>ModelCalled</td><td class="mono">security-scan</td><td class="mono">agent:security-scanner</td><td class="mono">bb8d02a6</td></tr>
+<tr><td class="num">183</td><td>ExitGateEvaluated</td><td class="mono">security-scan</td><td class="mono">engine:orchestrator</td><td class="mono">a28141b5</td></tr>
+<tr><td class="num">184</td><td>NodeStateChanged</td><td class="mono">security-scan</td><td class="mono">agent:security-scanner</td><td class="mono">5fa1b29d</td></tr>
+<tr><td class="num">185</td><td>NodeAttemptFinished</td><td class="mono">test</td><td class="mono">engine:orchestrator</td><td class="mono">466efa73</td></tr>
+<tr><td class="num">186</td><td>ArtifactProduced</td><td class="mono">test</td><td class="mono">agent:test-engineer</td><td class="mono">aaae23d1</td></tr>
+<tr><td class="num">187</td><td>ArtifactProduced</td><td class="mono">test</td><td class="mono">agent:test-engineer</td><td class="mono">eb8602b3</td></tr>
+<tr><td class="num">188</td><td>ArtifactProduced</td><td class="mono">test</td><td class="mono">agent:test-engineer</td><td class="mono">3256f038</td></tr>
+<tr><td class="num">189</td><td>ModelCalled</td><td class="mono">test</td><td class="mono">agent:test-engineer</td><td class="mono">f16a9a4f</td></tr>
+<tr><td class="num">190</td><td>NodeStateChanged</td><td class="mono">test</td><td class="mono">engine:orchestrator</td><td class="mono">ee5f0bb0</td></tr>
+<tr><td class="num">191</td><td>NodeRetryScheduled</td><td class="mono">test</td><td class="mono">engine:orchestrator</td><td class="mono">05cd2053</td></tr>
+<tr><td class="num">192</td><td>NodeStateChanged</td><td class="mono">test</td><td class="mono">engine:orchestrator</td><td class="mono">f4837f71</td></tr>
+<tr><td class="num">193</td><td>NodeStateChanged</td><td class="mono">test</td><td class="mono">engine:orchestrator</td><td class="mono">9207acac</td></tr>
+<tr><td class="num">194</td><td>NodeAttemptStarted</td><td class="mono">test</td><td class="mono">engine:orchestrator</td><td class="mono">e669a27c</td></tr>
+<tr><td class="num">195</td><td>NodeAttemptFinished</td><td class="mono">test</td><td class="mono">engine:orchestrator</td><td class="mono">c56fd866</td></tr>
+<tr><td class="num">196</td><td>ArtifactProduced</td><td class="mono">test</td><td class="mono">agent:test-engineer</td><td class="mono">63febecc</td></tr>
+<tr><td class="num">197</td><td>ArtifactProduced</td><td class="mono">test</td><td class="mono">agent:test-engineer</td><td class="mono">c9a35a16</td></tr>
+<tr><td class="num">198</td><td>ArtifactProduced</td><td class="mono">test</td><td class="mono">agent:test-engineer</td><td class="mono">87b58450</td></tr>
+<tr><td class="num">199</td><td>ModelCalled</td><td class="mono">test</td><td class="mono">agent:test-engineer</td><td class="mono">bd7224d2</td></tr>
+<tr><td class="num">200</td><td>NodeStateChanged</td><td class="mono">test</td><td class="mono">engine:orchestrator</td><td class="mono">18c8e88b</td></tr>
+<tr><td class="num">201</td><td>NodeRetryScheduled</td><td class="mono">test</td><td class="mono">engine:orchestrator</td><td class="mono">d04c7eec</td></tr>
+<tr><td class="num">202</td><td>NodeStateChanged</td><td class="mono">test</td><td class="mono">engine:orchestrator</td><td class="mono">c0243d0d</td></tr>
+<tr><td class="num">203</td><td>NodeStateChanged</td><td class="mono">test</td><td class="mono">engine:orchestrator</td><td class="mono">022d3ff3</td></tr>
+<tr><td class="num">204</td><td>NodeAttemptStarted</td><td class="mono">test</td><td class="mono">engine:orchestrator</td><td class="mono">ca013d6f</td></tr>
+<tr><td class="num">205</td><td>NodeAttemptFinished</td><td class="mono">test</td><td class="mono">engine:orchestrator</td><td class="mono">ecbc20f5</td></tr>
+<tr><td class="num">206</td><td>ArtifactProduced</td><td class="mono">test</td><td class="mono">agent:test-engineer</td><td class="mono">0729f858</td></tr>
+<tr><td class="num">207</td><td>ArtifactProduced</td><td class="mono">test</td><td class="mono">agent:test-engineer</td><td class="mono">53df820c</td></tr>
+<tr><td class="num">208</td><td>ArtifactProduced</td><td class="mono">test</td><td class="mono">agent:test-engineer</td><td class="mono">2412287d</td></tr>
+<tr><td class="num">209</td><td>ModelCalled</td><td class="mono">test</td><td class="mono">agent:test-engineer</td><td class="mono">92f9b4e7</td></tr>
+<tr><td class="num">210</td><td>NodeStateChanged</td><td class="mono">test</td><td class="mono">engine:orchestrator</td><td class="mono">0078d6c0</td></tr>
+<tr><td class="num">211</td><td>NodeRetryBudgetExhausted</td><td class="mono">test</td><td class="mono">engine:orchestrator</td><td class="mono">6ba75441</td></tr>
+<tr><td class="num">212</td><td>NodeInvalidated</td><td class="mono">implement</td><td class="mono">engine:orchestrator</td><td class="mono">b596e423</td></tr>
+<tr><td class="num">213</td><td>NodeStateChanged</td><td class="mono">implement</td><td class="mono">engine:orchestrator</td><td class="mono">123e14c3</td></tr>
+<tr><td class="num">214</td><td>NodeStateChanged</td><td class="mono">implement</td><td class="mono">engine:orchestrator</td><td class="mono">9ea85dfe</td></tr>
+<tr><td class="num">215</td><td>ReplanPerformed</td><td class="mono">test</td><td class="mono">engine:orchestrator</td><td class="mono">5cc63fe3</td></tr>
+<tr><td class="num">216</td><td>EntryGateEvaluated</td><td class="mono">implement</td><td class="mono">engine:orchestrator</td><td class="mono">fcf19b43</td></tr>
+<tr><td class="num">217</td><td>NodeStateChanged</td><td class="mono">implement</td><td class="mono">engine:orchestrator</td><td class="mono">beaef48f</td></tr>
+<tr><td class="num">218</td><td>NodeStateChanged</td><td class="mono">implement</td><td class="mono">engine:orchestrator</td><td class="mono">b49e3eb8</td></tr>
+<tr><td class="num">219</td><td>NodeAttemptStarted</td><td class="mono">implement</td><td class="mono">engine:orchestrator</td><td class="mono">ad72b6c5</td></tr>
+<tr><td class="num">220</td><td>NodeAttemptFinished</td><td class="mono">implement</td><td class="mono">engine:orchestrator</td><td class="mono">c53ce123</td></tr>
+<tr><td class="num">221</td><td>ArtifactProduced</td><td class="mono">implement</td><td class="mono">agent:implementer</td><td class="mono">4455e776</td></tr>
+<tr><td class="num">222</td><td>ContextFactAdded</td><td class="mono">implement</td><td class="mono">agent:implementer</td><td class="mono">079a256c</td></tr>
+<tr><td class="num">223</td><td>ContextFactAdded</td><td class="mono">implement</td><td class="mono">agent:implementer</td><td class="mono">6e437975</td></tr>
+<tr><td class="num">224</td><td>ContextFactAdded</td><td class="mono">implement</td><td class="mono">agent:implementer</td><td class="mono">3ba17e3f</td></tr>
+<tr><td class="num">225</td><td>ModelCalled</td><td class="mono">implement</td><td class="mono">agent:implementer</td><td class="mono">e1f60c36</td></tr>
+<tr><td class="num">226</td><td>ExitGateEvaluated</td><td class="mono">implement</td><td class="mono">engine:orchestrator</td><td class="mono">b00db439</td></tr>
+<tr><td class="num">227</td><td>NodeStateChanged</td><td class="mono">implement</td><td class="mono">agent:implementer</td><td class="mono">3a16bb4d</td></tr>
+<tr><td class="num">228</td><td>RunCompleted</td><td class="mono">&amp;mdash;</td><td class="mono">engine:orchestrator</td><td class="mono">9ae73a41</td></tr>
+</tbody></table></details>
+<p class="footnote">run_20260917T020240Z_c6e2f4: chain intact across 228 event(s). Every figure in this report is derived from that log rather than recorded alongside it, so the report cannot say anything the log does not support. Generated by mandate/0.1.0 (.NETCoreApp,Version=v10.0; .NET 10.0.11).</p>
+</body></html>

@@ -6,11 +6,12 @@
 # ---- .NET ----
 bin/
 obj/
-[Dd]ebug/
-[Rr]elease/
-# Anchored to the repository root on purpose. Unanchored, this pattern also matches
-# source directories named Artifacts/, and on a case-insensitive filesystem it silently
-# excluded the artifact domain model from the repository.
+# Every one of these is anchored or specific on purpose. An unanchored directory pattern
+# also matches source directories of the same name: `artifacts/` once swallowed
+# src/Mandate.Core/Artifacts/, and on a case-insensitive filesystem `git add` skipped it
+# without a word, so the repository did not compile from a clean clone. Build output
+# already lives under bin/ and obj/, so nothing is lost by being strict here.
+# scripts/check-sources-tracked.sh fails the build if this happens again.
 /artifacts/
 *.user
 *.suo

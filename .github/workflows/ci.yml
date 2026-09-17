@@ -16,10 +16,10 @@ jobs:
     name: build / test / style
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
 
@@ -39,8 +39,56 @@ jobs:
 
       - name: Upload coverage
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage
           path: "**/TestResults/**/coverage.cobertura.xml"
           if-no-files-found: ignore
+
+  # The reviewer's path, walked on a machine that is not the author's.
+  #
+  # The build job proves the code compiles from a clean checkout. This one proves the
+  # thing a reviewer is actually invited to do still works: validate the lifecycle, run
+  # the model layer offline, walk all eleven stages with no key and no network, then load
+  # the committed run evidence and verify its audit chains. A demo that only works on the
+  # machine it was written on is not a demo.
+  demo:
+    name: offline demo
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      # No ANTHROPIC_API_KEY is set anywhere in this job, which is the point: if any step
+      # needed to reach a model provider, it would fail here rather than in front of a
+      # reviewer who was promised the whole thing runs offline.
+      - name: Run the guided demo
+        run: make demo
+
+      - name: Verify the committed evidence independently
+        run: |
+          dotnet run --project src/Mandate.Cli --no-build -- audit verify
+          dotnet run --project src/Mandate.Cli --no-build -- runs metrics run_20260917T004505Z_e2258e
+
+  # The service Mandate produced, built and tested on its own.
+  #
+  # Run outside the orchestrator on purpose: a test result the system grades itself on is
+  # not evidence that the system produces working software.
+  service:
+    name: generated service
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Test the generated URL shortener
+        working-directory: services/url-shortener
+        run: dotnet test tests/Service.Tests/Service.Tests.csproj --nologo

@@ -12,7 +12,7 @@ SHELL := /bin/bash
 DOTNET ?= $(shell bash scripts/find-dotnet.sh)
 CLI := $(DOTNET) run --project src/Mandate.Cli --
 
-.PHONY: help doctor restore build test format lint info workflow diagram run run-model runs audit policy metrics report llm prompts clean verify demo
+.PHONY: help doctor restore build test format lint info workflow diagram run run-model runs audit policy metrics report llm prompts clean verify demo check-sources
 
 help: ## Show available targets
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -90,7 +90,10 @@ diagram: ## Regenerate the lifecycle diagram from the workflow definition
 demo: ## Guided five-minute tour for a reviewer: offline, no API key
 	@DOTNET="$(DOTNET)" bash scripts/demo.sh
 
-verify: doctor build test lint ## Full local gate: toolchain, build, test, style
+check-sources: ## Fail if .gitignore is hiding a source file from the repository
+	@bash scripts/check-sources-tracked.sh
+
+verify: doctor check-sources build test lint ## Full local gate: toolchain, sources, build, test, style
 	@echo "verify: OK"
 
 clean: ## Remove build output and local run state (recorded runs are deleted)

@@ -201,9 +201,9 @@ whoever reads the log.
 
 Three of those gates read facts that a model could simply assert. The lifecycle definition
 itself says the test gate "depends on the recorded result of an actual test run, never on
-an agent's assertion that the code works", and for a while the code did not honour that.
+an agent's assertion that the code works", and the engine enforces exactly that.
 
-It does now. Before the engine commits anything, `dotnet build` and `dotnet test` run over
+Before the engine commits anything, `dotnet build` and `dotnet test` run over
 a copy of the tree with the stage's proposed files applied. Counts come from the TRX report
 and coverage from the Cobertura file, not from scraping console output that changes between
 SDK releases. The measured figure replaces the claim, and three outcomes are distinguished:

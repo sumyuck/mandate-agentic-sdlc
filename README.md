@@ -21,6 +21,13 @@ written by Mandate, not by hand: its code, its tests, its OpenAPI contract, its 
 decision record and its README. Two products in one repository. The orchestrator is the
 deliverable; the service is the evidence that it works.
 
+> **Assessing this against the brief?**
+> [`docs/TRACEABILITY.md`](docs/TRACEABILITY.md) is the map: all eight core requirements, the
+> ten sub-capabilities of the orchestration requirement, and all five deliverables, each
+> pointing at the code that implements it, the test that holds it in place, and the committed
+> run where it happened. Every row resolves to a file you can open. The short version is
+> [further down this page](#how-this-maps-to-the-brief).
+
 ---
 
 ## Try it in five minutes
@@ -85,10 +92,9 @@ the reviewer discovering it. It is also the difference between claiming the evid
 verifiable and demonstrating it: the job imports the three recorded runs and recomputes
 their hash chains on a machine that has never seen them before.
 
-This is not decoration. The first CI run on this repository failed, because a `.gitignore`
-pattern intended for build output was also matching a source directory, so the artifact
-domain model was missing from the repository. It built perfectly on the machine that had
-the files on disk. Nothing but a clean checkout would have found that.
+This is not decoration. A `.gitignore` pattern written for build output can quietly match a
+source directory, and the result builds perfectly on the machine that still has the files on
+disk. Only a clean checkout finds it, which is why every push gets one.
 
 Prose-only pushes skip the pipeline. The exclusion list is explicit rather than a blanket
 `**.md`, because several markdown files here are not prose: `prompts/*.prompt.md` are the
@@ -198,14 +204,67 @@ a control, on a real vulnerability, with the reasoning recorded.
 
 ---
 
+## How this maps to the brief
+
+The brief names workflow orchestration the critical differentiator and lists ten capabilities
+under it. Each one, where it lives, and how to see it working:
+
+| Required | Where it lives | See it |
+|---|---|---|
+| Explicit dependency graph with entry and exit gates | [`workflows/sdlc.v1.yaml`](workflows/sdlc.v1.yaml); nine gate condition kinds in [`BuiltInGateEvaluators`](src/Mandate.Orchestrator/Gates/BuiltInGateEvaluators.cs) | `make workflow` |
+| Sequential and parallel paths with synchronization | Four stages run concurrently; `release-readiness` joins on all four | `make workflow` |
+| Cross-stage context and decision lineage | Every decision, its rejected options and its reason are events in the run log | `mandate runs show <id>` |
+| Human approval checkpoints for high-impact actions | Two, each requiring a named human who is not the requester | S1, both checkpoints |
+| Bounded retries, fallback, rollback and safe-stop | `retry.max-attempts` per node; [`RevertNodeCommitAction`](src/Mandate.Orchestrator/Compensation/RevertNodeCommitAction.cs) reverts a stage's commit on a real git tree; [`FileSafeStopMonitor`](src/Mandate.Persistence/FileSafeStopMonitor.cs) stops at the next safe boundary, never mid-stage | S2 compensates; S3 exhausts three attempts |
+| Policy guardrails for security, compliance and change control | [`workflows/policies/`](workflows/policies/), three packs as data, with waivers on the record | `mandate policy check` |
+| Audit-grade observability and traceability | A SHA-256 chain over every event ([`AuditChain`](src/Mandate.Core/Events/AuditChain.cs)) | `mandate audit verify` |
+| Reliability metrics | Derived from the log rather than stored beside it | `mandate runs metrics <id>` |
+| Dynamic re-planning when upstream outputs change | Invalidation revokes any approval that covered the invalidated work | S3, three re-plans |
+| Controlled agent autonomy under governance | No agent writes to the workspace; agents propose and the engine validates and commits | Any run's artifact provenance |
+
+The other seven core requirements, the five deliverables and the eight evaluation criteria
+are mapped the same way, with test names and event references, in
+[`docs/TRACEABILITY.md`](docs/TRACEABILITY.md).
+
+### The reliability metrics, on a committed run
+
+The brief asks for success rate, retry and rollback frequency, MTTR and end-to-end latency.
+This is the greenfield run, read back from its own event log:
+
+```
+$ mandate runs metrics run_20260917T004505Z_e2258e
+
+╭───────────────────────┬─────────────┬───────────────────────────────────────────╮
+│ measure               │       value │ basis                                     │
+├───────────────────────┼─────────────┼───────────────────────────────────────────┤
+│ success rate          │        100% │ 9 of 9 attempted                          │
+│ end to end            │        3.5m │ 171 events                                │
+│ stage p50 / p95       │ 20ms / 2.1m │ 9 stage(s) run, 2 not required            │
+│ retry rate            │         10% │ 1 of 10 attempts                          │
+│ mean time to recovery │      57.24s │ 1 failure(s)                              │
+│ rollback rate         │          0% │ 0 compensation(s)                         │
+│ gate block rate       │        5.6% │ 2 of 36 conditions                        │
+│ approval wait         │       10.6s │ 2 granted, 0 refused                      │
+│ autonomy ratio        │       83.3% │ 10 agent attempt(s) against human decisions│
+│ re-plans              │           0 │ plan recomputed                           │
+│ policy                │           1 │ 0 blocked, 0 waived                       │
+╰───────────────────────┴─────────────┴───────────────────────────────────────────╯
+```
+
+Every figure carries the basis it was computed from, and none of them is stored. They are
+recomputed from the event log on each call, so no number in a report can be set. It can only
+be caused. See [ADR-0012](docs/adr/0012-metrics-derived-not-recorded.md).
+
+---
+
 ## Documentation
 
 | Document | What it covers |
 |---|---|
+| [`docs/TRACEABILITY.md`](docs/TRACEABILITY.md) | **The assessor's map.** Every requirement in the brief against the code that implements it, the test that holds it, and the committed run where it happened |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Components, control flow, governance mechanisms, key decisions, what the system does not do |
 | [`docs/RUNBOOK.md`](docs/RUNBOOK.md) | Installing, running, every command, operating a live run, spend control |
 | [`docs/TESTING.md`](docs/TESTING.md) | The 867 tests and what they pin, the scope boundaries, and the trade-offs behind each design choice |
-| [`docs/TRACEABILITY.md`](docs/TRACEABILITY.md) | Every requirement in the brief mapped to code, test and evidence |
 | [`docs/FINAL-SUMMARY.md`](docs/FINAL-SUMMARY.md) | Plan, rationale, artifacts, risk controls, assumptions, roadmap |
 | [`docs/scenarios/`](docs/scenarios/) | The three runs, in detail |
 | [`docs/adr/`](docs/adr/) | 17 architecture decision records with the alternatives rejected |

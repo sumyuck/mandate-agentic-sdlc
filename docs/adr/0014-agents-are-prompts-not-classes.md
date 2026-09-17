@@ -62,13 +62,11 @@ swallowing it. A "decision" with nothing rejected is a statement.
 - Prompts are rendered only from the requirement, the scoped context and the tree; never
   from the run id or the attempt number, so the same question is asked on a retry and a run
   can be replayed (ADR-0007).
-- **A gap that was recorded here and has since been closed.** Three context facts,
-  `implementation.builds`, `test.coverage` and `test.failures`, were originally the model's
-  own assertion about its own work, which made three gates check a claim rather than a fact.
-  [ADR-0015](0015-verified-not-claimed.md) replaced them with measurements from a real
-  `dotnet build` and `dotnet test`, and made a stage that overstates its own results fail.
-  The entry is left in place rather than deleted: the shape of the mistake is worth keeping,
-  and so is the fact that it was written down before it was found by someone else.
+- A prompt governs what a stage is asked to do, not what its results are taken to be. The
+  three context facts that drive the build and test gates, `implementation.builds`,
+  `test.coverage` and `test.failures`, are measurements from a real `dotnet build` and
+  `dotnet test` rather than anything the agent reports about its own work. See
+  [ADR-0015](0015-verified-not-claimed.md).
 
 ## Validation
 - `AgentCoverageTests` asserts every agent the lifecycle names has a prompt, every model it

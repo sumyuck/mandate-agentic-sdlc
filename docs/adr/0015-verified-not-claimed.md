@@ -3,18 +3,20 @@
 - **Status:** Accepted
 - **Date:** 2026-09-16
 - **Decider:** Human (Muskan Jain)
-- **Supersedes:** the known gap recorded in [ADR-0014](0014-agents-are-prompts-not-classes.md)
+- **Relates to:** [ADR-0014](0014-agents-are-prompts-not-classes.md), which makes each agent a prompt
 
 ## Context
 Three context facts drive three gates: `implementation.builds` feeds `workspace-builds`,
-`test.failures` feeds `tests-pass`, and `test.coverage` feeds `coverage-at-least`. When
-model-backed agents landed, all three were the model's own assertion about its own work.
+`test.failures` feeds `tests-pass`, and `test.coverage` feeds `coverage-at-least`.
 
-That is the difference between a governed system and a demonstration of one. The lifecycle
-definition already said so, in the testing stage's own description: the gate "depends on the
-recorded result of an actual test run, never on an agent's assertion that the code works."
-The code did not do that, and a gate reading a self-reported number is not a control; it is
-a field the graded party fills in.
+A model-backed agent can report on its own work, and the cheapest way to obtain those three
+facts is to ask it. Doing so would make all three gates check a claim rather than a fact. A
+gate reading a self-reported number is not a control; it is a field the graded party fills
+in, and that is the difference between a governed system and a demonstration of one. The
+lifecycle definition is explicit about it in the testing stage's own description: the gate
+"depends on the recorded result of an actual test run, never on an agent's assertion that
+the code works."
+
 
 ## Decision
 A stage that declares any of those three facts has its claim replaced by a measurement.

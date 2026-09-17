@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+  # Lets anyone with access re-run the whole thing from the Actions tab without pushing.
+  # Useful for demonstrating on request that the checks still pass on a clean machine.
+  workflow_dispatch:
+
 env:
   CI: "true"
   DOTNET_NOLOGO: "true"

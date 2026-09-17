@@ -1,0 +1,794 @@
+{
+  "runId": "run_20260917T015141Z_def060",
+  "workflow": "sdlc@v1",
+  "scenario": "Ambiguous",
+  "request": "The shortener needs rate limiting so one client cannot flood it.\n\nAdd sensible limits to the create endpoint and make sure abusive clients get throttled\nrather than taking the service down for everyone else.",
+  "status": "Failed",
+  "startedAt": "2026-09-17T01:51:41.997767+00:00",
+  "updatedAt": "2026-09-17T01:59:26.426149+00:00",
+  "eventCount": 314,
+  "chainIntact": true,
+  "nodes": [
+    {
+      "id": "architecture",
+      "state": "Succeeded",
+      "attempts": 1,
+      "elapsedMilliseconds": 9878.118,
+      "detail": "Approved; exit gate passed without re-running the stage."
+    },
+    {
+      "id": "clarification",
+      "state": "Skipped",
+      "attempts": 1,
+      "elapsedMilliseconds": 4622.152,
+      "detail": "Join policy \u0027All\u0027 cannot be satisfied: \u0027requirements\u0027 (guard false). The stage is not required on this path."
+    },
+    {
+      "id": "code-review",
+      "state": "Succeeded",
+      "attempts": 2,
+      "elapsedMilliseconds": 283721.219,
+      "detail": "Exit gate passed."
+    },
+    {
+      "id": "documentation",
+      "state": "Succeeded",
+      "attempts": 2,
+      "elapsedMilliseconds": 322934.232,
+      "detail": "Exit gate passed."
+    },
+    {
+      "id": "impact-analysis",
+      "state": "Succeeded",
+      "attempts": 1,
+      "elapsedMilliseconds": 142.639,
+      "detail": "Exit gate passed."
+    },
+    {
+      "id": "implement",
+      "state": "Succeeded",
+      "attempts": 4,
+      "elapsedMilliseconds": 449127.905,
+      "detail": "Exit gate passed."
+    },
+    {
+      "id": "intake",
+      "state": "Succeeded",
+      "attempts": 1,
+      "elapsedMilliseconds": 238.97,
+      "detail": "Exit gate passed."
+    },
+    {
+      "id": "release-readiness",
+      "state": "Pending",
+      "attempts": 0,
+      "elapsedMilliseconds": null,
+      "detail": null
+    },
+    {
+      "id": "requirements",
+      "state": "Succeeded",
+      "attempts": 2,
+      "elapsedMilliseconds": 4759.593,
+      "detail": "Exit gate passed."
+    },
+    {
+      "id": "security-scan",
+      "state": "Succeeded",
+      "attempts": 2,
+      "elapsedMilliseconds": 310379.43,
+      "detail": "Exit gate passed."
+    },
+    {
+      "id": "test",
+      "state": "Failed",
+      "attempts": 4,
+      "elapsedMilliseconds": 331323.002,
+      "detail": "Verification ran but produced no figure for test.failures or test.coverage. The toolchain reported: No tests ran (tests/Service.Tests/RateLimiterIntegrationTests.cs(193,20): error CS0246: The type or namespace name \u0027DefaultHt...). Output: tests/Service.Tests/RateLimiterIntegrationTests.cs(193,20): error CS0246: The type or namespace name \u0027DefaultHttpContext\u0027 could not be found (are you missing a using directive or an assembly reference?) [tests/Service.Tests/Service.Tests.csproj]\ntests/Service.Tests/RateLimiterIntegrationTests.cs(200,20): error CS0246: The type or namespace name \u0027DefaultHttpContext\u0027 could not be found (are you missing a using directive or an assembly reference?) [tests/Service.Tests/Service.Tests.csproj]"
+    }
+  ],
+  "artifacts": [
+    {
+      "hash": "43b7bb0bb25405025afa9cb6f85d74b434b9724b5d470600e70e6f68a128ec9d",
+      "kind": "SourcePatch",
+      "name": "ClientKeyResolver.cs",
+      "producedBy": "agent:implementer",
+      "derivedFrom": [
+        "0133023df820f19beb98b8792db43ceb86eb958df7f8f963027e41dacb8f8de1",
+        "2b21e2a223ac326f1e131dceb70e5072c1244663818996ac4f05d61b5b594b47",
+        "53ffb6f0527a66149b9f2c80a4a999450547b06614d4e0061cf782ae9e8e6505",
+        "57736faceb08746d14999479e75d2f31a9b5286403ce95076108b8fca19b1aa6",
+        "67be695f526a09e1a5b3c82e8efe2c97f10a4685da120c9b13bc350d33894cf0",
+        "90abba71a396cd2620b2eb9ba250684356cc4ac895fd47e5d5665e23dc28cc98",
+        "a6633be026f2bec379efced08344addda81e41497007d964ed8601bbf35e1b00",
+        "cc6f76d0f8469f9301b75ecb2479985d58f6e8fc6e131dcef2f86d4599a6d018",
+        "d1814458b311b4f6645b544f8796be5cefd70992146552a036b53eaebca1d8ed"
+      ]
+    },
+    {
+      "hash": "de87e3ee82e8807da49f79029777646878af810a26e4cdf457f0258d4e811fd4",
+      "kind": "SourcePatch",
+      "name": "Program.cs",
+      "producedBy": "agent:implementer",
+      "derivedFrom": [
+        "0133023df820f19beb98b8792db43ceb86eb958df7f8f963027e41dacb8f8de1",
+        "2b21e2a223ac326f1e131dceb70e5072c1244663818996ac4f05d61b5b594b47",
+        "53ffb6f0527a66149b9f2c80a4a999450547b06614d4e0061cf782ae9e8e6505",
+        "57736faceb08746d14999479e75d2f31a9b5286403ce95076108b8fca19b1aa6",
+        "67be695f526a09e1a5b3c82e8efe2c97f10a4685da120c9b13bc350d33894cf0",
+        "90abba71a396cd2620b2eb9ba250684356cc4ac895fd47e5d5665e23dc28cc98",
+        "a6633be026f2bec379efced08344addda81e41497007d964ed8601bbf35e1b00",
+        "cc6f76d0f8469f9301b75ecb2479985d58f6e8fc6e131dcef2f86d4599a6d018",
+        "d1814458b311b4f6645b544f8796be5cefd70992146552a036b53eaebca1d8ed"
+      ]
+    },
+    {
+      "hash": "9db9992a7109d3fddedfcaf8c9e2c197ea29a86397dd3d1afc9188cc91603ad9",
+      "kind": "SourcePatch",
+      "name": "Program.cs",
+      "producedBy": "agent:implementer",
+      "derivedFrom": [
+        "0133023df820f19beb98b8792db43ceb86eb958df7f8f963027e41dacb8f8de1",
+        "047185654f3b965dddec8827ccc0b9f871fa5a6c8030dfa283416c365e5a6de6",
+        "2b21e2a223ac326f1e131dceb70e5072c1244663818996ac4f05d61b5b594b47",
+        "4dfc696a890173c3177e1cfe0a527a49fc71c94a0623ea7de6bf97186ddbb74d",
+        "53ffb6f0527a66149b9f2c80a4a999450547b06614d4e0061cf782ae9e8e6505",
+        "57736faceb08746d14999479e75d2f31a9b5286403ce95076108b8fca19b1aa6",
+        "67be695f526a09e1a5b3c82e8efe2c97f10a4685da120c9b13bc350d33894cf0",
+        "8285a5349d57745d3f006393d4854e70fc7c778b7abf8f7f8ce8fcdb50639c21",
+        "83ff32ae262941832b83611c950f1b1a5b31f7c7a3a88ea365fdcb582d0f03a5",
+        "90abba71a396cd2620b2eb9ba250684356cc4ac895fd47e5d5665e23dc28cc98",
+        "a6633be026f2bec379efced08344addda81e41497007d964ed8601bbf35e1b00",
+        "af8dcf9a2e2a72bc96c2ff03d8970cf6e5770d427aa3b2ed91b4908f9d110e82",
+        "ba2827c423f36dbcce992419445261244187c0dd716d8bc8401f506b5a492551",
+        "bab9bb60b88ad101e0728d02d68b7d91dd0a100393f38286c11fb2cb6cdb4abd",
+        "bbabaac65f7e1149e7ee6fcb7f0944ea82224078f7716629225cdeb937407a33",
+        "cc6f76d0f8469f9301b75ecb2479985d58f6e8fc6e131dcef2f86d4599a6d018",
+        "d0f4147b1cfd9b358870aed44dc2dbe327bb1bdeec010574e829d0e937f038e9",
+        "d1814458b311b4f6645b544f8796be5cefd70992146552a036b53eaebca1d8ed",
+        "fa5adc8a5c60666f9dda142c0b1fd09426686a2b98d411e1e7469891b637196a"
+      ]
+    },
+    {
+      "hash": "6b797e10acdbebb4e0d51df4aa29b3cb77d90a552a76b619f236fd46dc987117",
+      "kind": "SourcePatch",
+      "name": "README.md",
+      "producedBy": "agent:implementer",
+      "derivedFrom": [
+        "0133023df820f19beb98b8792db43ceb86eb958df7f8f963027e41dacb8f8de1",
+        "2b21e2a223ac326f1e131dceb70e5072c1244663818996ac4f05d61b5b594b47",
+        "53ffb6f0527a66149b9f2c80a4a999450547b06614d4e0061cf782ae9e8e6505",
+        "57736faceb08746d14999479e75d2f31a9b5286403ce95076108b8fca19b1aa6",
+        "67be695f526a09e1a5b3c82e8efe2c97f10a4685da120c9b13bc350d33894cf0",
+        "90abba71a396cd2620b2eb9ba250684356cc4ac895fd47e5d5665e23dc28cc98",
+        "a6633be026f2bec379efced08344addda81e41497007d964ed8601bbf35e1b00",
+        "cc6f76d0f8469f9301b75ecb2479985d58f6e8fc6e131dcef2f86d4599a6d018",
+        "d1814458b311b4f6645b544f8796be5cefd70992146552a036b53eaebca1d8ed"
+      ]
+    },
+    {
+      "hash": "9e7dcf7a716bcd73c788b1ebf8f22ef07897604c5581df0272310eb689746ecd",
+      "kind": "Documentation",
+      "name": "README.md",
+      "producedBy": "agent:technical-writer",
+      "derivedFrom": [
+        "0133023df820f19beb98b8792db43ceb86eb958df7f8f963027e41dacb8f8de1",
+        "2b21e2a223ac326f1e131dceb70e5072c1244663818996ac4f05d61b5b594b47",
+        "43b7bb0bb25405025afa9cb6f85d74b434b9724b5d470600e70e6f68a128ec9d",
+        "53ffb6f0527a66149b9f2c80a4a999450547b06614d4e0061cf782ae9e8e6505",
+        "57736faceb08746d14999479e75d2f31a9b5286403ce95076108b8fca19b1aa6",
+        "67be695f526a09e1a5b3c82e8efe2c97f10a4685da120c9b13bc350d33894cf0",
+        "6b797e10acdbebb4e0d51df4aa29b3cb77d90a552a76b619f236fd46dc987117",
+        "90abba71a396cd2620b2eb9ba250684356cc4ac895fd47e5d5665e23dc28cc98",
+        "a6633be026f2bec379efced08344addda81e41497007d964ed8601bbf35e1b00",
+        "cc6f76d0f8469f9301b75ecb2479985d58f6e8fc6e131dcef2f86d4599a6d018",
+        "d1814458b311b4f6645b544f8796be5cefd70992146552a036b53eaebca1d8ed",
+        "de87e3ee82e8807da49f79029777646878af810a26e4cdf457f0258d4e811fd4"
+      ]
+    },
+    {
+      "hash": "c39a926eaef3479bf1dbbcb4e82c9688844a7816b9a036c21dad0eebc3eec6d6",
+      "kind": "Documentation",
+      "name": "README.md",
+      "producedBy": "agent:technical-writer",
+      "derivedFrom": [
+        "0133023df820f19beb98b8792db43ceb86eb958df7f8f963027e41dacb8f8de1",
+        "2b21e2a223ac326f1e131dceb70e5072c1244663818996ac4f05d61b5b594b47",
+        "43b7bb0bb25405025afa9cb6f85d74b434b9724b5d470600e70e6f68a128ec9d",
+        "53ffb6f0527a66149b9f2c80a4a999450547b06614d4e0061cf782ae9e8e6505",
+        "57736faceb08746d14999479e75d2f31a9b5286403ce95076108b8fca19b1aa6",
+        "67be695f526a09e1a5b3c82e8efe2c97f10a4685da120c9b13bc350d33894cf0",
+        "6b797e10acdbebb4e0d51df4aa29b3cb77d90a552a76b619f236fd46dc987117",
+        "90abba71a396cd2620b2eb9ba250684356cc4ac895fd47e5d5665e23dc28cc98",
+        "a6633be026f2bec379efced08344addda81e41497007d964ed8601bbf35e1b00",
+        "cc6f76d0f8469f9301b75ecb2479985d58f6e8fc6e131dcef2f86d4599a6d018",
+        "d1814458b311b4f6645b544f8796be5cefd70992146552a036b53eaebca1d8ed",
+        "d673806316c61e6b5390e03d174e944354a05368e4c3de1e0a1e880e45602d37",
+        "de87e3ee82e8807da49f79029777646878af810a26e4cdf457f0258d4e811fd4",
+        "e2a93403c39b872d5540be548ad0f34544af7a6617ed992a60282dfb19869f1b"
+      ]
+    },
+    {
+      "hash": "d1814458b311b4f6645b544f8796be5cefd70992146552a036b53eaebca1d8ed",
+      "kind": "ApiContract",
+      "name": "contracts/openapi.yaml",
+      "producedBy": "agent:architect",
+      "derivedFrom": [
+        "0133023df820f19beb98b8792db43ceb86eb958df7f8f963027e41dacb8f8de1",
+        "2b21e2a223ac326f1e131dceb70e5072c1244663818996ac4f05d61b5b594b47",
+        "53ffb6f0527a66149b9f2c80a4a999450547b06614d4e0061cf782ae9e8e6505",
+        "57736faceb08746d14999479e75d2f31a9b5286403ce95076108b8fca19b1aa6",
+        "90abba71a396cd2620b2eb9ba250684356cc4ac895fd47e5d5665e23dc28cc98",
+        "cc6f76d0f8469f9301b75ecb2479985d58f6e8fc6e131dcef2f86d4599a6d018"
+      ]
+    },
+    {
+      "hash": "67be695f526a09e1a5b3c82e8efe2c97f10a4685da120c9b13bc350d33894cf0",
+      "kind": "ArchitectureDecisionRecord",
+      "name": "docs/adr/0002-builtin-rate-limiter-middleware.md",
+      "producedBy": "agent:architect",
+      "derivedFrom": [
+        "0133023df820f19beb98b8792db43ceb86eb958df7f8f963027e41dacb8f8de1",
+        "2b21e2a223ac326f1e131dceb70e5072c1244663818996ac4f05d61b5b594b47",
+        "53ffb6f0527a66149b9f2c80a4a999450547b06614d4e0061cf782ae9e8e6505",
+        "57736faceb08746d14999479e75d2f31a9b5286403ce95076108b8fca19b1aa6",
+        "90abba71a396cd2620b2eb9ba250684356cc4ac895fd47e5d5665e23dc28cc98",
+        "cc6f76d0f8469f9301b75ecb2479985d58f6e8fc6e131dcef2f86d4599a6d018"
+      ]
+    },
+    {
+      "hash": "2b21e2a223ac326f1e131dceb70e5072c1244663818996ac4f05d61b5b594b47",
+      "kind": "AmbiguityReport",
+      "name": "docs/ambiguity.md",
+      "producedBy": "agent:requirements-analyst",
+      "derivedFrom": [
+        "0133023df820f19beb98b8792db43ceb86eb958df7f8f963027e41dacb8f8de1"
+      ]
+    },
+    {
+      "hash": "cc6f76d0f8469f9301b75ecb2479985d58f6e8fc6e131dcef2f86d4599a6d018",
+      "kind": "AmbiguityReport",
+      "name": "docs/ambiguity.md",
+      "producedBy": "agent:requirements-analyst",
+      "derivedFrom": [
+        "0133023df820f19beb98b8792db43ceb86eb958df7f8f963027e41dacb8f8de1",
+        "a748e5f9bf30eb7689352dd545d2b674ba28e62778c9d627d48b80bec2b32a97",
+        "e8e9d0877f29e11f46858d4c9ed9921c003ba6e4cc8e473621149d5502f82086",
+        "fec216330c6ddbd2c02db41fe3aad7455567fd1f1da578d1ef1631d05c407ead"
+      ]
+    },
+    {
+      "hash": "a6633be026f2bec379efced08344addda81e41497007d964ed8601bbf35e1b00",
+      "kind": "DesignDoc",
+      "name": "docs/design.md",
+      "producedBy": "agent:architect",
+      "derivedFrom": [
+        "0133023df820f19beb98b8792db43ceb86eb958df7f8f963027e41dacb8f8de1",
+        "2b21e2a223ac326f1e131dceb70e5072c1244663818996ac4f05d61b5b594b47",
+        "53ffb6f0527a66149b9f2c80a4a999450547b06614d4e0061cf782ae9e8e6505",
+        "57736faceb08746d14999479e75d2f31a9b5286403ce95076108b8fca19b1aa6",
+        "90abba71a396cd2620b2eb9ba250684356cc4ac895fd47e5d5665e23dc28cc98",
+        "cc6f76d0f8469f9301b75ecb2479985d58f6e8fc6e131dcef2f86d4599a6d018"
+      ]
+    },
+    {
+      "hash": "57736faceb08746d14999479e75d2f31a9b5286403ce95076108b8fca19b1aa6",
+      "kind": "ImpactAnalysis",
+      "name": "docs/impact-analysis.md",
+      "producedBy": "agent:codebase-analyst",
+      "derivedFrom": [
+        "0133023df820f19beb98b8792db43ceb86eb958df7f8f963027e41dacb8f8de1",
+        "2b21e2a223ac326f1e131dceb70e5072c1244663818996ac4f05d61b5b594b47",
+        "53ffb6f0527a66149b9f2c80a4a999450547b06614d4e0061cf782ae9e8e6505",
+        "90abba71a396cd2620b2eb9ba250684356cc4ac895fd47e5d5665e23dc28cc98",
+        "cc6f76d0f8469f9301b75ecb2479985d58f6e8fc6e131dcef2f86d4599a6d018"
+      ]
+    },
+    {
+      "hash": "e8e9d0877f29e11f46858d4c9ed9921c003ba6e4cc8e473621149d5502f82086",
+      "kind": "Assumption",
+      "name": "docs/mandate/assumptions.md",
+      "producedBy": "agent:clarification-broker",
+      "derivedFrom": [
+        "0133023df820f19beb98b8792db43ceb86eb958df7f8f963027e41dacb8f8de1",
+        "2b21e2a223ac326f1e131dceb70e5072c1244663818996ac4f05d61b5b594b47",
+        "53ffb6f0527a66149b9f2c80a4a999450547b06614d4e0061cf782ae9e8e6505"
+      ]
+    },
+    {
+      "hash": "fec216330c6ddbd2c02db41fe3aad7455567fd1f1da578d1ef1631d05c407ead",
+      "kind": "ClarificationRequest",
+      "name": "docs/mandate/clarification-request.md",
+      "producedBy": "agent:clarification-broker",
+      "derivedFrom": [
+        "0133023df820f19beb98b8792db43ceb86eb958df7f8f963027e41dacb8f8de1",
+        "2b21e2a223ac326f1e131dceb70e5072c1244663818996ac4f05d61b5b594b47",
+        "53ffb6f0527a66149b9f2c80a4a999450547b06614d4e0061cf782ae9e8e6505"
+      ]
+    },
+    {
+      "hash": "a748e5f9bf30eb7689352dd545d2b674ba28e62778c9d627d48b80bec2b32a97",
+      "kind": "ClarificationResponse",
+      "name": "docs/mandate/clarification-response.md",
+      "producedBy": "agent:clarification-broker",
+      "derivedFrom": [
+        "0133023df820f19beb98b8792db43ceb86eb958df7f8f963027e41dacb8f8de1",
+        "2b21e2a223ac326f1e131dceb70e5072c1244663818996ac4f05d61b5b594b47",
+        "53ffb6f0527a66149b9f2c80a4a999450547b06614d4e0061cf782ae9e8e6505"
+      ]
+    },
+    {
+      "hash": "0133023df820f19beb98b8792db43ceb86eb958df7f8f963027e41dacb8f8de1",
+      "kind": "Request",
+      "name": "docs/mandate/request.md",
+      "producedBy": "agent:intake",
+      "derivedFrom": []
+    },
+    {
+      "hash": "8285a5349d57745d3f006393d4854e70fc7c778b7abf8f7f8ce8fcdb50639c21",
+      "kind": "ReviewReport",
+      "name": "docs/mandate/review-report.md",
+      "producedBy": "agent:reviewer",
+      "derivedFrom": [
+        "0133023df820f19beb98b8792db43ceb86eb958df7f8f963027e41dacb8f8de1",
+        "2b21e2a223ac326f1e131dceb70e5072c1244663818996ac4f05d61b5b594b47",
+        "43b7bb0bb25405025afa9cb6f85d74b434b9724b5d470600e70e6f68a128ec9d",
+        "53ffb6f0527a66149b9f2c80a4a999450547b06614d4e0061cf782ae9e8e6505",
+        "57736faceb08746d14999479e75d2f31a9b5286403ce95076108b8fca19b1aa6",
+        "67be695f526a09e1a5b3c82e8efe2c97f10a4685da120c9b13bc350d33894cf0",
+        "6b797e10acdbebb4e0d51df4aa29b3cb77d90a552a76b619f236fd46dc987117",
+        "90abba71a396cd2620b2eb9ba250684356cc4ac895fd47e5d5665e23dc28cc98",
+        "a6633be026f2bec379efced08344addda81e41497007d964ed8601bbf35e1b00",
+        "cc6f76d0f8469f9301b75ecb2479985d58f6e8fc6e131dcef2f86d4599a6d018",
+        "d1814458b311b4f6645b544f8796be5cefd70992146552a036b53eaebca1d8ed",
+        "de87e3ee82e8807da49f79029777646878af810a26e4cdf457f0258d4e811fd4"
+      ]
+    },
+    {
+      "hash": "bbabaac65f7e1149e7ee6fcb7f0944ea82224078f7716629225cdeb937407a33",
+      "kind": "ReviewReport",
+      "name": "docs/mandate/review-report.md",
+      "producedBy": "agent:reviewer",
+      "derivedFrom": [
+        "0133023df820f19beb98b8792db43ceb86eb958df7f8f963027e41dacb8f8de1",
+        "2b21e2a223ac326f1e131dceb70e5072c1244663818996ac4f05d61b5b594b47",
+        "43b7bb0bb25405025afa9cb6f85d74b434b9724b5d470600e70e6f68a128ec9d",
+        "53ffb6f0527a66149b9f2c80a4a999450547b06614d4e0061cf782ae9e8e6505",
+        "57736faceb08746d14999479e75d2f31a9b5286403ce95076108b8fca19b1aa6",
+        "67be695f526a09e1a5b3c82e8efe2c97f10a4685da120c9b13bc350d33894cf0",
+        "6b797e10acdbebb4e0d51df4aa29b3cb77d90a552a76b619f236fd46dc987117",
+        "90abba71a396cd2620b2eb9ba250684356cc4ac895fd47e5d5665e23dc28cc98",
+        "a6633be026f2bec379efced08344addda81e41497007d964ed8601bbf35e1b00",
+        "cc6f76d0f8469f9301b75ecb2479985d58f6e8fc6e131dcef2f86d4599a6d018",
+        "d1814458b311b4f6645b544f8796be5cefd70992146552a036b53eaebca1d8ed",
+        "d673806316c61e6b5390e03d174e944354a05368e4c3de1e0a1e880e45602d37",
+        "de87e3ee82e8807da49f79029777646878af810a26e4cdf457f0258d4e811fd4",
+        "e2a93403c39b872d5540be548ad0f34544af7a6617ed992a60282dfb19869f1b"
+      ]
+    },
+    {
+      "hash": "af8c99ab9eb4e6f69a0c0d91c434ddea27d2b7b7590802432c6d3d77d2208175",
+      "kind": "SecurityReport",
+      "name": "docs/mandate/security-report.md",
+      "producedBy": "agent:security-scanner",
+      "derivedFrom": [
+        "0133023df820f19beb98b8792db43ceb86eb958df7f8f963027e41dacb8f8de1",
+        "2b21e2a223ac326f1e131dceb70e5072c1244663818996ac4f05d61b5b594b47",
+        "43b7bb0bb25405025afa9cb6f85d74b434b9724b5d470600e70e6f68a128ec9d",
+        "53ffb6f0527a66149b9f2c80a4a999450547b06614d4e0061cf782ae9e8e6505",
+        "57736faceb08746d14999479e75d2f31a9b5286403ce95076108b8fca19b1aa6",
+        "67be695f526a09e1a5b3c82e8efe2c97f10a4685da120c9b13bc350d33894cf0",
+        "6b797e10acdbebb4e0d51df4aa29b3cb77d90a552a76b619f236fd46dc987117",
+        "90abba71a396cd2620b2eb9ba250684356cc4ac895fd47e5d5665e23dc28cc98",
+        "a6633be026f2bec379efced08344addda81e41497007d964ed8601bbf35e1b00",
+        "cc6f76d0f8469f9301b75ecb2479985d58f6e8fc6e131dcef2f86d4599a6d018",
+        "d1814458b311b4f6645b544f8796be5cefd70992146552a036b53eaebca1d8ed",
+        "de87e3ee82e8807da49f79029777646878af810a26e4cdf457f0258d4e811fd4"
+      ]
+    },
+    {
+      "hash": "927cd03823bf98d71066f08f42663ea227ad83ab3c3dc63abfb62186d1fc0a86",
+      "kind": "SecurityReport",
+      "name": "docs/mandate/security-report.md",
+      "producedBy": "agent:security-scanner",
+      "derivedFrom": [
+        "0133023df820f19beb98b8792db43ceb86eb958df7f8f963027e41dacb8f8de1",
+        "2b21e2a223ac326f1e131dceb70e5072c1244663818996ac4f05d61b5b594b47",
+        "43b7bb0bb25405025afa9cb6f85d74b434b9724b5d470600e70e6f68a128ec9d",
+        "53ffb6f0527a66149b9f2c80a4a999450547b06614d4e0061cf782ae9e8e6505",
+        "57736faceb08746d14999479e75d2f31a9b5286403ce95076108b8fca19b1aa6",
+        "67be695f526a09e1a5b3c82e8efe2c97f10a4685da120c9b13bc350d33894cf0",
+        "6b797e10acdbebb4e0d51df4aa29b3cb77d90a552a76b619f236fd46dc987117",
+        "90abba71a396cd2620b2eb9ba250684356cc4ac895fd47e5d5665e23dc28cc98",
+        "a6633be026f2bec379efced08344addda81e41497007d964ed8601bbf35e1b00",
+        "cc6f76d0f8469f9301b75ecb2479985d58f6e8fc6e131dcef2f86d4599a6d018",
+        "d1814458b311b4f6645b544f8796be5cefd70992146552a036b53eaebca1d8ed",
+        "d673806316c61e6b5390e03d174e944354a05368e4c3de1e0a1e880e45602d37",
+        "de87e3ee82e8807da49f79029777646878af810a26e4cdf457f0258d4e811fd4",
+        "e2a93403c39b872d5540be548ad0f34544af7a6617ed992a60282dfb19869f1b"
+      ]
+    },
+    {
+      "hash": "bab9bb60b88ad101e0728d02d68b7d91dd0a100393f38286c11fb2cb6cdb4abd",
+      "kind": "TestReport",
+      "name": "docs/mandate/test-report.md",
+      "producedBy": "agent:test-engineer",
+      "derivedFrom": [
+        "0133023df820f19beb98b8792db43ceb86eb958df7f8f963027e41dacb8f8de1",
+        "2b21e2a223ac326f1e131dceb70e5072c1244663818996ac4f05d61b5b594b47",
+        "43b7bb0bb25405025afa9cb6f85d74b434b9724b5d470600e70e6f68a128ec9d",
+        "53ffb6f0527a66149b9f2c80a4a999450547b06614d4e0061cf782ae9e8e6505",
+        "57736faceb08746d14999479e75d2f31a9b5286403ce95076108b8fca19b1aa6",
+        "67be695f526a09e1a5b3c82e8efe2c97f10a4685da120c9b13bc350d33894cf0",
+        "6b797e10acdbebb4e0d51df4aa29b3cb77d90a552a76b619f236fd46dc987117",
+        "90abba71a396cd2620b2eb9ba250684356cc4ac895fd47e5d5665e23dc28cc98",
+        "a6633be026f2bec379efced08344addda81e41497007d964ed8601bbf35e1b00",
+        "cc6f76d0f8469f9301b75ecb2479985d58f6e8fc6e131dcef2f86d4599a6d018",
+        "d1814458b311b4f6645b544f8796be5cefd70992146552a036b53eaebca1d8ed",
+        "de87e3ee82e8807da49f79029777646878af810a26e4cdf457f0258d4e811fd4"
+      ]
+    },
+    {
+      "hash": "fa5adc8a5c60666f9dda142c0b1fd09426686a2b98d411e1e7469891b637196a",
+      "kind": "TestReport",
+      "name": "docs/mandate/test-report.md",
+      "producedBy": "agent:test-engineer",
+      "derivedFrom": [
+        "0133023df820f19beb98b8792db43ceb86eb958df7f8f963027e41dacb8f8de1",
+        "2b21e2a223ac326f1e131dceb70e5072c1244663818996ac4f05d61b5b594b47",
+        "43b7bb0bb25405025afa9cb6f85d74b434b9724b5d470600e70e6f68a128ec9d",
+        "53ffb6f0527a66149b9f2c80a4a999450547b06614d4e0061cf782ae9e8e6505",
+        "57736faceb08746d14999479e75d2f31a9b5286403ce95076108b8fca19b1aa6",
+        "67be695f526a09e1a5b3c82e8efe2c97f10a4685da120c9b13bc350d33894cf0",
+        "6b797e10acdbebb4e0d51df4aa29b3cb77d90a552a76b619f236fd46dc987117",
+        "90abba71a396cd2620b2eb9ba250684356cc4ac895fd47e5d5665e23dc28cc98",
+        "a6633be026f2bec379efced08344addda81e41497007d964ed8601bbf35e1b00",
+        "cc6f76d0f8469f9301b75ecb2479985d58f6e8fc6e131dcef2f86d4599a6d018",
+        "d1814458b311b4f6645b544f8796be5cefd70992146552a036b53eaebca1d8ed",
+        "de87e3ee82e8807da49f79029777646878af810a26e4cdf457f0258d4e811fd4"
+      ]
+    },
+    {
+      "hash": "ba2827c423f36dbcce992419445261244187c0dd716d8bc8401f506b5a492551",
+      "kind": "TestReport",
+      "name": "docs/mandate/test-report.md",
+      "producedBy": "agent:test-engineer",
+      "derivedFrom": [
+        "0133023df820f19beb98b8792db43ceb86eb958df7f8f963027e41dacb8f8de1",
+        "2b21e2a223ac326f1e131dceb70e5072c1244663818996ac4f05d61b5b594b47",
+        "43b7bb0bb25405025afa9cb6f85d74b434b9724b5d470600e70e6f68a128ec9d",
+        "53ffb6f0527a66149b9f2c80a4a999450547b06614d4e0061cf782ae9e8e6505",
+        "57736faceb08746d14999479e75d2f31a9b5286403ce95076108b8fca19b1aa6",
+        "67be695f526a09e1a5b3c82e8efe2c97f10a4685da120c9b13bc350d33894cf0",
+        "6b797e10acdbebb4e0d51df4aa29b3cb77d90a552a76b619f236fd46dc987117",
+        "90abba71a396cd2620b2eb9ba250684356cc4ac895fd47e5d5665e23dc28cc98",
+        "a6633be026f2bec379efced08344addda81e41497007d964ed8601bbf35e1b00",
+        "cc6f76d0f8469f9301b75ecb2479985d58f6e8fc6e131dcef2f86d4599a6d018",
+        "d1814458b311b4f6645b544f8796be5cefd70992146552a036b53eaebca1d8ed",
+        "d673806316c61e6b5390e03d174e944354a05368e4c3de1e0a1e880e45602d37",
+        "de87e3ee82e8807da49f79029777646878af810a26e4cdf457f0258d4e811fd4",
+        "e2a93403c39b872d5540be548ad0f34544af7a6617ed992a60282dfb19869f1b"
+      ]
+    },
+    {
+      "hash": "53ffb6f0527a66149b9f2c80a4a999450547b06614d4e0061cf782ae9e8e6505",
+      "kind": "RequirementSpec",
+      "name": "docs/requirements.md",
+      "producedBy": "agent:requirements-analyst",
+      "derivedFrom": [
+        "0133023df820f19beb98b8792db43ceb86eb958df7f8f963027e41dacb8f8de1"
+      ]
+    },
+    {
+      "hash": "90abba71a396cd2620b2eb9ba250684356cc4ac895fd47e5d5665e23dc28cc98",
+      "kind": "RequirementSpec",
+      "name": "docs/requirements.md",
+      "producedBy": "agent:requirements-analyst",
+      "derivedFrom": [
+        "0133023df820f19beb98b8792db43ceb86eb958df7f8f963027e41dacb8f8de1",
+        "a748e5f9bf30eb7689352dd545d2b674ba28e62778c9d627d48b80bec2b32a97",
+        "e8e9d0877f29e11f46858d4c9ed9921c003ba6e4cc8e473621149d5502f82086",
+        "fec216330c6ddbd2c02db41fe3aad7455567fd1f1da578d1ef1631d05c407ead"
+      ]
+    },
+    {
+      "hash": "047185654f3b965dddec8827ccc0b9f871fa5a6c8030dfa283416c365e5a6de6",
+      "kind": "TestSuite",
+      "name": "tests/Service.Tests/ClientKeyResolverTests.cs",
+      "producedBy": "agent:test-engineer",
+      "derivedFrom": [
+        "0133023df820f19beb98b8792db43ceb86eb958df7f8f963027e41dacb8f8de1",
+        "2b21e2a223ac326f1e131dceb70e5072c1244663818996ac4f05d61b5b594b47",
+        "43b7bb0bb25405025afa9cb6f85d74b434b9724b5d470600e70e6f68a128ec9d",
+        "53ffb6f0527a66149b9f2c80a4a999450547b06614d4e0061cf782ae9e8e6505",
+        "57736faceb08746d14999479e75d2f31a9b5286403ce95076108b8fca19b1aa6",
+        "67be695f526a09e1a5b3c82e8efe2c97f10a4685da120c9b13bc350d33894cf0",
+        "6b797e10acdbebb4e0d51df4aa29b3cb77d90a552a76b619f236fd46dc987117",
+        "90abba71a396cd2620b2eb9ba250684356cc4ac895fd47e5d5665e23dc28cc98",
+        "a6633be026f2bec379efced08344addda81e41497007d964ed8601bbf35e1b00",
+        "cc6f76d0f8469f9301b75ecb2479985d58f6e8fc6e131dcef2f86d4599a6d018",
+        "d1814458b311b4f6645b544f8796be5cefd70992146552a036b53eaebca1d8ed",
+        "de87e3ee82e8807da49f79029777646878af810a26e4cdf457f0258d4e811fd4"
+      ]
+    },
+    {
+      "hash": "4dfc696a890173c3177e1cfe0a527a49fc71c94a0623ea7de6bf97186ddbb74d",
+      "kind": "TestSuite",
+      "name": "tests/Service.Tests/ClientKeyResolverTests.cs",
+      "producedBy": "agent:test-engineer",
+      "derivedFrom": [
+        "0133023df820f19beb98b8792db43ceb86eb958df7f8f963027e41dacb8f8de1",
+        "2b21e2a223ac326f1e131dceb70e5072c1244663818996ac4f05d61b5b594b47",
+        "43b7bb0bb25405025afa9cb6f85d74b434b9724b5d470600e70e6f68a128ec9d",
+        "53ffb6f0527a66149b9f2c80a4a999450547b06614d4e0061cf782ae9e8e6505",
+        "57736faceb08746d14999479e75d2f31a9b5286403ce95076108b8fca19b1aa6",
+        "67be695f526a09e1a5b3c82e8efe2c97f10a4685da120c9b13bc350d33894cf0",
+        "6b797e10acdbebb4e0d51df4aa29b3cb77d90a552a76b619f236fd46dc987117",
+        "90abba71a396cd2620b2eb9ba250684356cc4ac895fd47e5d5665e23dc28cc98",
+        "a6633be026f2bec379efced08344addda81e41497007d964ed8601bbf35e1b00",
+        "cc6f76d0f8469f9301b75ecb2479985d58f6e8fc6e131dcef2f86d4599a6d018",
+        "d1814458b311b4f6645b544f8796be5cefd70992146552a036b53eaebca1d8ed",
+        "de87e3ee82e8807da49f79029777646878af810a26e4cdf457f0258d4e811fd4"
+      ]
+    },
+    {
+      "hash": "e2a93403c39b872d5540be548ad0f34544af7a6617ed992a60282dfb19869f1b",
+      "kind": "SourcePatch",
+      "name": "tests/Service.Tests/ClientKeyResolverTests.cs",
+      "producedBy": "agent:implementer",
+      "derivedFrom": [
+        "0133023df820f19beb98b8792db43ceb86eb958df7f8f963027e41dacb8f8de1",
+        "047185654f3b965dddec8827ccc0b9f871fa5a6c8030dfa283416c365e5a6de6",
+        "2b21e2a223ac326f1e131dceb70e5072c1244663818996ac4f05d61b5b594b47",
+        "4dfc696a890173c3177e1cfe0a527a49fc71c94a0623ea7de6bf97186ddbb74d",
+        "53ffb6f0527a66149b9f2c80a4a999450547b06614d4e0061cf782ae9e8e6505",
+        "57736faceb08746d14999479e75d2f31a9b5286403ce95076108b8fca19b1aa6",
+        "67be695f526a09e1a5b3c82e8efe2c97f10a4685da120c9b13bc350d33894cf0",
+        "8285a5349d57745d3f006393d4854e70fc7c778b7abf8f7f8ce8fcdb50639c21",
+        "83ff32ae262941832b83611c950f1b1a5b31f7c7a3a88ea365fdcb582d0f03a5",
+        "90abba71a396cd2620b2eb9ba250684356cc4ac895fd47e5d5665e23dc28cc98",
+        "a6633be026f2bec379efced08344addda81e41497007d964ed8601bbf35e1b00",
+        "bab9bb60b88ad101e0728d02d68b7d91dd0a100393f38286c11fb2cb6cdb4abd",
+        "cc6f76d0f8469f9301b75ecb2479985d58f6e8fc6e131dcef2f86d4599a6d018",
+        "d1814458b311b4f6645b544f8796be5cefd70992146552a036b53eaebca1d8ed",
+        "fa5adc8a5c60666f9dda142c0b1fd09426686a2b98d411e1e7469891b637196a"
+      ]
+    },
+    {
+      "hash": "af8dcf9a2e2a72bc96c2ff03d8970cf6e5770d427aa3b2ed91b4908f9d110e82",
+      "kind": "TestSuite",
+      "name": "tests/Service.Tests/ClientKeyResolverTests.cs",
+      "producedBy": "agent:test-engineer",
+      "derivedFrom": [
+        "0133023df820f19beb98b8792db43ceb86eb958df7f8f963027e41dacb8f8de1",
+        "2b21e2a223ac326f1e131dceb70e5072c1244663818996ac4f05d61b5b594b47",
+        "43b7bb0bb25405025afa9cb6f85d74b434b9724b5d470600e70e6f68a128ec9d",
+        "53ffb6f0527a66149b9f2c80a4a999450547b06614d4e0061cf782ae9e8e6505",
+        "57736faceb08746d14999479e75d2f31a9b5286403ce95076108b8fca19b1aa6",
+        "67be695f526a09e1a5b3c82e8efe2c97f10a4685da120c9b13bc350d33894cf0",
+        "6b797e10acdbebb4e0d51df4aa29b3cb77d90a552a76b619f236fd46dc987117",
+        "90abba71a396cd2620b2eb9ba250684356cc4ac895fd47e5d5665e23dc28cc98",
+        "a6633be026f2bec379efced08344addda81e41497007d964ed8601bbf35e1b00",
+        "cc6f76d0f8469f9301b75ecb2479985d58f6e8fc6e131dcef2f86d4599a6d018",
+        "d1814458b311b4f6645b544f8796be5cefd70992146552a036b53eaebca1d8ed",
+        "d673806316c61e6b5390e03d174e944354a05368e4c3de1e0a1e880e45602d37",
+        "de87e3ee82e8807da49f79029777646878af810a26e4cdf457f0258d4e811fd4",
+        "e2a93403c39b872d5540be548ad0f34544af7a6617ed992a60282dfb19869f1b"
+      ]
+    },
+    {
+      "hash": "374bf2902ab554f1032d60867a07990a4d31cc124ca211c961e7d8c14410c9ea",
+      "kind": "SourcePatch",
+      "name": "tests/Service.Tests/ClientKeyResolverTests.cs",
+      "producedBy": "agent:implementer",
+      "derivedFrom": [
+        "0133023df820f19beb98b8792db43ceb86eb958df7f8f963027e41dacb8f8de1",
+        "047185654f3b965dddec8827ccc0b9f871fa5a6c8030dfa283416c365e5a6de6",
+        "2b21e2a223ac326f1e131dceb70e5072c1244663818996ac4f05d61b5b594b47",
+        "4dfc696a890173c3177e1cfe0a527a49fc71c94a0623ea7de6bf97186ddbb74d",
+        "53ffb6f0527a66149b9f2c80a4a999450547b06614d4e0061cf782ae9e8e6505",
+        "57736faceb08746d14999479e75d2f31a9b5286403ce95076108b8fca19b1aa6",
+        "67be695f526a09e1a5b3c82e8efe2c97f10a4685da120c9b13bc350d33894cf0",
+        "8285a5349d57745d3f006393d4854e70fc7c778b7abf8f7f8ce8fcdb50639c21",
+        "83ff32ae262941832b83611c950f1b1a5b31f7c7a3a88ea365fdcb582d0f03a5",
+        "90abba71a396cd2620b2eb9ba250684356cc4ac895fd47e5d5665e23dc28cc98",
+        "a6633be026f2bec379efced08344addda81e41497007d964ed8601bbf35e1b00",
+        "af8dcf9a2e2a72bc96c2ff03d8970cf6e5770d427aa3b2ed91b4908f9d110e82",
+        "ba2827c423f36dbcce992419445261244187c0dd716d8bc8401f506b5a492551",
+        "bab9bb60b88ad101e0728d02d68b7d91dd0a100393f38286c11fb2cb6cdb4abd",
+        "bbabaac65f7e1149e7ee6fcb7f0944ea82224078f7716629225cdeb937407a33",
+        "cc6f76d0f8469f9301b75ecb2479985d58f6e8fc6e131dcef2f86d4599a6d018",
+        "d0f4147b1cfd9b358870aed44dc2dbe327bb1bdeec010574e829d0e937f038e9",
+        "d1814458b311b4f6645b544f8796be5cefd70992146552a036b53eaebca1d8ed",
+        "fa5adc8a5c60666f9dda142c0b1fd09426686a2b98d411e1e7469891b637196a"
+      ]
+    },
+    {
+      "hash": "d0f4147b1cfd9b358870aed44dc2dbe327bb1bdeec010574e829d0e937f038e9",
+      "kind": "TestSuite",
+      "name": "tests/Service.Tests/RateLimiterIntegrationTests.cs",
+      "producedBy": "agent:test-engineer",
+      "derivedFrom": [
+        "0133023df820f19beb98b8792db43ceb86eb958df7f8f963027e41dacb8f8de1",
+        "2b21e2a223ac326f1e131dceb70e5072c1244663818996ac4f05d61b5b594b47",
+        "43b7bb0bb25405025afa9cb6f85d74b434b9724b5d470600e70e6f68a128ec9d",
+        "53ffb6f0527a66149b9f2c80a4a999450547b06614d4e0061cf782ae9e8e6505",
+        "57736faceb08746d14999479e75d2f31a9b5286403ce95076108b8fca19b1aa6",
+        "67be695f526a09e1a5b3c82e8efe2c97f10a4685da120c9b13bc350d33894cf0",
+        "6b797e10acdbebb4e0d51df4aa29b3cb77d90a552a76b619f236fd46dc987117",
+        "90abba71a396cd2620b2eb9ba250684356cc4ac895fd47e5d5665e23dc28cc98",
+        "a6633be026f2bec379efced08344addda81e41497007d964ed8601bbf35e1b00",
+        "cc6f76d0f8469f9301b75ecb2479985d58f6e8fc6e131dcef2f86d4599a6d018",
+        "d1814458b311b4f6645b544f8796be5cefd70992146552a036b53eaebca1d8ed",
+        "d673806316c61e6b5390e03d174e944354a05368e4c3de1e0a1e880e45602d37",
+        "de87e3ee82e8807da49f79029777646878af810a26e4cdf457f0258d4e811fd4",
+        "e2a93403c39b872d5540be548ad0f34544af7a6617ed992a60282dfb19869f1b"
+      ]
+    },
+    {
+      "hash": "83ff32ae262941832b83611c950f1b1a5b31f7c7a3a88ea365fdcb582d0f03a5",
+      "kind": "TestSuite",
+      "name": "tests/Service.Tests/RateLimiterTests.cs",
+      "producedBy": "agent:test-engineer",
+      "derivedFrom": [
+        "0133023df820f19beb98b8792db43ceb86eb958df7f8f963027e41dacb8f8de1",
+        "2b21e2a223ac326f1e131dceb70e5072c1244663818996ac4f05d61b5b594b47",
+        "43b7bb0bb25405025afa9cb6f85d74b434b9724b5d470600e70e6f68a128ec9d",
+        "53ffb6f0527a66149b9f2c80a4a999450547b06614d4e0061cf782ae9e8e6505",
+        "57736faceb08746d14999479e75d2f31a9b5286403ce95076108b8fca19b1aa6",
+        "67be695f526a09e1a5b3c82e8efe2c97f10a4685da120c9b13bc350d33894cf0",
+        "6b797e10acdbebb4e0d51df4aa29b3cb77d90a552a76b619f236fd46dc987117",
+        "90abba71a396cd2620b2eb9ba250684356cc4ac895fd47e5d5665e23dc28cc98",
+        "a6633be026f2bec379efced08344addda81e41497007d964ed8601bbf35e1b00",
+        "cc6f76d0f8469f9301b75ecb2479985d58f6e8fc6e131dcef2f86d4599a6d018",
+        "d1814458b311b4f6645b544f8796be5cefd70992146552a036b53eaebca1d8ed",
+        "de87e3ee82e8807da49f79029777646878af810a26e4cdf457f0258d4e811fd4"
+      ]
+    },
+    {
+      "hash": "d673806316c61e6b5390e03d174e944354a05368e4c3de1e0a1e880e45602d37",
+      "kind": "SourcePatch",
+      "name": "tests/Service.Tests/Service.Tests.csproj",
+      "producedBy": "agent:implementer",
+      "derivedFrom": [
+        "0133023df820f19beb98b8792db43ceb86eb958df7f8f963027e41dacb8f8de1",
+        "047185654f3b965dddec8827ccc0b9f871fa5a6c8030dfa283416c365e5a6de6",
+        "2b21e2a223ac326f1e131dceb70e5072c1244663818996ac4f05d61b5b594b47",
+        "4dfc696a890173c3177e1cfe0a527a49fc71c94a0623ea7de6bf97186ddbb74d",
+        "53ffb6f0527a66149b9f2c80a4a999450547b06614d4e0061cf782ae9e8e6505",
+        "57736faceb08746d14999479e75d2f31a9b5286403ce95076108b8fca19b1aa6",
+        "67be695f526a09e1a5b3c82e8efe2c97f10a4685da120c9b13bc350d33894cf0",
+        "8285a5349d57745d3f006393d4854e70fc7c778b7abf8f7f8ce8fcdb50639c21",
+        "83ff32ae262941832b83611c950f1b1a5b31f7c7a3a88ea365fdcb582d0f03a5",
+        "90abba71a396cd2620b2eb9ba250684356cc4ac895fd47e5d5665e23dc28cc98",
+        "a6633be026f2bec379efced08344addda81e41497007d964ed8601bbf35e1b00",
+        "bab9bb60b88ad101e0728d02d68b7d91dd0a100393f38286c11fb2cb6cdb4abd",
+        "cc6f76d0f8469f9301b75ecb2479985d58f6e8fc6e131dcef2f86d4599a6d018",
+        "d1814458b311b4f6645b544f8796be5cefd70992146552a036b53eaebca1d8ed",
+        "fa5adc8a5c60666f9dda142c0b1fd09426686a2b98d411e1e7469891b637196a"
+      ]
+    }
+  ],
+  "context": [
+    {
+      "key": "architecture.components",
+      "value": "HttpApiLayer, ClientKeyResolver, RateLimitPolicy, LinkService, LinkRepository",
+      "revisions": 1
+    },
+    {
+      "key": "documentation.written",
+      "value": "true",
+      "revisions": 2
+    },
+    {
+      "key": "impact.affected-components",
+      "value": "Program.cs (HTTP endpoint mappings), new RateLimiter component, Models.cs, contracts/openapi.yaml, README.md, tests/Service.Tests",
+      "revisions": 1
+    },
+    {
+      "key": "impact.blast-radius",
+      "value": "high",
+      "revisions": 1
+    },
+    {
+      "key": "implementation.builds",
+      "value": "true",
+      "revisions": 3
+    },
+    {
+      "key": "implementation.commit",
+      "value": "Reuse resolved client key in rate-limit rejection handler",
+      "revisions": 3
+    },
+    {
+      "key": "implementation.files-changed",
+      "value": "2",
+      "revisions": 3
+    },
+    {
+      "key": "intake.recorded",
+      "value": "true",
+      "revisions": 1
+    },
+    {
+      "key": "requirements.acceptance-criteria",
+      "value": "10",
+      "revisions": 2
+    },
+    {
+      "key": "requirements.ambiguity-score",
+      "value": "0.1",
+      "revisions": 2
+    },
+    {
+      "key": "requirements.assumptions",
+      "value": "6",
+      "revisions": 1
+    },
+    {
+      "key": "requirements.clarified",
+      "value": "false",
+      "revisions": 1
+    },
+    {
+      "key": "requirements.scope",
+      "value": "Add per-client rate limiting (fixed window, 60 requests/minute, keyed by API key or falling back to client IP) to POST /api/v1/links, returning 429 with Retry-After when exceeded, backed by in-process counters only.",
+      "revisions": 2
+    },
+    {
+      "key": "review.findings",
+      "value": "1",
+      "revisions": 2
+    },
+    {
+      "key": "review.highest-severity",
+      "value": "low",
+      "revisions": 2
+    },
+    {
+      "key": "run.approval-notes",
+      "value": "human:muskan on \u0027clarification\u0027 (requester): Fixed window of 60 create requests per API key per minute. Over the limit returns 429 with a Retry-After header. Counters live in process; no shared store, no distributed coordination. Only POST /api/v1/links is limited. Requests without an API key are limited by client IP on the same terms.\nhuman:alex on \u0027architecture\u0027 (tech-lead): In-process fixed-window limiter is proportionate; revisit if the service is ever run multi-instance.",
+      "revisions": 2
+    },
+    {
+      "key": "run.has-existing-code",
+      "value": "true",
+      "revisions": 1
+    },
+    {
+      "key": "run.id",
+      "value": "run_20260917T015141Z_def060",
+      "revisions": 1
+    },
+    {
+      "key": "run.initiated-by",
+      "value": "human:muskan",
+      "revisions": 1
+    },
+    {
+      "key": "run.request",
+      "value": "The shortener needs rate limiting so one client cannot flood it.\n\nAdd sensible limits to the create endpoint and make sure abusive clients get throttled\nrather than taking the service down for everyone else.",
+      "revisions": 1
+    },
+    {
+      "key": "run.scenario",
+      "value": "ambiguous",
+      "revisions": 1
+    },
+    {
+      "key": "run.workflow",
+      "value": "sdlc@v1",
+      "revisions": 1
+    },
+    {
+      "key": "security.findings",
+      "value": "0",
+      "revisions": 2
+    },
+    {
+      "key": "security.secrets-found",
+      "value": "false",
+      "revisions": 2
+    }
+  ]
+}

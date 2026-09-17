@@ -44,6 +44,14 @@ app.MapGet("/api/v1/links/{code}/stats", async (string code, LinkService service
     return Results.Json(stats, statusCode: StatusCodes.Status200OK);
 });
 
+app.MapDelete("/api/v1/links/{code}", async (string code, LinkService service) =>
+{
+    bool deleted = await service.DeleteAsync(code);
+    return deleted
+        ? Results.NoContent()
+        : Results.Json(new ErrorResponse("not_found", "No link exists for this code."), statusCode: StatusCodes.Status404NotFound);
+});
+
 app.MapGet("/{code}", async (string code, LinkService service) =>
 {
     RedirectResult result = await service.RedirectAsync(code);

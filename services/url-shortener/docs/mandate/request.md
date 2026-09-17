@@ -1,29 +1,21 @@
-# Request: URL Shortener Service
+# Request: Add Delete Endpoint to URL Shortener
 
 ## Requirement
 
-Build a URL shortener service.
+Add a delete endpoint to the existing URL shortener.
 
-POST /api/v1/links accepts JSON with `url` (required), `alias` (optional) and `expiresAt`
-(optional, ISO-8601 UTC). It returns 201 with the short code and the absolute short URL. A
-requested alias that is already taken returns 409 and creates nothing.
+DELETE /api/v1/links/{code} removes a link and its click statistics. It returns 204 with no
+body on success, and 404 when no link with that code exists. A deleted code must behave
+exactly as an unknown one afterwards: GET /{code} returns 404, and the stats endpoint
+returns 404.
 
-GET /{code} returns 302 Found to the original URL and increments that link's click count. An
-unknown code returns 404. A link past its expiry returns 410 Gone.
+Deleting is permanent; there is no soft delete and no recovery. Keep the existing behaviour
+of every other endpoint unchanged.
 
-GET /api/v1/links/{code}/stats returns the code, the original URL, the creation time, the
-expiry if one is set, and the click count.
+## Run Context
 
-Reject with 400 any URL whose scheme is not http or https. Reject with 400 any URL whose host
-is an IP literal in a loopback, link-local, or RFC 1918 private range. Do not perform DNS
-resolution; check the literal host only.
+**Scenario:** brownfield
 
-Persist links in SQLite. Generate codes as base62 over a monotonic identifier.
+**Existing code involved:** true
 
-## Scenario
-
-Greenfield development.
-
-## Existing Code
-
-No existing code is involved.
+The target codebase already contains the URL shortener code under modification.

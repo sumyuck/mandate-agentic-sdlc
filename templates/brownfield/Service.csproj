@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!-- Target framework, language version and nullability: Directory.Build.props -->
+
+  <PropertyGroup>
+    <RootNamespace>Service</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The store the lifecycle's requirements call for, referenced up front so an
+         implementation stage never has to edit a project file to get one. -->
+    <PackageReference Include="Microsoft.Data.Sqlite" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      The test project lives under this one's directory, so the SDK's default glob would
+      compile its files into the service. Excluded rather than moved: keeping the service at
+      the tree root means every .cs file an implementation stage writes, wherever it puts it,
+      is part of the build — and therefore part of what the build gate actually checks. Under
+      a src/Service/ layout, a file written one directory off would compile nowhere, pass the
+      gate, and ship as inert code nobody noticed.
+    -->
+    <Compile Remove="tests/**" />
+    <Content Remove="tests/**" />
+    <None Remove="tests/**" />
+  </ItemGroup>
+
+</Project>

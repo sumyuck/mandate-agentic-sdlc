@@ -372,6 +372,49 @@ public sealed class ModelStageAgentTests
         sent[0].Fingerprint.ShouldBe(sent[1].Fingerprint);
     }
 
+    [Fact]
+    public async Task Returning_a_file_unchanged_is_a_no_op_not_a_self_derived_artifact()
+    {
+        // A stage that returns a file it did not need to alter produces content identical
+        // to one of its inputs, and content-addressing makes them the same artifact. The
+        // domain rightly refuses an artifact that lists itself as an ancestor; the fix is
+        // to drop the self-reference, not to fail the stage. The test stage hit this on a
+        // real brownfield run by returning a project file unchanged.
+        const string unchanged = "namespace Service; public static class Links { }";
+
+        Artifact upstream = Artifact.FromContent(
+            ArtifactKind.SourcePatch,
+            "src/Links.cs",
+            "text/plain",
+            System.Text.Encoding.UTF8.GetBytes(unchanged),
+            NodeId.Parse("implement"),
+            Actor.Agent("implementer"),
+            TestClock.DefaultStart);
+
+        StageExecution execution = ExecutionFor("intake") with
+        {
+            Inputs = [upstream],
+        };
+
+        ModelStageAgent agent = AgentFor("intake", _ => $$"""
+            {
+              "summary": "Recorded.",
+              "documents": [ { "kind": "request", "path": "docs/request.md" } ],
+              "facts": { "intake.recorded": "true" }
+            }
+
+            @@@MANDATE-FILE docs/request.md
+            {{unchanged}}
+            @@@MANDATE-END
+            """);
+
+        StageResult result = await agent.ExecuteAsync(execution, CancellationToken.None);
+
+        result.Succeeded.ShouldBeTrue(result.Failure);
+        result.Artifacts.Single().Hash.ShouldBe(upstream.Hash);
+        result.Artifacts.Single().DerivedFrom.ShouldNotContain(upstream.Hash);
+    }
+
     private sealed class ScriptedLlmClient(
         Func<LlmRequest, string> responder, string stopReason = "end_turn") : ILlmClient
     {

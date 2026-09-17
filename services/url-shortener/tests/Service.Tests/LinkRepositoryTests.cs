@@ -185,4 +185,71 @@ public sealed class LinkRepositoryTests
         Assert.NotNull(stats);
         Assert.Equal(1L, stats.ClickCount);
     }
+
+    [Fact]
+    public async Task DeleteAsync_for_existing_code_returns_true_and_removes_link()
+    {
+        await _repository.CreateAsync("https://example.com", "todelete", null);
+
+        bool deleted = await _repository.DeleteAsync("todelete");
+
+        Assert.True(deleted);
+        Assert.Null(await _repository.GetStatsAsync("todelete"));
+    }
+
+    [Fact]
+    public async Task DeleteAsync_for_nonexistent_code_returns_false()
+    {
+        bool deleted = await _repository.DeleteAsync("neverexisted");
+
+        Assert.False(deleted);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_called_twice_returns_false_second_time()
+    {
+        await _repository.CreateAsync("https://example.com", "doubledelete", null);
+
+        bool first = await _repository.DeleteAsync("doubledelete");
+        bool second = await _repository.DeleteAsync("doubledelete");
+
+        Assert.True(first);
+        Assert.False(second);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_removes_click_statistics_along_with_link()
+    {
+        await _repository.CreateAsync("https://example.com", "withclicks", null);
+        await _repository.RedirectAsync("withclicks");
+        await _repository.RedirectAsync("withclicks");
+
+        bool deleted = await _repository.DeleteAsync("withclicks");
+
+        Assert.True(deleted);
+        Assert.Null(await _repository.GetStatsAsync("withclicks"));
+    }
+
+    [Fact]
+    public async Task RedirectAsync_after_delete_returns_not_found()
+    {
+        await _repository.CreateAsync("https://example.com", "gonecode", null);
+        await _repository.DeleteAsync("gonecode");
+
+        RedirectResult result = await _repository.RedirectAsync("gonecode");
+
+        Assert.Equal(RedirectKind.NotFound, result.Kind);
+    }
+
+    [Fact]
+    public async Task CreateAsync_can_reuse_code_after_delete()
+    {
+        await _repository.CreateAsync("https://example.com/first", "reusable", null);
+        await _repository.DeleteAsync("reusable");
+
+        RepositoryCreateResult result = await _repository.CreateAsync("https://example.com/second", "reusable", null);
+
+        Assert.True(result.Success);
+        Assert.Equal("reusable", result.Code);
+    }
 }

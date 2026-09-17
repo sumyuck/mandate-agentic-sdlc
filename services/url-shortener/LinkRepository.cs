@@ -5,9 +5,10 @@ namespace Service;
 
 /// <summary>
 /// The only component that opens a <see cref="SqliteConnection"/> or writes SQL. Owns the
-/// insert-with-collision-retry algorithm, the atomic redirect-with-increment statement, and the
-/// stats query. See ADR 0001 for why correctness here rests on SQLite's own locking and unique
-/// index rather than application-level coordination.
+/// insert-with-collision-retry algorithm, the atomic redirect-with-increment statement, the
+/// stats query, and the delete statement. See ADR 0001 for why correctness here rests on
+/// SQLite's own locking and unique index rather than application-level coordination, and ADR
+/// 0002 for why delete is a single statement using the affected-row count as its only signal.
 /// </summary>
 public sealed class LinkRepository
 {
@@ -142,6 +143,23 @@ public sealed class LinkRepository
         long clickCount = reader.GetInt64(4);
 
         return new LinkStats(resolvedCode, url, createdAt, expiresAt, clickCount);
+    }
+
+    /// <summary>
+    /// Permanently removes the link and its click statistics identified by <paramref name="code"/>.
+    /// Returns true if a row existed and was removed, false if no such code exists. See ADR 0002:
+    /// a single DELETE statement, with its own affected-row count as the sole existence signal.
+    /// </summary>
+    public async Task<bool> DeleteAsync(string code)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        await connection.OpenAsync();
+
+        using SqliteCommand delete = connection.CreateCommand();
+        delete.CommandText = "DELETE FROM links WHERE code = $code;";
+        delete.Parameters.AddWithValue("$code", code);
+        int affected = await delete.ExecuteNonQueryAsync();
+        return affected > 0;
     }
 
     private static string? ToStorageString(DateTimeOffset? value) =>

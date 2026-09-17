@@ -1,0 +1,9 @@
+Add a delete endpoint to the existing URL shortener.
+
+DELETE /api/v1/links/{code} removes a link and its click statistics. It returns 204 with no
+body on success, and 404 when no link with that code exists. A deleted code must behave
+exactly as an unknown one afterwards: GET /{code} returns 404, and the stats endpoint
+returns 404.
+
+Deleting is permanent; there is no soft delete and no recovery. Keep the existing behaviour
+of every other endpoint unchanged.

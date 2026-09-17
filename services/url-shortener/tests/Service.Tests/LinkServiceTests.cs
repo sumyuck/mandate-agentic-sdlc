@@ -157,4 +157,51 @@ public sealed class LinkServiceTests
         LinkStats? stats = await _service.GetStatsAsync("nonexistent");
         Assert.Null(stats);
     }
+
+    [Fact]
+    public async Task DeleteAsync_for_existing_code_returns_true()
+    {
+        var request = new CreateLinkRequest("https://example.com", "deleteme", null);
+        await _service.CreateAsync(request);
+
+        bool deleted = await _service.DeleteAsync("deleteme");
+
+        Assert.True(deleted);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_for_nonexistent_code_returns_false()
+    {
+        bool deleted = await _service.DeleteAsync("nosuchcode");
+
+        Assert.False(deleted);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_twice_returns_false_the_second_time()
+    {
+        var request = new CreateLinkRequest("https://example.com", "twicedeleted", null);
+        await _service.CreateAsync(request);
+
+        bool first = await _service.DeleteAsync("twicedeleted");
+        bool second = await _service.DeleteAsync("twicedeleted");
+
+        Assert.True(first);
+        Assert.False(second);
+    }
+
+    [Fact]
+    public async Task After_delete_redirect_and_stats_both_return_not_found()
+    {
+        var request = new CreateLinkRequest("https://example.com", "goneafterdelete", null);
+        await _service.CreateAsync(request);
+
+        await _service.DeleteAsync("goneafterdelete");
+
+        RedirectResult redirect = await _service.RedirectAsync("goneafterdelete");
+        LinkStats? stats = await _service.GetStatsAsync("goneafterdelete");
+
+        Assert.Equal(RedirectKind.NotFound, redirect.Kind);
+        Assert.Null(stats);
+    }
 }

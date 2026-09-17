@@ -44,9 +44,26 @@ public static class WorkflowContextKeys
     /// </summary>
     public const string Amendment = "run.amendment";
 
+    /// <summary>
+    /// What the humans who approved this run said when they approved it.
+    /// </summary>
+    /// <remarks>
+    /// The note on an approval is the human's answer, and a lifecycle with a clarification
+    /// loop is asking questions precisely so it can be given one. Without this the answer
+    /// is recorded in the audit log and read by nobody: a real run put its questions to the
+    /// requester, the requester answered in detail, the loop-back re-ran the requirements
+    /// stage — and it re-scored the ambiguity <em>higher</em>, because it had never been
+    /// told anything. A system that asks a question it cannot hear the answer to is worse
+    /// than one that does not ask.
+    /// </remarks>
+    public const string ApprovalNotes = "run.approval-notes";
+
     /// <summary>Every key the engine guarantees is present.</summary>
     public static ImmutableHashSet<string> EngineProvided { get; } =
-        [RunId, Request, Scenario, Workflow, InitiatedBy, HasExistingCode, Amendment];
+    [
+            RunId, Request, Scenario, Workflow, InitiatedBy, HasExistingCode, Amendment,
+            ApprovalNotes,
+        ];
 
     /// <summary>
     /// The node id the engine attributes run-level facts to.

@@ -1,0 +1,187 @@
+openapi: 3.1.0
+info:
+  title: URL Shortener Service
+  version: "1.0.0"
+  description: >
+    Creates short links, redirects short codes to their original URLs while tracking clicks,
+    and reports per-link statistics. Backed by SQLite; no authentication.
+servers:
+  - url: /
+paths:
+  /api/v1/links:
+    post:
+      operationId: createLink
+      summary: Create a short link
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLinkRequest'
+      responses:
+        '201':
+          description: Link created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateLinkResponse'
+        '400':
+          description: >
+            Invalid request: `url` missing, `url` scheme not http/https, `url` host is a
+            loopback/link-local/RFC1918/IPv6-private-equivalent IP literal, `alias` malformed,
+            or `expiresAt` not valid ISO-8601 UTC.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: The requested alias is already taken. No link was created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /{code}:
+    get:
+      operationId: redirectToOriginalUrl
+      summary: Redirect to the original URL and record a click
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[A-Za-z0-9]{1,32}$'
+      responses:
+        '302':
+          description: Redirect to the original URL. The link's click count was incremented by 1.
+          headers:
+            Location:
+              description: The original URL.
+              schema:
+                type: string
+                format: uri
+        '404':
+          description: No link exists for this code.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '410':
+          description: The link exists but has expired. No redirect occurs; click count is not incremented.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/links/{code}/stats:
+    get:
+      operationId: getLinkStats
+      summary: Get statistics for a short link
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[A-Za-z0-9]{1,32}$'
+      responses:
+        '200':
+          description: Link statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LinkStats'
+        '404':
+          description: No link exists for this code.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  schemas:
+    CreateLinkRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - url
+      properties:
+        url:
+          type: string
+          format: uri
+          description: >
+            The URL to shorten. Must be an absolute URL with scheme http or https, and its host
+            (if a literal IP) must not be loopback, link-local, or private-range.
+          examples:
+            - "https://example.com/some/long/path"
+        alias:
+          type: string
+          pattern: '^[A-Za-z0-9]{1,32}$'
+          description: Optional caller-supplied short code. Must be unique across all links.
+          examples:
+            - "my-alias-1"
+        expiresAt:
+          type: string
+          format: date-time
+          description: Optional expiry timestamp, ISO-8601 with an explicit UTC designator.
+          examples:
+            - "2026-01-01T00:00:00Z"
+    CreateLinkResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - shortUrl
+      properties:
+        code:
+          type: string
+          description: The short code assigned to (or supplied for) this link.
+        shortUrl:
+          type: string
+          format: uri
+          description: The absolute short URL built from the service's configured base URL.
+    LinkStats:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - url
+        - createdAt
+        - clickCount
+      properties:
+        code:
+          type: string
+        url:
+          type: string
+          format: uri
+          description: The original URL this code redirects to.
+        createdAt:
+          type: string
+          format: date-time
+          description: When this link was created, ISO-8601 UTC.
+        expiresAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+          description: The link's expiry timestamp, or null if none was set.
+        clickCount:
+          type: integer
+          minimum: 0
+          description: Total number of successful redirects recorded for this link.
+    Error:
+      type: object
+      additionalProperties: false
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Machine-readable error identifier.
+          examples:
+            - "invalid_url"
+            - "alias_taken"
+            - "not_found"
+            - "expired"
+        message:
+          type: string
+          description: Human-readable explanation.

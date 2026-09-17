@@ -136,3 +136,32 @@ internal static class GitCommand
         }
     }
 }
+
+/// <summary>A node's work could not be undone cleanly.</summary>
+/// <remarks>
+/// Distinct from a git command simply failing. This one says something specific and
+/// actionable: the rollback ran, it could not complete, the tree is clean, and a human has
+/// to decide what it should contain. The engine turns it into a failed compensation rather
+/// than letting it end the run — a rollback that needs a person is a governance outcome,
+/// not a crash.
+/// </remarks>
+public sealed class WorkspaceCompensationException : Exception
+{
+    /// <summary>Creates the exception.</summary>
+    public WorkspaceCompensationException()
+        : base("The node's work could not be undone cleanly.")
+    {
+    }
+
+    /// <summary>Creates the exception.</summary>
+    public WorkspaceCompensationException(string message)
+        : base(message)
+    {
+    }
+
+    /// <summary>Creates the exception.</summary>
+    public WorkspaceCompensationException(string message, Exception innerException)
+        : base(message, innerException)
+    {
+    }
+}

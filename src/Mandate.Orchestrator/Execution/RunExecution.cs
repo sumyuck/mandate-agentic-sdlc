@@ -230,6 +230,51 @@ internal sealed class RunExecution(
     /// before the approval was sought, and re-executing on the strength of a signature would
     /// mean the human approved something other than what ships.
     /// </remarks>
+    /// <summary>
+    /// Puts what an approving human said into the run's context.
+    /// </summary>
+    /// <remarks>
+    /// An approval note is the human's answer, and the clarification stage exists to ask
+    /// for one. Recorded in the audit log it satisfies accountability; put into the context
+    /// it also reaches the stage that re-runs on the loop-back, which is the only way the
+    /// answer can change anything. Accumulated rather than replaced, because a second round
+    /// of questions does not retract the first round's answer.
+    /// </remarks>
+    private async Task RecordApprovalNotesAsync(
+        WorkflowNode node, CancellationToken cancellationToken)
+    {
+        ImmutableArray<RunEvent> history =
+            await journal.ReadAsync(request.Id, cancellationToken).ConfigureAwait(false);
+
+        foreach (RunEvent granted in history
+            .Where(entry => entry.Kind == RunEventKind.ApprovalGranted)
+            .Where(entry => entry.NodeId == node.Id))
+        {
+            ApprovalDecidedPayload payload = granted.Payload<ApprovalDecidedPayload>();
+
+            if (string.IsNullOrWhiteSpace(payload.Note))
+            {
+                continue;
+            }
+
+            string line = $"{granted.Actor} on '{node.Id}' ({payload.Role}): {payload.Note.Trim()}";
+            string existing = _state.Context.Latest(WorkflowContextKeys.ApprovalNotes)?.Value ?? string.Empty;
+
+            if (existing.Contains(line, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            await AppendAsync(
+                RunEventKind.ContextFactAdded, EngineNode, Actor.Engine,
+                new ContextFactAddedPayload(
+                    WorkflowContextKeys.ApprovalNotes,
+                    existing.Length == 0 ? line : existing + "\n" + line,
+                    []),
+                cancellationToken).ConfigureAwait(false);
+        }
+    }
+
     private async Task ReconcileApprovalsAsync(CancellationToken cancellationToken)
     {
         foreach (NodeId nodeId in graph.TopologicalOrder)
@@ -250,6 +295,8 @@ internal sealed class RunExecution(
 
             if (gate.Passed)
             {
+                await RecordApprovalNotesAsync(node, cancellationToken).ConfigureAwait(false);
+
                 Actor producer = _state.ProducerOf(nodeId) ?? Actor.Agent(node.Agent);
 
                 await TransitionAsync(
@@ -804,9 +851,28 @@ internal sealed class RunExecution(
                 nodeId, NodeState.Compensating, Actor.Engine,
                 $"Undoing with '{action.Id}'.", cancellationToken).ConfigureAwait(false);
 
-            CompensationResult result = await action
-                .ExecuteAsync(new CompensationContext(request.Id, node, _workspace), cancellationToken)
-                .ConfigureAwait(false);
+            CompensationResult result;
+
+            try
+            {
+                result = await action
+                    .ExecuteAsync(
+                        new CompensationContext(request.Id, node, _workspace), cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                // A rollback that cannot complete is a real outcome, not an engine fault.
+                // A sibling stage running in parallel may have touched the same files, in
+                // which case a clean revert of this node's work does not exist and a person
+                // has to decide what the tree should contain. Recorded as an unsuccessful
+                // compensation so the run reports it and the node keeps a state the
+                // governance model allows — letting it escape would end the run on a stack
+                // trace and leave the audit log claiming the rollback was still in progress.
+                result = new CompensationResult(
+                    Undone: false,
+                    Detail: $"Compensation failed: {exception.Message}");
+            }
 
             WorkspaceStatus status = await _workspace.StatusAsync(cancellationToken)
                 .ConfigureAwait(false);

@@ -215,6 +215,37 @@ public sealed class GitRunWorkspace : IRunWorkspace, IDisposable
         }
     }
 
+    /// <summary>
+    /// Leaves the tree clean after a revert that could not be applied.
+    /// </summary>
+    /// <remarks>
+    /// A conflicted revert leaves markers in the files and entries in the index. Left
+    /// alone, the next stage's commit would carry them, and the run would go on building
+    /// on a tree nobody authored.
+    /// </remarks>
+    private async Task AbandonRevertAsync(CancellationToken cancellationToken)
+    {
+        foreach (string[] arguments in new[]
+        {
+            new[] { "revert", "--abort" },
+            ["reset", "--hard", "HEAD"],
+            ["clean", "-fd"],
+        })
+        {
+            try
+            {
+                await GitCommand.RunAsync(Root, arguments, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            catch (GitCommandException)
+            {
+                // 'revert --abort' fails when there is no revert in progress, which is the
+                // ordinary case for the reset and clean that follow it. The point is to end
+                // with a clean tree, and the next command gets its turn either way.
+            }
+        }
+    }
+
     private async Task<int> RevertNodeCoreAsync(NodeId nodeId, CancellationToken cancellationToken)
     {
         ImmutableArray<WorkspaceCommit> commits =
@@ -227,12 +258,36 @@ public sealed class GitRunWorkspace : IRunWorkspace, IDisposable
 
         // Newest first: reverting an older commit before a newer one that builds on it would
         // conflict, and a rollback that needs conflict resolution is not a rollback.
+        //
+        // It can still conflict, because this node is not the only one that commits. A
+        // sibling stage running in parallel may have touched the same file, and then a
+        // clean revert of this node's work does not exist. That is a real outcome and not
+        // an engine fault: the tree is returned to a clean state and the caller is told
+        // how far the rollback got, rather than the run dying on an unhandled git error
+        // with a half-applied revert in the index.
+        int reverted = 0;
+
         foreach (WorkspaceCommit commit in commits.Reverse())
         {
-            await GitCommand.RunAsync(
-                Root,
-                ["revert", "--no-edit", "--no-commit", commit.Sha],
-                cancellationToken).ConfigureAwait(false);
+            try
+            {
+                await GitCommand.RunAsync(
+                    Root,
+                    ["revert", "--no-edit", "--no-commit", commit.Sha],
+                    cancellationToken).ConfigureAwait(false);
+            }
+            catch (GitCommandException exception)
+            {
+                await AbandonRevertAsync(cancellationToken).ConfigureAwait(false);
+
+                throw new WorkspaceCompensationException(
+                    $"'{nodeId}' could not be rolled back cleanly: reverting {commit.Sha[..8]} "
+                    + $"conflicts with later work in the tree. {reverted} of {commits.Length} "
+                    + "commit(s) were undone before it stopped, and the working tree has been "
+                    + "returned to a clean state at the last good commit. A human must decide "
+                    + $"what the tree should contain. {exception.Message}",
+                    exception);
+            }
 
             string shortSha = commit.Sha[..Math.Min(8, commit.Sha.Length)];
 
@@ -246,9 +301,11 @@ public sealed class GitRunWorkspace : IRunWorkspace, IDisposable
                     + $"{NodeTrailer}: {RevertNodePrefix}{nodeId}",
                 ],
                 cancellationToken).ConfigureAwait(false);
+
+            reverted++;
         }
 
-        return commits.Length;
+        return reverted;
     }
 
     /// <inheritdoc />

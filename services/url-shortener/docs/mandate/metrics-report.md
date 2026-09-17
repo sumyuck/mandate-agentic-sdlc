@@ -1,73 +1,61 @@
-# Metrics Report — URL Shortener Service Run
+# Run Metrics Report
 
-## Scope of this report
+This report covers the run for: "Add a delete endpoint to the existing URL shortener"
+(`run.workflow`: sdlc@v1, `run.scenario`: brownfield, initiated by `run.initiated-by`:
+human:muskan).
 
-This reports what is available in the run context about the run itself (stages, retries,
-human interventions). Where a figure was not supplied to this stage, it is stated as not
-available rather than estimated.
+## Stages
 
-## Run identity
+The run context supplied to this stage does not include a stage-by-stage timing or count log.
+The following stages are inferable from the list of artifacts produced upstream, but exact
+counts of stage executions, stage durations, or retries within each stage are **not available**
+in the run context:
 
-- Workflow: `sdlc@v1`
-- Scenario: `greenfield`
-- Initiated by: `human:muskan`
-- Existing code at start: `false`
-
-## Stage outputs recorded
-
-The following artifacts were produced over the run, per the upstream artifact list:
-
-- `docs/mandate/request.md`
-- `docs/requirements.md`
-- `docs/ambiguity.md`
-- `docs/design.md`
-- `docs/adr/0001-sqlite-write-serialization.md`
-- `contracts/openapi.yaml`
-- 8 source patches (`Program.cs`, `Models.cs`, `UrlValidator.cs`, `CodeGenerator.cs`,
-  `SchemaInitializer.cs`, `LinkRepository.cs`, `LinkService.cs`, `appsettings.json`)
-- `docs/mandate/review-report.md`
-- `README.md`
-- `docs/mandate/security-report.md`
-- Test suites: `UrlValidatorTests.cs`, `CodeGeneratorTests.cs`, `LinkRepositoryTests.cs`,
-  `LinkServiceTests.cs` — each appearing twice in the artifact list with different byte sizes
-- `docs/mandate/test-report.md` — appearing twice with different byte sizes
+- intake (request recorded: `intake.recorded` = true)
+- requirements (produced `docs/requirements.md`, `requirements.acceptance-criteria` = 10)
+- ambiguity check (`docs/ambiguity.md`, `requirements.ambiguity-score` = 0.15)
+- impact analysis (`docs/impact-analysis.md`, `impact.blast-radius` = high)
+- design (`docs/design.md`, `docs/adr/0002-single-statement-atomic-delete.md`)
+- implementation (6 files changed per `implementation.files-changed`, `implementation.builds` = true)
+- testing (`test.failures` = 0, `test.coverage` = 0.8157)
+- review (`review.findings` = 0, `review.highest-severity` = none)
+- security scanning (`security.findings` = 0, `security.secrets-found` = false)
+- documentation (`documentation.written` = true)
+- release readiness (this stage)
 
 ## Retries
 
-- Number of stage retries: **not available**. The run context does not record a retry count
-  for any stage. The presence of two differently-sized versions of each test suite file and
-  of the test-report file is consistent with either a retry/re-run of the test stage or an
-  intentional revision, but the run context does not distinguish between these, so no retry
-  count is reported.
+Not available. No retry counter, failed-attempt log, or re-run indicator was supplied in the
+run context or in any upstream artifact visible to this stage.
 
 ## Human interventions
 
-- Number of human interventions during the run: **not available**. The run context records
-  only that the run was initiated by `human:muskan` (`run.initiated-by`). It does not record
-  any subsequent in-run intervention events, approvals, or edits, so none are reported here
-  beyond the initiating request.
+- One human-initiated action is recorded: `run.initiated-by` = human:muskan, who submitted the
+  original request.
+- No other human interventions (e.g. mid-run edits, manual overrides, escalations) are recorded
+  in the run context available to this stage. Whether any occurred during intermediate stages
+  is **not available** here.
 
 ## Cost
 
-- Stage-level cost, token cost, or time cost: **not available**. No cost or duration figures
-  for any stage were supplied in the run context.
+No token, time, or monetary cost figures were supplied in the run context. **Not available.**
 
-## Quality figures actually recorded
+## File and artifact volume
 
-- `requirements.acceptance-criteria`: 20
-- `requirements.ambiguity-score`: 0.3
-- `implementation.files-changed`: 8
-- `review.findings`: 2
-- `review.highest-severity`: medium
-- `security.findings`: 0
-- `security.secrets-found`: false
-- `test.failures`: 0
-- `test.coverage`: 0.8259
+- Files changed: **6** (`implementation.files-changed`)
+- Upstream artifacts listed for this run: 22, spanning requirement, ambiguity, impact, design,
+  ADR, API contract, source patches, test suites, review report, security report, test reports,
+  and documentation.
+- Two `test-report` artifacts are listed (4921 bytes and 11354 bytes) and two `LinkServiceTests.cs`
+  entries appear (one as source-patch, one as test-suite) — this may reflect legitimate iteration
+  across stages, but the run context gives no explicit versioning or ordering to confirm that,
+  so it is reported here as an observation rather than a conclusion.
 
-## What this report does not claim
+## Summary judgement on run efficiency
 
-This report does not infer a number of retries or human interventions from the presence of
-duplicate test-suite/test-report artifacts, since the run context gives no explicit count or
-timestamp data to support such an inference. An approver who needs those figures for audit
-purposes should request them from the run's execution log directly, as they are not present
-in what was made available to this stage.
+This stage cannot respond to how efficient the run was in terms of retries or interventions,
+since those counters were not part of the supplied run context. What can be said from the
+available facts: the recorded quality signals (test failures = 0, review findings = 0, security
+findings = 0) are consistent with a run that did not require corrective rework visible to this
+stage — but "no rework visible" is not the same as "no rework occurred," and this report does
+not claim the latter.

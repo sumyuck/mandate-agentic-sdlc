@@ -1,6 +1,6 @@
 # URL Shortener Service
 
-A REST API service that creates short links from long URLs, redirects visitors to the original URL while tracking clicks, and reports per-link statistics. Links are persisted in SQLite and can optionally include a caller-supplied alias and an expiry timestamp.
+A REST API service that creates short links from long URLs, redirects visitors to the original URL while tracking clicks, reports per-link statistics, and permanently deletes links. Links are persisted in SQLite and can optionally include a caller-supplied alias and an expiry timestamp.
 
 ## Running the service
 
@@ -168,7 +168,7 @@ Location: https://example.com/page
 
 **Error responses**:
 
-- **404 Not Found** if the code does not exist:
+- **404 Not Found** if the code does not exist (or has been deleted — a deleted code is indistinguishable from one that was never created):
 
   ```json
   {
@@ -214,7 +214,7 @@ Get statistics for a short link.
 - `expiresAt`: ISO-8601 UTC timestamp when the link expires, or `null` if no expiry was set.
 - `clickCount`: Total number of successful redirects (GET /{code} responses with 302 status).
 
-**Error response (404 Not Found)** if the code does not exist:
+**Error response (404 Not Found)** if the code does not exist (or has been deleted):
 
 ```json
 {
@@ -242,9 +242,117 @@ Response:
 
 ---
 
+### DELETE /api/v1/links/{code}
+
+Permanently delete a link and its click statistics.
+
+**Parameters**:
+
+- `code` (path, required, string): The short code to delete.
+
+**Success response (204 No Content)**:
+
+No response body. The link record and its click statistics are removed permanently. There is no soft delete and no recovery: once deleted, the code behaves exactly as if it had never been created — `GET /{code}` and `GET /api/v1/links/{code}/stats` both return 404, and a subsequent `POST /api/v1/links` may reuse the code as a fresh alias.
+
+**Error response (404 Not Found)** if no link exists for that code (including a code that was already deleted):
+
+```json
+{
+  "error": "not_found",
+  "message": "No link exists for this code."
+}
+```
+
+**Example: delete a link**
+
+```bash
+curl -i -X DELETE http://localhost:5000/api/v1/links/mypage
+```
+
+Output (excerpt):
+```
+HTTP/1.1 204 No Content
+```
+
+**Example: delete again (already deleted)**
+
+```bash
+curl -i -X DELETE http://localhost:5000/api/v1/links/mypage
+```
+
+Output (excerpt):
+```
+HTTP/1.1 404 Not Found
+Content-Type: application/json
+
+{
+  "error": "not_found",
+  "message": "No link exists for this code."
+}
+```
+
+**Example: verify deletion via stats endpoint**
+
+```bash
+curl http://localhost:5000/api/v1/links/mypage/stats
+```
+
+Output:
+```
+HTTP/1.1 404 Not Found
+Content-Type: application/json
+
+{
+  "error": "not_found",
+  "message": "No link exists for this code."
+}
+```
+
+**Example: verify deletion via redirect endpoint**
+
+```bash
+curl -i http://localhost:5000/mypage
+```
+
+Output (excerpt):
+```
+HTTP/1.1 404 Not Found
+Content-Type: application/json
+
+{
+  "error": "not_found",
+  "message": "No link exists for this code."
+}
+```
+
+**Example: reuse deleted code as a new alias**
+
+After deleting `mypage`, you can create a new link with the same code:
+
+```bash
+curl -X POST http://localhost:5000/api/v1/links \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://example.com/different/target",
+    "alias": "mypage"
+  }'
+```
+
+Response:
+```json
+{
+  "code": "mypage",
+  "shortUrl": "http://localhost:5000/mypage"
+}
+```
+
+This succeeds because the deleted code is indistinguishable from one that never existed.
+
+---
+
 ## Data validation
 
-All three request fields are validated **before any database write**:
+All request fields are validated **before any database write**:
 
 ### URL validation
 
@@ -285,7 +393,7 @@ This service assumes a single SQLite database file and a single running process.
 
 ### No built-in authentication or rate limiting
 
-The API has no authentication, API keys, or rate limiting. Any caller can create, read, and list links. If deployed to the internet, deploy it behind a reverse proxy or gateway that enforces authentication and rate limits.
+The API has no authentication, API keys, or rate limiting. Any caller can create, read, delete, and list links. If deployed to the internet, deploy it behind a reverse proxy or gateway that enforces authentication and rate limits.
 
 ### Click count is approximate under high concurrency
 
@@ -310,6 +418,10 @@ Expiry comparison uses the system's UTC clock at request time. If the host syste
 ### SQLite file location
 
 The SQLite file must be on a filesystem the process can write to. If the file becomes inaccessible or the disk fills, all write operations fail with errors. Backup and disaster recovery are not built in; use standard SQLite backup tools.
+
+### Deletion is permanent
+
+`DELETE /api/v1/links/{code}` is irreversible. There is no soft delete, tombstone, or recovery mechanism. A deleted link's URL and click statistics cannot be retrieved again by any endpoint. Once deleted, the row is completely removed from the database, and the code may be reused for a new link if desired.
 
 ---
 
@@ -351,7 +463,7 @@ CREATE TABLE IF NOT EXISTS links (
 - `expires_at`: ISO-8601 UTC timestamp of expiry, or NULL if no expiry was set.
 - `click_count`: Number of successful redirects.
 
-All timestamps are stored and returned in ISO-8601 format with UTC timezone.
+All timestamps are stored and returned in ISO-8601 format with UTC timezone. Deletion removes the entire row for a code; there is no separate table or column tracking deleted links.
 
 ---
 
@@ -360,6 +472,8 @@ All timestamps are stored and returned in ISO-8601 format with UTC timezone.
 The service uses SQLite's Write-Ahead Logging (WAL) mode to allow concurrent reads (redirects, stats queries) while writes are in flight. A busy timeout of 5000 milliseconds is configured so writers briefly wait rather than immediately fail if another write is in progress.
 
 Alias uniqueness is enforced by SQLite's unique constraint on the `code` column, making concurrent alias-creation requests race-free: only one succeeds with 201; the others receive 409.
+
+Deletion is a single `DELETE` statement, so it is atomic with respect to both the link record and its click statistics (the same row). A delete racing a concurrent redirect on the same code is serialized by SQLite's writer lock; whichever statement commits first determines the outcome, with no data corruption possible either way.
 
 ---
 
@@ -384,3 +498,11 @@ Only successful redirects (HTTP 302) increment the click count. A 404 (code not 
 ### ExpiresAt is in the future but GET returns 410 Gone
 
 Verify the timestamp is in UTC and includes the UTC designator (`Z` or `+00:00`). Timestamps without explicit UTC (e.g. `2026-01-01T00:00:00`) may be misinterpreted. Query the stats endpoint to see the stored expiry value.
+
+### DELETE returns 404 for a code I expect to exist
+
+Confirm the code is spelled exactly as returned by creation (case-sensitive) and has not already been deleted. Query the stats endpoint first to check whether the link still exists.
+
+### After deleting a code, I cannot create a new link with the same alias
+
+This should not happen — a deleted code becomes immediately available for reuse. Verify that the delete request returned 204 (successful) rather than 404, and that the subsequent create request uses the same code exactly (case-sensitive). If the stats endpoint returns 404 for the code, the deletion succeeded and the alias is free.

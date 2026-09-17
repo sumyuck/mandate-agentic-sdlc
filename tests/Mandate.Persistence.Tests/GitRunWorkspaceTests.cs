@@ -307,4 +307,47 @@ public sealed class GitRunWorkspaceTests : IDisposable
             File.SetAttributes(file, FileAttributes.Normal);
         }
     }
+
+    [Fact]
+    public async Task A_revert_that_conflicts_with_later_work_reports_it_and_leaves_a_clean_tree()
+    {
+        // This node is not the only one that commits. A sibling running in parallel can
+        // touch the same file, and then a clean revert of this node's work does not exist.
+        // A real run hit it and died on an unhandled git error with a half-applied revert
+        // sitting in the index.
+        GitRunWorkspace workspace = await CreateAsync();
+
+        await WriteAsync(workspace, "implement", 1, ("src/Shared.cs", "// first\nline two\n"));
+        await WriteAsync(workspace, "test", 1, ("src/Shared.cs", "// rewritten entirely\n"));
+
+        WorkspaceCompensationException refused =
+            await Should.ThrowAsync<WorkspaceCompensationException>(
+                () => workspace.RevertNodeAsync(Node("implement"), CancellationToken.None));
+
+        refused.Message.ShouldContain("could not be rolled back cleanly");
+        refused.Message.ShouldContain("a human must decide", Case.Insensitive);
+
+        // The important half: whatever happened, the tree is usable afterwards. Conflict
+        // markers left in the files would be committed by the next stage as its own work.
+        WorkspaceStatus status = await workspace.StatusAsync(CancellationToken.None);
+        status.IsClean.ShouldBeTrue();
+
+        (await File.ReadAllTextAsync(Path.Combine(_root, "src", "Shared.cs")))
+            .ShouldNotContain("<<<<<<<");
+    }
+
+    [Fact]
+    public async Task A_revert_with_no_conflict_still_undoes_everything_the_node_did()
+    {
+        GitRunWorkspace workspace = await CreateAsync();
+
+        await WriteAsync(workspace, "implement", 1, ("src/A.cs", "// a\n"));
+        await WriteAsync(workspace, "implement", 2, ("src/B.cs", "// b\n"));
+
+        (await workspace.RevertNodeAsync(Node("implement"), CancellationToken.None)).ShouldBe(2);
+
+        File.Exists(Path.Combine(_root, "src", "A.cs")).ShouldBeFalse();
+        File.Exists(Path.Combine(_root, "src", "B.cs")).ShouldBeFalse();
+        (await workspace.StatusAsync(CancellationToken.None)).IsClean.ShouldBeTrue();
+    }
 }

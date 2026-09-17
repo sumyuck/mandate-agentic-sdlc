@@ -1,0 +1,4 @@
+The shortener needs rate limiting so one client cannot flood it.
+
+Add sensible limits to the create endpoint and make sure abusive clients get throttled
+rather than taking the service down for everyone else.

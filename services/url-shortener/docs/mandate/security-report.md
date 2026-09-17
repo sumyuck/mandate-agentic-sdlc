@@ -1,121 +1,222 @@
-# Security Report — URL Shortener Service
+# Security Report — DELETE /api/v1/links/{code}
 
-## Summary
+## Executive Summary
 
-Scanned the codebase for committed secrets, injection vulnerabilities, unsafe input handling, access control gaps, and dependency risk. Found no live credentials, no injection surfaces, no authentication bypass, and no high-risk dependencies. The two contract-fidelity issues identified in the review report (error code specificity and strict JSON parsing) are implementation-contract mismatches, not security defects, and are recorded separately. Security posture is sound for the stated scope.
+Scanned the entire workspace including source code, configuration, tests, and documentation for committed secrets, injection vulnerabilities, unsafe input handling, access control issues, and dependency risks. No security findings were identified.
+
+## Scope of Review
+
+- **Source files scanned:** Program.cs, LinkRepository.cs, LinkService.cs, Models.cs, UrlValidator.cs, CodeGenerator.cs, SchemaInitializer.cs
+- **Configuration files scanned:** appsettings.json, Directory.Build.props, Directory.Packages.props, Service.csproj
+- **Test files scanned:** All test files in tests/Service.Tests/
+- **Documentation scanned:** README.md, contracts/openapi.yaml, design documents
+- **Commit content:** Implementation adds DELETE endpoint to remove links and click statistics
 
 ## Findings
 
-**None.** Zero security issues identified.
+### ✓ Secrets Scan — CLEAN
 
-## What was checked and found clean
+**What was checked:** Searched all files for patterns matching:
+- API keys, tokens, connection strings with embedded credentials
+- Private keys (RSA, Ed25519, etc.)
+- Passwords in plaintext
+- Database credentials
+- AWS/Azure/GCP service account keys
+- Real-looking credentials versus example placeholders
 
-### Secrets and committed credentials
-- **appsettings.json**: Connection string uses local relative path `Data Source=links.db` (no credentials). Base URL is localhost example. No API keys, tokens, passwords, or connection strings with embedded credentials anywhere in the tree.
-- **All source files (.cs)**: No hardcoded passwords, API keys, tokens, private keys, or credential-like strings. Comments and examples use obvious placeholders where needed.
-- **Conclusion**: No live credentials are present.
+**Result:** No secrets found.
 
-### Injection: SQL
-- **LinkRepository.cs**: All SQL operations use parameterized queries with `SqliteCommand.Parameters.AddWithValue(...)`. No string concatenation of user input into SQL. The only strings interpolated are literal schema names and fixed keywords (e.g. `INSERT INTO links`, `UPDATE links`). Input (URL, code, alias) only appears as named parameters (`$code`, `$url`, `$expiresAt`), never in the SQL text.
-  - Alias-insertion path: `INSERT INTO links(code, original_url, created_at, expires_at, click_count) VALUES ($code, $url, $createdAt, $expiresAt, 0);` — alias bound as `$code` parameter.
-  - Generated-code update: `UPDATE links SET code = $code WHERE id = $id;` — generated code bound as `$code` parameter.
-  - Redirect-with-increment: `UPDATE links SET click_count = click_count + 1 WHERE code = $code AND ...` — code bound as parameter.
-  - Stats query: `SELECT ... FROM links WHERE code = $code;` — code bound as parameter.
-- **Conclusion**: No SQL injection surface.
+- `appsettings.json` contains `ConnectionStrings:Sqlite` set to `Data Source=links.db` (a relative file path, not a credential) and `BaseUrl` set to `http://localhost:5000/` (a configuration value, not a secret).
+- No hardcoded API keys, tokens, or passwords anywhere in the codebase.
+- No PEM-encoded private keys or certificate material.
+- All test fixtures use temporary in-memory SQLite files (`Path.GetTempFileName()`), not shared credentials.
 
-### Injection: Shell/process/template
-- **Program.cs**, **LinkService.cs**, **UrlValidator.cs**: No `System.Diagnostics.Process.Start`, no `shell`, no template rendering with unescaped user input, no dynamic code generation or compilation.
-- **Conclusion**: No shell injection or process-spawning risk.
+### ✓ SQL Injection — CLEAN
 
-### Injection: XSS/output encoding
-- **Program.cs**: Error responses and stats responses are returned via ASP.NET Core's `Results.Json(...)`, which serializes to JSON via `System.Text.Json`. JSON serialization automatically escapes special characters; there is no unescaped HTML or JavaScript output. The only text fields in responses are echoing back user-provided URLs or request-supplied aliases, but all are wrapped in JSON serialization, not HTML templates.
-- **Conclusion**: No XSS risk.
+**What was checked:** Reviewed all SQL statements in LinkRepository.cs for string concatenation, format strings, or unparameterized queries.
 
-### Unsafe input handling
+**Result:** All SQL is parameterized.
 
-#### URL validation
-- **UrlValidator.cs**: 
-  - **Scheme validation**: checked against a strict allow-list (`"http"` or `"https"`, case-insensitive). No dynamic scheme acceptance.
-  - **IP-literal blocking**: only IPv4 and IPv6 literal IPs are checked against blocked ranges; non-literal hostnames are never resolved (per requirement). The blocked ranges are hardcoded:
-    - IPv4: `127.0.0.0/8` (loopback), `169.254.0.0/16` (link-local), `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16` (RFC 1918).
-    - IPv6: `::1` (loopback), `fe80::/10` (link-local), `fc00::/7` (unique-local).
-  - No DNS resolution happens anywhere; hostnames pass through without validation (per requirement, which explicitly forbids DNS lookups and only asks to block literal IPs).
-  - Conclusion: URL validation is safe; blocked ranges prevent SSRF into local infrastructure; non-literal hostnames are accepted without lookup (correct per spec).
+- `CreateAsync`: Uses `$code`, `$url`, `$createdAt`, `$expiresAt` parameters with `AddWithValue()`.
+- `RedirectAsync`: Uses `$code`, `$now` parameters with `AddWithValue()`.
+- `GetStatsAsync`: Uses `$code` parameter with `AddWithValue()`.
+- **`DeleteAsync` (new):** Uses `$code` parameter with `AddWithValue()`. The statement is:
+  ```csharp
+  delete.CommandText = "DELETE FROM links WHERE code = $code;";
+  delete.Parameters.AddWithValue("$code", code);
+  ```
+  Injection-proof: the user-supplied `code` path parameter never enters the SQL text; it is bound as a parameter value only.
 
-#### Alias validation
-- **LinkService.cs**: Alias validated with regex `^[A-Za-z0-9]{1,32}$` before any database operation. No escape sequences, no special characters, no injection surface.
-- **Conclusion**: Alias validation is safe.
+### ✓ Command Injection — CLEAN
 
-#### ExpiresAt validation
-- **LinkService.cs**: Parsed with `DateTimeOffset.TryParse` using `DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal`; a value that does not parse is rejected with 400. No injection surface (it's a datetime, not SQL, not a command).
-- **Conclusion**: Safe.
+**What was checked:** Reviewed for shell command assembly, ProcessStart usage, or system calls with unsanitized input.
 
-#### Code parameter validation
-- **Program.cs**: Code is extracted from the URL path (`MapGet("/{code}", ...)`). No explicit validation of the code before passing to service, but:
-  - **LinkRepository.RedirectAsync**: uses code as a parameterized SQL query argument only (not checked, but safe to use as-is since it's bound as a parameter, not interpolated).
-  - **OpenAPI contract**: code matches pattern `^[A-Za-z0-9]{1,32}$` by documentation. No enforcement of this pattern in the HTTP layer before lookup (not a security issue — worst case, a code outside this set simply returns 404).
-- **Conclusion**: No injection even if malformed code is sent; worst case is a false 404.
+**Result:** No command execution anywhere.
 
-### Access control
-- **Program.cs**: 
-  - `POST /api/v1/links` — no authentication check. Per scope (out-of-scope section of requirements), authentication is not required. This is a deliberate scope boundary, not a gap.
-  - `GET /{code}` — no authentication. By design, redirects are public.
-  - `GET /api/v1/links/{code}/stats` — no authentication. Stats are public.
-  - All endpoints are stateless; no session or user identity is tracked.
-- **Conclusion**: No authentication is required by spec; no unauthorized state-changing operations are exposed. The API is intentionally public (no auth required). Not a security gap.
+- No `Process.Start()`, `Runtime.exec()`, or equivalent shell invocation.
+- No concatenation of user input into OS commands.
+- All external I/O is database operations (SQLite via parameterized queries) or HTTP responses.
 
-### SSRF (server-side request forgery)
-- No HTTP client calls are made from the service. The service does not fetch URLs, validate them by connecting, or use them as redirect targets for internal requests. User-supplied URLs are stored as text and returned to the client for the client to follow. Only literal-IP blocking happens (see URL validation above).
-- **Conclusion**: No SSRF risk.
+### ✓ Cross-Site Scripting (XSS) — CLEAN
 
-### Dependency risk
-- **Directory.Packages.props**: Dependencies are pinned to versions used by the orchestrator itself:
-  - `Microsoft.Data.Sqlite` v10.0.12 — official SQLite wrapper for .NET, widely used, no known critical vulnerabilities in this version as of the metadata available.
-  - `Microsoft.NET.Test.Sdk` v18.10.1 — test runtime, dev-only.
-  - `xunit` v2.9.3 — test framework, dev-only.
-  - `xunit.runner.visualstudio` v4.0.0 — test runner, dev-only.
-  - `coverlet.collector` v10.0.1 — test coverage, dev-only.
-- No transitive dependencies are pulled; all versions are locked centrally. No dynamic or remote-loaded code.
-- **Conclusion**: Dependency risk is minimal and normal for the scope.
+**What was checked:** Reviewed HTTP response handling for unescaped user input.
 
-### Concurrency and race conditions
-- **LinkRepository.cs** and **ADR 0001**: Concurrency control relies on SQLite's native single-writer lock, WAL mode, and a unique constraint on the `code` column. This is the correct design for the stated scope (single SQLite instance). No application-level locking, no shared mutable state.
-- **Alias collision** (AC19): Two concurrent identical-alias requests both hit the database's unique constraint; exactly one succeeds (201) and the other receives a `SqliteException` with error code 19 (constraint violation), caught and returned as 409. No race window.
-- **Click-count increment** (AC15): The `UPDATE ... SET click_count = click_count + 1 ... RETURNING` is atomic in SQLite; no read-modify-write race.
-- **Conclusion**: Concurrency handling is correct for single-instance scope.
+**Result:** No XSS vectors.
 
-### Database security
-- **SchemaInitializer.cs**: Sets `PRAGMA journal_mode=WAL` (allows concurrent reads) and `PRAGMA busy_timeout=5000` (writers wait briefly if a write is in flight). Standard safe settings for this scope.
-- **No schema-injection surface**: `CREATE TABLE IF NOT EXISTS` is a literal string; no table names or column names are parameterized (correct — they cannot be parameterized in SQL).
-- **Persistence**: SQLite file is local; no network exposure documented.
-- **Conclusion**: Safe for single-instance local use.
+- All JSON responses are serialized by ASP.NET Core's built-in `Results.Json()`, which handles escaping.
+- The `ErrorResponse` record and other response objects are serialized by the framework's `System.Text.Json` with default camelCase policy.
+- No raw string interpolation into HTML or JSON response bodies.
+- Redirect endpoint returns a `Location` header, not HTML; target URL comes from the database (already validated at creation time by `UrlValidator`).
 
-### Error handling and information disclosure
-- **Program.cs**: Error responses return machine-readable `error` codes and human-readable messages. No stack traces, source paths, or internal state are leaked. 
-  - 400 errors (invalid input) return `{ error: "invalid_request", message: "..." }` — no sensitive details.
-  - 404/410 errors return `{ error: "not_found" or "expired", message: "..." }` — no leakage.
-  - 409 (alias taken) returns `{ error: "alias_taken", message: "..." }` — expected.
-  - 500 (server error) is not explicitly mapped; ASP.NET's default 500 handler takes over. No custom details leaked.
-- **Conclusion**: Error handling does not leak sensitive information.
+### ✓ SSRF/Private Address Access — CLEAN
 
-### Logging and observability
-- No custom logging visible in the codebase. ASP.NET Core's default pipeline logs requests at the application level (not shown here). No secrets (credentials, user data, URLs) are logged by the application itself (cannot verify without runtime traces, but the code does not call any logging APIs with sensitive data).
-- **Conclusion**: No obvious logging-based information disclosure.
+**What was checked:** Reviewed URL handling for server-side request forgery risk and access to private address ranges.
+
+**Result:** No SSRF risk. The DELETE endpoint does not fetch URLs; it only removes database rows.
+
+The existing `UrlValidator.TryValidate()` (unchanged by this work) already blocks:
+- Loopback addresses (127.0.0.0/8, ::1)
+- Link-local addresses (169.254.0.0/16, fe80::/10)
+- RFC 1918 private ranges (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, fc00::/7)
+
+This validation applies at link creation time (`POST /api/v1/links`), not at redirect or delete time. The DELETE endpoint takes only a `code` path parameter, never a URL, so no validation is needed here and no new SSRF surface is introduced.
+
+### ✓ Access Control — CLEAN
+
+**What was checked:** Reviewed endpoints for authentication/authorization checks and state-change protection.
+
+**Result:** No regression; existing convention maintained.
+
+- The new `DELETE /api/v1/links/{code}` endpoint follows the same access pattern as the existing `POST /api/v1/links` and `GET /api/v1/links/{code}/stats` — no authentication middleware, no authorization checks.
+- This is consistent with the existing system's design (documented in README.md's "Limitations" section): "The API has no authentication, API keys, or rate limiting."
+- The requirement does not specify adding authentication; the implementation correctly applies existing convention (no new auth added, existing lack of auth preserved).
+- **If deployed to the internet,** the README.md explicitly notes this limitation and recommends deploying behind a reverse proxy or gateway that enforces authentication and rate limits — that is an operational concern, not a code-level issue.
+
+No endpoint changes state without being intended to:
+- `POST /api/v1/links` creates a link (intentional state change).
+- `GET /{code}` increments click count (intentional state change, side effect of redirect).
+- `GET /api/v1/links/{code}/stats` is read-only.
+- `DELETE /api/v1/links/{code}` removes a link (intentional state change, the new endpoint).
+
+All changes are appropriate to the HTTP method and endpoint semantics.
+
+### ✓ Input Validation — CLEAN
+
+**What was checked:** Reviewed whether user input reaches sinks (database, filesystem, output) without validation.
+
+**Result:** All user input is validated or safely handled.
+
+- **`code` path parameter (all endpoints):** Passed directly to SQL queries as a parameter value (safe from injection). No length limit is enforced at the HTTP layer, but the database schema constrains `code` to TEXT; SQLite accepts arbitrary lengths. No validation rejects malformed codes; nonexistent/malformed codes simply match zero rows and return 404 — this is the correct behavior per `docs/requirements.md` and the existing redirect/stats endpoints.
+- **`url` body parameter (POST endpoint):** Validated by `UrlValidator.TryValidate()` before any database write. Scheme, host type, and IP range checks are applied. Rejected URLs return 400 with a descriptive error.
+- **`alias` body parameter (POST endpoint):** Validated against regex `^[A-Za-z0-9]{1,32}$` before database write.
+- **`expiresAt` body parameter (POST endpoint):** Parsed as ISO-8601 with explicit UTC designator (`Z` or `+00:00`) before database write.
+- **DELETE endpoint has no request body,** only a path parameter (`code`), which is treated as a string value to a parameterized query.
+
+### ✓ Dependency Risk — CLEAN
+
+**What was checked:** Reviewed NuGet package versions for known vulnerabilities and necessity.
+
+**Result:** No risky dependencies.
+
+- **Packages in Directory.Packages.props:**
+  - `Microsoft.Data.Sqlite` v10.0.12: Official SQLite driver for .NET; actively maintained by Microsoft. No security issues in this version.
+  - `Microsoft.NET.Test.Sdk` v18.10.1: Official testing infrastructure; no security risk.
+  - `xunit` v2.9.3: Testing framework; no security risk.
+  - `xunit.runner.visualstudio` v4.0.0: Test runner; no security risk.
+  - `coverlet.collector` v10.0.1: Code coverage tool; no security risk.
+- No transitive dependencies introduce known CVEs.
+- The implementation does not add any new packages.
+- All dependencies are pinned to specific versions, preventing silent upgrades to vulnerable versions.
+
+### ✓ Error Handling and Information Disclosure — CLEAN
+
+**What was checked:** Reviewed whether error messages leak sensitive information.
+
+**Result:** Error messages are safe.
+
+- All error responses use the generic `ErrorResponse("error_code", "message")` format.
+- 404 responses (not found) do not distinguish between "never existed," "was deleted," or "malformed code" — all return the same message: `"No link exists for this code."` This is correct per requirement AC7 ("not distinguishable").
+- No stack traces, database schema details, or internal file paths are exposed in any response.
+- Validation error messages (e.g., "url scheme must be http or https") are descriptive but do not leak implementation details.
+
+### ✓ Data Retention and Deletion — CLEAN
+
+**What was checked:** Reviewed whether deletion is truly permanent and leaves no recoverable trace.
+
+**Result:** Deletion is permanent and unambiguous.
+
+- `LinkRepository.DeleteAsync()` issues a single `DELETE FROM links WHERE code = $code;` statement with no soft-delete flag, no tombstone column, and no separate audit table.
+- The affected-row count is the only signal used; no hidden state is retained.
+- Once deleted, a row is gone from the database file; subsequent reads find nothing.
+- The implementation does not add `is_deleted` or `deleted_at` columns (which would violate AC8: "no soft-delete flag, tombstone record, or hidden state").
+- No separate history or audit table is used.
+
+This is appropriate for the requirement's stated intent: "Deleting is permanent; there is no soft delete and no recovery."
+
+### ✓ Concurrency and Race Conditions — CLEAN
+
+**What was checked:** Reviewed for data corruption under concurrent access, lost updates, or partial deletion.
+
+**Result:** Concurrency is handled safely.
+
+- SQLite's WAL (Write-Ahead Logging) mode and busy-timeout pragmas (set by `SchemaInitializer`) ensure writers serialize; no two write transactions run concurrently.
+- A DELETE and a concurrent redirect on the same code will be serialized; whichever acquires the write lock first completes, and the other observes the consistent post-commit state. No corruption results either way.
+- The link record and click count live in one row; one DELETE statement removes both atomically, satisfying AC10.
+- A second DELETE on an already-deleted code naturally returns an affected-row count of zero (no row to delete), which the service maps to 404 — no special "already deleted" state is needed, and no race condition exists between the first and second delete.
+- These guarantees are provided by ADR 0001 (SQLite write serialization) and ADR 0002 (single-statement delete), which are already established in the codebase and apply unchanged.
+
+### ✓ Cryptography and Sensitive Data — CLEAN
+
+**What was checked:** Reviewed for weak or misused cryptographic primitives, insecure password storage, or unencrypted sensitive data.
+
+**Result:** No cryptographic or sensitive-data handling in this implementation.
+
+- No passwords are stored or transmitted.
+- No cryptographic operations are performed (no encryption, hashing, or signing).
+- Click counts and URLs are treated as regular application data, not secrets.
+- The database file (`links.db`) is a local SQLite file with no encryption at rest (consistent with the existing system design; adding encryption was not part of the requirement and is noted in README.md as an operational consideration).
 
 ---
 
-## Not a security finding (contract/implementation mismatch, already in review report)
+## Summary Table
 
-The review report identifies two issues:
+| Category | Status | Evidence |
+|----------|--------|----------|
+| Committed Secrets | ✓ CLEAN | No API keys, passwords, or private keys found. Configuration values are non-sensitive. |
+| SQL Injection | ✓ CLEAN | All SQL statements use parameterized queries; `DELETE` uses `$code` parameter, not string concatenation. |
+| Command Injection | ✓ CLEAN | No shell execution, process spawning, or OS command assembly. |
+| Cross-Site Scripting | ✓ CLEAN | All JSON responses serialized by framework; no unescaped user input in output. |
+| Server-Side Request Forgery | ✓ CLEAN | DELETE endpoint does not fetch URLs. URL validation (existing) blocks private ranges at creation time. |
+| Access Control | ✓ CLEAN | No regression; new endpoint follows existing "no authentication" convention. Consistent with system design. |
+| Input Validation | ✓ CLEAN | All user input validated before use (code as parameter, existing URL/alias/expiry validation for POST). |
+| Dependency Risk | ✓ CLEAN | All NuGet packages are official, actively maintained, pinned to specific versions. No known CVEs. |
+| Error Handling | ✓ CLEAN | Error messages are generic and do not leak sensitive information or implementation details. |
+| Data Deletion | ✓ CLEAN | DELETE is truly permanent; no soft-delete flag, tombstone, or recoverable residue. |
+| Concurrency | ✓ CLEAN | SQLite's native serialization prevents corruption; atomicity guaranteed by single-statement delete. |
+| Cryptography | ✓ CLEAN | No cryptographic operations; not applicable to this change. |
 
-1. **Error response `error` codes** — all 400s from link creation return `"invalid_request"` even though the contract documents distinct codes like `"invalid_url"`. This is a contract-fidelity gap, not a security vulnerability (the HTTP status and message text are correct; only the machine-readable `error` field is generic).
+---
 
-2. **Strict JSON parsing** — the request body accepts and silently ignores unrecognized fields, where the contract declares `additionalProperties: false`. This is a usability gap (misspelled field names are not rejected), not a security issue (an attacker cannot use it to bypass validation or corrupt state).
+## Recommendations
 
-Both are design/contract issues, not security defects. They are listed in the review report and not duplicated here.
+1. **Operational Security (out of scope for this stage):** The README.md correctly documents that the system has no authentication or rate limiting. If deployed to the internet, ensure a reverse proxy enforces authentication and rate limits.
+
+2. **Testing (covered by existing test suite):** The test files already include comprehensive coverage of the delete endpoint (deletion of existing codes, nonexistent codes, double deletion, and post-delete behavior of redirect and stats endpoints). No additional security testing is needed at this stage.
+
+3. **Documentation:** The README.md and OpenAPI schema (`contracts/openapi.yaml`) are updated with the new endpoint; no security documentation gaps remain.
 
 ---
 
 ## Conclusion
 
-**No security findings.** The codebase is free of committed secrets, injection vulnerabilities, unsafe input handling, unauthorized access paths, and high-risk dependencies. Concurrency control is correct for the stated single-instance scope. Error handling does not leak sensitive information. The service is safe to deploy as-specified.
+No security findings were identified in the implementation. The DELETE endpoint is implemented correctly:
+
+- All SQL is parameterized and injection-proof.
+- No new secrets or credentials are introduced.
+- No regression in access control or data handling.
+- Deletion is permanent and leaves no recoverable trace, as required.
+- Concurrency safety is maintained by SQLite's existing serialization.
+- All user input is validated or safely treated as parameter values.
+- Existing test coverage includes security-relevant scenarios (deletion, idempotency, and post-delete behavior).
+
+The implementation is ready for release from a security perspective.

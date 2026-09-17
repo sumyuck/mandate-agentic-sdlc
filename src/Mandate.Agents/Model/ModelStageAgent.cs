@@ -301,15 +301,23 @@ public sealed class ModelStageAgent : IStageAgent
 
             string name = path;
 
+            byte[] bytes = Encoding.UTF8.GetBytes(document.Content);
+            Sha256Hash own = Sha256Hash.OfBytes(bytes);
+
             artifacts.Add(Artifact.FromContent(
                 kind,
                 name,
                 MediaTypeFor(name),
-                Encoding.UTF8.GetBytes(document.Content),
+                bytes,
                 node.Id,
                 execution.Actor,
                 now,
-                derivedFrom));
+                // A stage that returns a file unchanged produces content identical to one
+                // of its own inputs, and content-addressing makes them the same artifact.
+                // That is not self-derivation, it is a no-op — but listing the artifact as
+                // its own ancestor would be, and the domain rightly refuses it. The test
+                // stage hit this by returning a project file it had not needed to alter.
+                derivedFrom.Where(hash => hash != own)));
 
             files.Add(new WorkspaceFile(path, document.Content));
         }

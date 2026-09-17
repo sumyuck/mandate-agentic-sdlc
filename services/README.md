@@ -5,16 +5,27 @@ the design, the code, the tests, the OpenAPI contract, the ADR, the README, and 
 governance records under `docs/mandate/`. It is the *fixture* — the thing the orchestrator
 was asked to build so that the orchestrator itself has something real to be judged on.
 
-## Which run produced it
+## Which runs produced it
 
-`run_20260917T004505Z_e2258e` — greenfield, the requirement in
-[`../scenarios/s1-greenfield.txt`](../scenarios/s1-greenfield.txt). Its complete evidence is
-in [`../runs/run_20260917T004505Z_e2258e/`](../runs/run_20260917T004505Z_e2258e/): every
-event, the timeline, and a self-contained HTML report.
+Two, in sequence, which is why the tree looks like a codebase rather than a snapshot.
 
-Nine stages succeeded, two were correctly skipped as not required on the greenfield path,
-and two named humans signed it — `alex` approved the design, `priya` approved the release.
-Neither is the requester. The audit chain verifies across all 171 events.
+**`run_20260917T004505Z_e2258e`** — greenfield, from
+[`../scenarios/s1-greenfield.txt`](../scenarios/s1-greenfield.txt). Built the service from
+an empty template: nine stages succeeded, two were correctly skipped as not required on the
+greenfield path, 171 events. 70 tests.
+
+**`run_20260917T012835Z_28d1ac`** — brownfield, from
+[`../scenarios/s2-brownfield.txt`](../scenarios/s2-brownfield.txt). Added the delete
+endpoint to the tree the first run produced, which is the honest way to do a brownfield
+scenario: the existing code is genuinely code this system wrote. Ten stages succeeded —
+including `impact-analysis`, which only runs when there is existing code to reason about —
+and one was skipped. 179 events. 96 tests.
+
+Each run's complete evidence is under [`../runs/`](../runs/): every event, a timeline, and
+a self-contained HTML report. Both chains verify.
+
+Four named humans across the two runs: `alex` approved each design, `priya` approved each
+release. Neither is the requester, which the segregation-of-duties check enforces.
 
 ## Check it yourself
 
@@ -22,13 +33,14 @@ Neither is the requester. The audit chain verifies across all 171 events.
 cd services/url-shortener && dotnet test tests/Service.Tests/Service.Tests.csproj
 ```
 
-70 tests pass. That run is independent of the orchestrator — the point of copying the tree
+96 tests pass. That run is independent of the orchestrator — the point of copying the tree
 out is that the test result is not something the system grading itself produced.
 
 ## What it does
 
 `POST /api/v1/links` creates a short link, with an optional alias and expiry. `GET /{code}`
 redirects and counts the click. `GET /api/v1/links/{code}/stats` reports what it knows.
+`DELETE /api/v1/links/{code}` removes a link and its statistics — added by the second run.
 URLs that are not http or https are rejected, and so are hosts in loopback, link-local and
 RFC 1918 private ranges.
 

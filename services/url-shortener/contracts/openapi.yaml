@@ -1,10 +1,11 @@
 openapi: 3.1.0
 info:
   title: URL Shortener Service
-  version: "1.0.0"
+  version: "1.1.0"
   description: >
     Creates short links, redirects short codes to their original URLs while tracking clicks,
-    and reports per-link statistics. Backed by SQLite; no authentication.
+    reports per-link statistics, and permanently deletes a link and its statistics. Backed by
+    SQLite; no authentication.
 servers:
   - url: /
 paths:
@@ -90,6 +91,32 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/LinkStats'
+        '404':
+          description: No link exists for this code.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/links/{code}:
+    delete:
+      operationId: deleteLink
+      summary: Permanently delete a link and its click statistics
+      description: >
+        Removes the link identified by `code` and its click statistics permanently. There is no
+        soft delete and no recovery. After a successful delete, the code behaves exactly as a
+        code that was never created: `GET /{code}` and `GET /api/v1/links/{code}/stats` both
+        return 404, and a repeated `DELETE` on the same code also returns 404.
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[A-Za-z0-9]{1,32}$'
+      responses:
+        '204':
+          description: >
+            Link and its click statistics were permanently removed. No response body.
         '404':
           description: No link exists for this code.
           content:

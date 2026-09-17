@@ -61,6 +61,9 @@ public sealed partial class LinkService
 
     public Task<LinkStats?> GetStatsAsync(string code) => _repository.GetStatsAsync(code);
 
+    /// <summary>Permanently deletes the link and its click statistics. Returns true if a link existed.</summary>
+    public Task<bool> DeleteAsync(string code) => _repository.DeleteAsync(code);
+
     [GeneratedRegex("^[A-Za-z0-9]{1,32}$")]
     private static partial Regex AliasPattern();
 }

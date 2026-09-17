@@ -6,8 +6,8 @@
 
 ## Context
 The brief demands "an explicit dependency graph with entry/exit gates" and explicitly
-rejects "simple linear task chaining". A workflow expressed as imperative C# — a sequence of
-awaits, or a `foreach` over stages — cannot be inspected, diffed, versioned or reasoned about
+rejects "simple linear task chaining". A workflow expressed as imperative C#, a sequence of
+awaits, or a `foreach` over stages, cannot be inspected, diffed, versioned or reasoned about
 before it runs, and cannot be shown to a reviewer as a graph.
 
 ## Decision
@@ -26,12 +26,12 @@ no orchestration control flow in C#.
 ## Consequences
 - The workflow can be validated before execution (reachability, unknown agents, gate typos)
   and rendered as a diagram for the architecture docs.
-- Changing the lifecycle is a config change under change control, not a code deployment —
+- Changing the lifecycle is a config change under change control, not a code deployment,
   which is itself the governance story the brief is asking about.
 - Requires building a loader, a validator and a small guard-expression evaluator. Accepted
   cost; it is also where a lot of the assessed value sits.
 - YAML is stringly typed. Mitigated by strict schema validation that fails loudly at load.
 
 ## Validation
-An invalid workflow must be rejected at load with a precise, actionable message — never
+An invalid workflow must be rejected at load with a precise, actionable message; never
 silently skipped, and never discovered mid-run.

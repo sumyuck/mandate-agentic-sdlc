@@ -113,7 +113,7 @@ internal sealed record PromptFrontMatter(
             if (!PromptLibrary.IsValidVersion(version))
             {
                 throw new PromptFormatException(
-                    $"{path}: '{version}' is not a version. Expected 'v1', 'v2' and so on — "
+                    $"{path}: '{version}' is not a version. Expected 'v1', 'v2' and so on, "
                     + "ordered, so 'the latest prompt' is a fact rather than a guess.");
             }
 

@@ -41,7 +41,7 @@ public static class BuiltInGateEvaluators
             explain: value =>
                 IsFalse(value) ? "none found."
                 : IsTrue(value) ? "secrets present."
-                : $"the scan recorded '{value.Trim()}', which is not true or false — its "
+                : $"the scan recorded '{value.Trim()}', which is not true or false, so its "
                   + "result could not be read, so the gate fails closed."),
 
         new ContextEvidenceGateEvaluator(

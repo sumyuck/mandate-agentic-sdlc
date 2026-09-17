@@ -196,7 +196,7 @@ internal sealed class RunCommand : AsyncCommand<RunCommand.Settings>
             AnsiConsole.MarkupLine(
                 $"[red]cannot load policies[/] {policyProblem!.EscapeMarkup()}");
             AnsiConsole.MarkupLine(
-                "[grey]this lifecycle gates on a policy pack, so it cannot run without one — "
+                "[grey]this lifecycle gates on a policy pack, so it cannot run without one. "
                 + "run from the repository root, or pass --policies[/]");
 
             return ExitCode.BadInput;
@@ -262,14 +262,14 @@ internal sealed class RunCommand : AsyncCommand<RunCommand.Settings>
             + $"existing code: {hasExistingCode} · max concurrency {settings.MaxConcurrency}[/]");
 
         AnsiConsole.MarkupLine(models is null
-            ? "[grey]agents: scripted — the engine is exercised, the engineering judgment is not[/]"
+            ? "[grey]agents: scripted, the engine is exercised, the engineering judgment is not[/]"
             : $"[grey]agents: model · {models.Description.EscapeMarkup()}[/]");
 
         if (models is not null)
         {
             AnsiConsole.MarkupLine(settings.VerificationRequested
                 ? $"[grey]verification: {settings.VerifierOrDisabled.Description.EscapeMarkup()}[/]"
-                : "[yellow]verification: off[/] [grey]— build and test results in this run are "
+                : "[yellow]verification: off[/] [grey]build and test results in this run are "
                   + "the agent's own claims, not measurements[/]");
         }
 
@@ -313,7 +313,7 @@ internal sealed class RunCommand : AsyncCommand<RunCommand.Settings>
                 $"[grey]models: {spend.Summary.EscapeMarkup()}"
                 + (models.Mode == LlmMode.Live || models.Mode == LlmMode.Record
                     ? string.Empty
-                    : " (recorded cost — nothing was spent on this execution)")
+                    : " (recorded cost, nothing was spent on this execution)")
                 + "[/]");
         }
 

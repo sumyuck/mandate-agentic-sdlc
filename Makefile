@@ -4,28 +4,22 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
 
-# Override if your .NET 10 SDK is not first on PATH, e.g.
+# A machine with several .NET installations resolves `dotnet` to whichever comes
+# first on PATH, which is often not the one holding the SDK global.json pins.
+# The build finds a suitable one rather than asking the reviewer to fix PATH.
+# Override explicitly if you want a particular install:
 #   make build DOTNET=$$HOME/.dotnet/dotnet
-DOTNET ?= dotnet
+DOTNET ?= $(shell bash scripts/find-dotnet.sh)
 CLI := $(DOTNET) run --project src/Mandate.Cli --
 
-.PHONY: help doctor restore build test format lint info workflow diagram run run-model runs audit policy metrics report llm prompts clean verify
+.PHONY: help doctor restore build test format lint info workflow diagram run run-model runs audit policy metrics report llm prompts clean verify demo
 
 help: ## Show available targets
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
 		| awk 'BEGIN{FS=":.*?## "}{printf "  \033[1m%-12s\033[0m %s\n", $$1, $$2}'
 
 doctor: ## Check the toolchain matches global.json
-	@printf 'requested SDK : %s\n' "$$(python3 -c 'import json;print(json.load(open("global.json"))["sdk"]["version"])')"
-	@printf 'resolved SDK  : %s\n' "$$($(DOTNET) --version 2>&1)"
-	@if $(DOTNET) --version >/dev/null 2>&1 && [[ "$$($(DOTNET) --version)" == 10.0.* ]]; then \
-		echo "doctor: OK"; \
-	else \
-		echo "doctor: FAIL - a .NET 10 SDK is required (see docs/adr/0002-target-framework.md)."; \
-		echo "        install: curl -fsSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 10.0"; \
-		echo "        then:    export PATH=\"\$$HOME/.dotnet:\$$PATH\""; \
-		exit 1; \
-	fi
+	@DOTNET="$(DOTNET)" bash scripts/doctor.sh
 
 restore: ## Restore NuGet packages
 	$(DOTNET) restore
@@ -92,6 +86,9 @@ report: ## Write a run as a self-contained HTML page
 
 diagram: ## Regenerate the lifecycle diagram from the workflow definition
 	@$(CLI) workflow render -o docs/diagrams/sdlc.v1.mmd
+
+demo: ## Guided five-minute tour for a reviewer: offline, no API key
+	@DOTNET="$(DOTNET)" bash scripts/demo.sh
 
 verify: doctor build test lint ## Full local gate: toolchain, build, test, style
 	@echo "verify: OK"

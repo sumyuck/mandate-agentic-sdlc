@@ -122,6 +122,65 @@ public sealed class SqliteRunJournal : IRunJournal, IRunCatalogue, IDisposable
         }
     }
 
+    /// <summary>
+    /// Loads a run's events verbatim, as read back from exported evidence.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Deliberately not on <see cref="IRunJournal"/>. The port takes a factory precisely so
+    /// the engine cannot choose an event's predecessor; import is the one operation that
+    /// must supply the links, because it is restoring a chain rather than extending one, and
+    /// keeping it off the port means the engine still cannot reach it.
+    /// </para>
+    /// <para>
+    /// Events are inserted exactly as given, digests included. Nothing is recomputed, so an
+    /// imported run that was altered on disk verifies as altered.
+    /// </para>
+    /// </remarks>
+    /// <returns>How many events were written.</returns>
+    /// <exception cref="InvalidOperationException">The run is already in the store.</exception>
+    public async Task<int> ImportAsync(
+        RunId runId, ImmutableArray<RunEvent> events, CancellationToken cancellationToken)
+    {
+        if (events.IsDefaultOrEmpty)
+        {
+            throw new ArgumentException("A run cannot be imported with no events.", nameof(events));
+        }
+
+        await _writeLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+
+        try
+        {
+            using SqliteTransaction transaction =
+                _connection.BeginTransaction(IsolationLevel.Serializable);
+
+            if (ReadTail(runId, transaction) is not null)
+            {
+                throw new InvalidOperationException(
+                    $"{runId} is already in this store. The log is append-only, so an " +
+                    "existing run is never overwritten by an import.");
+            }
+
+            foreach (RunEvent @event in events)
+            {
+                if (@event.RunId != runId)
+                {
+                    throw new InvalidOperationException(
+                        $"An event for {@event.RunId} was found while importing {runId}.");
+                }
+
+                Insert(@event, transaction);
+            }
+
+            transaction.Commit();
+            return events.Length;
+        }
+        finally
+        {
+            _writeLock.Release();
+        }
+    }
+
     /// <inheritdoc />
     public Task<ImmutableArray<RunEvent>> ReadAsync(
         RunId runId, CancellationToken cancellationToken)
@@ -157,7 +216,8 @@ public sealed class SqliteRunJournal : IRunJournal, IRunCatalogue, IDisposable
         cancellationToken.ThrowIfCancellationRequested();
 
         using SqliteCommand command = _connection.CreateCommand();
-        command.CommandText = SummaryQuery + " ORDER BY started_at DESC LIMIT $limit;";
+        command.CommandText =
+            SummaryQueryHead + SummaryQueryGroup + " ORDER BY started_at DESC LIMIT $limit;";
         command.Parameters.AddWithValue("$limit", limit);
 
         ImmutableArray<RunSummary>.Builder summaries = ImmutableArray.CreateBuilder<RunSummary>();
@@ -178,7 +238,8 @@ public sealed class SqliteRunJournal : IRunJournal, IRunCatalogue, IDisposable
         cancellationToken.ThrowIfCancellationRequested();
 
         using SqliteCommand command = _connection.CreateCommand();
-        command.CommandText = SummaryQuery + " AND events.run_id = $runId;";
+        command.CommandText =
+            SummaryQueryHead + " AND events.run_id = $runId" + SummaryQueryGroup + ";";
         command.Parameters.AddWithValue("$runId", runId.Value);
 
         using SqliteDataReader reader = command.ExecuteReader();
@@ -204,7 +265,12 @@ public sealed class SqliteRunJournal : IRunJournal, IRunCatalogue, IDisposable
 
     // The listing is derived from the events rather than kept in a second table, so there is
     // no denormalised copy of a run's status that can drift away from its log.
-    private const string SummaryQuery = """
+    //
+    // Split at the WHERE clause deliberately. A caller adding a filter has to be able to put
+    // it before the grouping: appended after `GROUP BY events.run_id`, an `AND` binds to the
+    // grouping expression instead of the filter, which is valid SQL that quietly matches
+    // every run. Keeping the two halves separate makes that mistake unrepresentable.
+    private const string SummaryQueryHead = """
         SELECT
             events.run_id                                               AS run_id,
             MIN(events.occurred_at)                                     AS started_at,
@@ -218,8 +284,9 @@ public sealed class SqliteRunJournal : IRunJournal, IRunCatalogue, IDisposable
               ORDER BY completed.sequence DESC LIMIT 1)                 AS completed_json
         FROM run_events events
         WHERE 1 = 1
-        GROUP BY events.run_id
         """;
+
+    private const string SummaryQueryGroup = " GROUP BY events.run_id";
 
     private RunEvent? ReadTail(RunId runId, SqliteTransaction transaction)
     {

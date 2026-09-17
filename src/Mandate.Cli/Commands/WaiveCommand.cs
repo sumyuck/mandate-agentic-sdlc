@@ -63,7 +63,7 @@ internal sealed class WaiveCommand : AsyncCommand<WaiveCommand.Settings>
 
         if (string.IsNullOrWhiteSpace(settings.Rule))
         {
-            AnsiConsole.MarkupLine("[red]--rule is required[/] — a waiver applies to one rule.");
+            AnsiConsole.MarkupLine("[red]--rule is required[/]: a waiver applies to one rule.");
             return ExitCode.BadInput;
         }
 
@@ -71,7 +71,7 @@ internal sealed class WaiveCommand : AsyncCommand<WaiveCommand.Settings>
         {
             // A waiver with no stated reason is indistinguishable from not having checked.
             AnsiConsole.MarkupLine(
-                "[red]a waiver needs a reason[/] — pass --reason. Overriding a control without "
+                "[red]a waiver needs a reason[/]: pass --reason. Overriding a control without "
                 + "saying why is indistinguishable from not having the control.");
 
             return ExitCode.BadInput;

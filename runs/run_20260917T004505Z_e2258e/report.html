@@ -72,7 +72,7 @@ resolution; check the literal host only.
 
 Persist links in SQLite. Generate codes as base62 over a monotonic identifier.</p>
 <h2>Reliability</h2>
-<p class="muted">Every figure below is computed from the run's event log. None of them is stored, so none of them can be set &mdash; only caused.</p>
+<p class="muted">Every figure below is computed from the run's event log. None of them is stored, so none of them can be set, only caused.</p>
 <div class="cards">
 <div class="card"><div class="label">success rate</div><div class="value">100%</div><div class="note">9 of 9 attempted</div></div>
 <div class="card"><div class="label">end to end</div><div class="value">3.5m</div><div class="note">171 events</div></div>
@@ -119,28 +119,28 @@ Persist links in SQLite. Generate codes as base62 over a monotonic identifier.</
 <h2>Decisions</h2>
 <div class="decision">
 <div class="q">Whether to block IPv6 loopback/link-local/unique-local addresses alongside the explicitly named IPv4 loopback/link-local/RFC1918 ranges</div>
-<p><strong>Extend to IPv6 analogues</strong> &mdash; The request's intent is clearly SSRF/local-target prevention; RFC 1918 is an IPv4-specific term but the underlying goal applies equally to IPv6, and extending coverage is the conventional secure default.</p>
+<p><strong>Extend to IPv6 analogues</strong>: The request's intent is clearly SSRF/local-target prevention; RFC 1918 is an IPv4-specific term but the underlying goal applies equally to IPv6, and extending coverage is the conventional secure default.</p>
 <p class="muted">by agent:requirements-analyst, confidence 0.7</p>
 <ul>
 <li>Rejected <strong>IPv4-only literal reading</strong>: Leaves an SSRF hole for IPv6 loopback/link-local/ULA addresses that is functionally identical to the IPv4 case the request is clearly trying to close; a silent gap here is a security defect, not a style choice.</li>
 </ul></div>
 <div class="decision">
 <div class="q">How the service determines the host/scheme used to build the 'absolute short URL' returned by POST /api/v1/links</div>
-<p><strong>Configured base URL</strong> &mdash; A fixed, operator-controlled base URL is deterministic, safe by default, and the conventional approach for services that must mint absolute URLs.</p>
+<p><strong>Configured base URL</strong>: A fixed, operator-controlled base URL is deterministic, safe by default, and the conventional approach for services that must mint absolute URLs.</p>
 <p class="muted">by agent:requirements-analyst, confidence 0.8</p>
 <ul>
 <li>Rejected <strong>Derived from request headers</strong>: Trusting client-supplied Host headers to construct a URL that will be persisted/returned invites host-header-injection style abuse and produces non-deterministic output depending on how the service is fronted.</li>
 </ul></div>
 <div class="decision">
 <div class="q">What character set a user-supplied custom alias may use</div>
-<p><strong>Base62 charset (same as generated codes)</strong> &mdash; Keeps aliases and generated codes in one uniform, unambiguous key space stored in the same column with a single uniqueness constraint, simplifying collision handling.</p>
+<p><strong>Base62 charset (same as generated codes)</strong>: Keeps aliases and generated codes in one uniform, unambiguous key space stored in the same column with a single uniqueness constraint, simplifying collision handling.</p>
 <p class="muted">by agent:requirements-analyst, confidence 0.75</p>
 <ul>
 <li>Rejected <strong>Broad URL-safe charset</strong>: Widens the code space beyond what the generator ever produces, complicates routing/escaping, and doesn't change the product's behavior in any way the requester is likely to care about — but a choice still has to be made and recorded.</li>
 </ul></div>
 <div class="decision">
 <div class="q">How do we guarantee that alias/generated-code uniqueness (AC4, AC19) and click-count increments (AC12, AC15) are correct under concurrent requests, given SQLite's single-writer model?</div>
-<p><strong>Native SQLite serialization + unique constraint + bounded retry</strong> &mdash; It gives the exact correctness AC19 demands (a DB-level constraint that cannot be raced) with the least code, matches the single-instance scope stated in the NFRs precisely, and needs no additional locking primitives — at the cost of write throughput being bounded by SQLite's single-writer model and a small, well-understood retry surface for the alias/generated-code collision case.</p>
+<p><strong>Native SQLite serialization + unique constraint + bounded retry</strong>: It gives the exact correctness AC19 demands (a DB-level constraint that cannot be raced) with the least code, matches the single-instance scope stated in the NFRs precisely, and needs no additional locking primitives — at the cost of write throughput being bounded by SQLite's single-writer model and a small, well-understood retry surface for the alias/generated-code collision case.</p>
 <p class="muted">by agent:architect, confidence 0.85</p>
 <ul>
 <li>Rejected <strong>Application-level global write mutex</strong>: Duplicates a guarantee SQLite already gives via unique index + IMMEDIATE transactions; still needs the same alias/generated-code collision handling on top, so it adds a whole lock-management layer without removing any complexity, and widens the locked section to the whole request handler rather than just the DB write.</li>
@@ -150,7 +150,7 @@ Persist links in SQLite. Generate codes as base62 over a monotonic identifier.</
 </ul></div>
 <div class="decision">
 <div class="q">Whether to recommend release given the current evidence set</div>
-<p><strong>go</strong> &mdash; All hard gates (build, tests, security) are green in the run context; the only open item is two medium-severity review findings, which is disclosed as an accepted risk rather than silently passed over.</p>
+<p><strong>go</strong>: All hard gates (build, tests, security) are green in the run context; the only open item is two medium-severity review findings, which is disclosed as an accepted risk rather than silently passed over.</p>
 <p class="muted">by agent:release-manager, confidence 0.68</p>
 <ul>
 <li>Rejected <strong>no-go</strong>: The recorded evidence shows no failing tests, no security findings, and no severity above medium; medium findings are a normal accepted-risk item for a first release rather than a release blocker, provided they are logged and tracked, which the checklist does explicitly.</li>
@@ -158,14 +158,14 @@ Persist links in SQLite. Generate codes as base62 over a monotonic identifier.</
 <h2>Audit log</h2>
 <details><summary>171 events, each committing to its predecessor</summary>
 <table><thead><tr><th class="num">#</th><th>event</th><th>stage</th><th>actor</th><th>digest</th></tr></thead><tbody>
-<tr><td class="num">1</td><td>RunPlanned</td><td class="mono">&amp;mdash;</td><td class="mono">engine:orchestrator</td><td class="mono">5df6223a</td></tr>
+<tr><td class="num">1</td><td>RunPlanned</td><td class="mono">&amp;ndash;</td><td class="mono">engine:orchestrator</td><td class="mono">5df6223a</td></tr>
 <tr><td class="num">2</td><td>ContextFactAdded</td><td class="mono">run</td><td class="mono">engine:orchestrator</td><td class="mono">5c8a7da7</td></tr>
 <tr><td class="num">3</td><td>ContextFactAdded</td><td class="mono">run</td><td class="mono">engine:orchestrator</td><td class="mono">a345a8e2</td></tr>
 <tr><td class="num">4</td><td>ContextFactAdded</td><td class="mono">run</td><td class="mono">engine:orchestrator</td><td class="mono">30360046</td></tr>
 <tr><td class="num">5</td><td>ContextFactAdded</td><td class="mono">run</td><td class="mono">engine:orchestrator</td><td class="mono">e1959eec</td></tr>
 <tr><td class="num">6</td><td>ContextFactAdded</td><td class="mono">run</td><td class="mono">engine:orchestrator</td><td class="mono">14394a20</td></tr>
 <tr><td class="num">7</td><td>ContextFactAdded</td><td class="mono">run</td><td class="mono">engine:orchestrator</td><td class="mono">39fa5548</td></tr>
-<tr><td class="num">8</td><td>RunStarted</td><td class="mono">&amp;mdash;</td><td class="mono">engine:orchestrator</td><td class="mono">b3c04b9c</td></tr>
+<tr><td class="num">8</td><td>RunStarted</td><td class="mono">&amp;ndash;</td><td class="mono">engine:orchestrator</td><td class="mono">b3c04b9c</td></tr>
 <tr><td class="num">9</td><td>EntryGateEvaluated</td><td class="mono">intake</td><td class="mono">engine:orchestrator</td><td class="mono">7c1650d8</td></tr>
 <tr><td class="num">10</td><td>NodeStateChanged</td><td class="mono">intake</td><td class="mono">engine:orchestrator</td><td class="mono">ca50a872</td></tr>
 <tr><td class="num">11</td><td>NodeStateChanged</td><td class="mono">intake</td><td class="mono">engine:orchestrator</td><td class="mono">63689056</td></tr>
@@ -214,9 +214,9 @@ Persist links in SQLite. Generate codes as base62 over a monotonic identifier.</
 <tr><td class="num">54</td><td>ExitGateEvaluated</td><td class="mono">architecture</td><td class="mono">engine:orchestrator</td><td class="mono">226c1848</td></tr>
 <tr><td class="num">55</td><td>ApprovalRequested</td><td class="mono">architecture</td><td class="mono">engine:orchestrator</td><td class="mono">f1d1f704</td></tr>
 <tr><td class="num">56</td><td>NodeStateChanged</td><td class="mono">architecture</td><td class="mono">engine:orchestrator</td><td class="mono">08ab6877</td></tr>
-<tr><td class="num">57</td><td>RunCompleted</td><td class="mono">&amp;mdash;</td><td class="mono">engine:orchestrator</td><td class="mono">a1a032f9</td></tr>
+<tr><td class="num">57</td><td>RunCompleted</td><td class="mono">&amp;ndash;</td><td class="mono">engine:orchestrator</td><td class="mono">a1a032f9</td></tr>
 <tr><td class="num">58</td><td>ApprovalGranted</td><td class="mono">architecture</td><td class="mono">human:alex</td><td class="mono">ab39082a</td></tr>
-<tr><td class="num">59</td><td>RunStarted</td><td class="mono">&amp;mdash;</td><td class="mono">engine:orchestrator</td><td class="mono">3e22b6d0</td></tr>
+<tr><td class="num">59</td><td>RunStarted</td><td class="mono">&amp;ndash;</td><td class="mono">engine:orchestrator</td><td class="mono">3e22b6d0</td></tr>
 <tr><td class="num">60</td><td>ExitGateEvaluated</td><td class="mono">architecture</td><td class="mono">engine:orchestrator</td><td class="mono">f95e1009</td></tr>
 <tr><td class="num">61</td><td>NodeStateChanged</td><td class="mono">architecture</td><td class="mono">agent:architect</td><td class="mono">da3fe996</td></tr>
 <tr><td class="num">62</td><td>EdgeGuardEvaluated</td><td class="mono">requirements</td><td class="mono">engine:orchestrator</td><td class="mono">28bb21d6</td></tr>
@@ -320,15 +320,15 @@ Persist links in SQLite. Generate codes as base62 over a monotonic identifier.</
 <tr><td class="num">160</td><td>ExitGateEvaluated</td><td class="mono">release-readiness</td><td class="mono">engine:orchestrator</td><td class="mono">ecc7284e</td></tr>
 <tr><td class="num">161</td><td>ApprovalRequested</td><td class="mono">release-readiness</td><td class="mono">engine:orchestrator</td><td class="mono">b5a86d9c</td></tr>
 <tr><td class="num">162</td><td>NodeStateChanged</td><td class="mono">release-readiness</td><td class="mono">engine:orchestrator</td><td class="mono">763d0661</td></tr>
-<tr><td class="num">163</td><td>RunCompleted</td><td class="mono">&amp;mdash;</td><td class="mono">engine:orchestrator</td><td class="mono">c55b6737</td></tr>
+<tr><td class="num">163</td><td>RunCompleted</td><td class="mono">&amp;ndash;</td><td class="mono">engine:orchestrator</td><td class="mono">c55b6737</td></tr>
 <tr><td class="num">164</td><td>ApprovalGranted</td><td class="mono">release-readiness</td><td class="mono">human:priya</td><td class="mono">49c1a69d</td></tr>
-<tr><td class="num">165</td><td>RunStarted</td><td class="mono">&amp;mdash;</td><td class="mono">engine:orchestrator</td><td class="mono">8a0e9bdf</td></tr>
+<tr><td class="num">165</td><td>RunStarted</td><td class="mono">&amp;ndash;</td><td class="mono">engine:orchestrator</td><td class="mono">8a0e9bdf</td></tr>
 <tr><td class="num">166</td><td>ExitGateEvaluated</td><td class="mono">release-readiness</td><td class="mono">engine:orchestrator</td><td class="mono">8ffdae79</td></tr>
 <tr><td class="num">167</td><td>NodeStateChanged</td><td class="mono">release-readiness</td><td class="mono">agent:release-manager</td><td class="mono">1c12b0fb</td></tr>
 <tr><td class="num">168</td><td>EdgeGuardEvaluated</td><td class="mono">requirements</td><td class="mono">engine:orchestrator</td><td class="mono">b2db631d</td></tr>
 <tr><td class="num">169</td><td>EdgeGuardEvaluated</td><td class="mono">requirements</td><td class="mono">engine:orchestrator</td><td class="mono">0ca3439e</td></tr>
 <tr><td class="num">170</td><td>EdgeGuardEvaluated</td><td class="mono">requirements</td><td class="mono">engine:orchestrator</td><td class="mono">61c684d0</td></tr>
-<tr><td class="num">171</td><td>RunCompleted</td><td class="mono">&amp;mdash;</td><td class="mono">engine:orchestrator</td><td class="mono">96d41bda</td></tr>
+<tr><td class="num">171</td><td>RunCompleted</td><td class="mono">&amp;ndash;</td><td class="mono">engine:orchestrator</td><td class="mono">96d41bda</td></tr>
 </tbody></table></details>
 <p class="footnote">run_20260917T004505Z_e2258e: chain intact across 171 event(s). Every figure in this report is derived from that log rather than recorded alongside it, so the report cannot say anything the log does not support. Generated by mandate/0.1.0 (.NETCoreApp,Version=v10.0; .NET 10.0.11).</p>
 </body></html>

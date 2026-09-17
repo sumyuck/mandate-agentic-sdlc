@@ -83,6 +83,6 @@ public sealed class CassetteMissException : LlmException
     private static string Explain(LlmRequest request, string store) =>
         $"No recording for {request.PromptId}.{request.PromptVersion} "
         + $"({request.Fingerprint.Abbreviated}) in {store}. The prompt, the model or the "
-        + "upstream output has changed since the cassettes were recorded — re-record with "
+        + "upstream output has changed since the cassettes were recorded. Re-record with "
         + "'--llm record', or check out the revision the recordings belong to.";
 }

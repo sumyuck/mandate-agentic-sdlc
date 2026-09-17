@@ -2,16 +2,16 @@
 
 ## The short version
 
-853 tests across 9 projects, all passing, zero warnings with warnings treated as errors.
+867 tests across 9 projects, all passing, zero warnings with warnings treated as errors.
 Run them with `make test`, or the full gate including style with `make verify`.
 
 | Project | Tests | Covers |
 |---|---:|---|
 | `Mandate.Core.Tests` | 256 | Domain: state machine, audit chain, provenance, decisions, guards, graph validation |
 | `Mandate.Orchestrator.Tests` | 149 | Engine: scheduling, joins, gates, retries, compensation, re-planning, architecture rules |
-| `Mandate.Cli.Tests` | 87 | Every command the binary exposes, end to end |
+| `Mandate.Cli.Tests` | 91 | Every command the binary exposes, end to end |
 | `Mandate.Workflows.Tests` | 81 | YAML loading and the 34 validation codes |
-| `Mandate.Persistence.Tests` | 74 | SQLite store, git workspace, toolchain verification, workspace reader |
+| `Mandate.Persistence.Tests` | 85 | SQLite store, git workspace, toolchain verification, workspace reader, evidence round trip |
 | `Mandate.Llm.Tests` | 67 | Prompt library, cassettes, budget, pricing, request fingerprints |
 | `Mandate.Agents.Tests` | 64 | Response parsing, contract enforcement, verified facts |
 | `Mandate.Policy.Tests` | 44 | Policy rules, waivers, segregation of duties |
@@ -35,6 +35,15 @@ fails the build if the engine gains a dependency beyond the domain, if an adapte
 on the engine, if a target framework is declared outside the central file, or if a second
 project starts referencing the model vendor's SDK. An architecture decision that is only
 written down decays.
+
+**The committed evidence, imported and verified.**
+[`RunEvidenceReaderTests`](../tests/Mandate.Persistence.Tests/RunEvidenceReaderTests.cs)
+reads the three scenario runs out of `runs/`, loads them into a store and asserts every
+chain verifies. The submission's central claim is that a reviewer can check the record
+themselves, so that claim is pinned by a test rather than having been checked once by
+hand. A companion test edits an exported payload, leaves its recorded digest alone, and
+asserts the import then fails verification: if import recomputed digests, every imported
+log would verify by construction and the check would be theatre.
 
 **The request fingerprint, pinned to a literal.** If the canonical serializer, property
 order or record shape changes, every cassette ever recorded stops matching. One test

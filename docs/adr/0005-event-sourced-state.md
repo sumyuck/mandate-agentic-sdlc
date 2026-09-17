@@ -8,7 +8,7 @@
 The brief requires stateful, non-linear execution, resumability, human approval checkpoints
 that survive process exit, "audit-grade observability and traceability", and reliability
 metrics including MTTR. A mutable status column cannot answer "how did this run reach this
-state, and who authorised it?" — and for a regulated financial client, that is the question
+state, and who authorised it?", and for a regulated financial client, that is the question
 that matters.
 
 ## Decision

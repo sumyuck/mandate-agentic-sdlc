@@ -130,7 +130,7 @@ internal sealed class ResumeCommand : AsyncCommand<ResumeCommand.Settings>
         if (!resume.HasOutstandingWork)
         {
             AnsiConsole.MarkupLine(
-                $"[green]nothing to do[/] — {runId.Value.EscapeMarkup()} has no outstanding work.");
+                $"[green]nothing to do[/]: {runId.Value.EscapeMarkup()} has no outstanding work.");
 
             return ExitCode.Success;
         }
@@ -149,7 +149,7 @@ internal sealed class ResumeCommand : AsyncCommand<ResumeCommand.Settings>
             AnsiConsole.MarkupLine(
                 $"[red]cannot load policies[/] {policyProblem!.EscapeMarkup()}");
             AnsiConsole.MarkupLine(
-                "[grey]this lifecycle gates on a policy pack, so it cannot run without one — "
+                "[grey]this lifecycle gates on a policy pack, so it cannot run without one. "
                 + "run from the repository root, or pass --policies[/]");
 
             return ExitCode.BadInput;

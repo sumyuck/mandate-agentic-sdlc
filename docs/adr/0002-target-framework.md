@@ -5,7 +5,7 @@
 - **Decider:** Human (Muskan Jain)
 - **Supersedes:** two earlier drafts of this record. The first targeted `net9.0` because that
   was the only SDK the build host had. The second targeted `net8.0` on the stated grounds
-  that .NET 8 was "the current LTS" — which was true when .NET 8 shipped and is not true now.
+  that .NET 8 was "the current LTS", which was true when .NET 8 shipped and is not true now.
   Both are recorded rather than quietly deleted, because the corrections are the point:
   toolchain convenience is not a valid input to a platform decision, and a support-lifecycle
   claim has to be checked against the calendar rather than recalled.
@@ -21,7 +21,7 @@ LTS with three years of support, even-numbered are STS with two. As of September
 | **.NET 10** | **LTS** | **November 2028** |
 
 This system is written for a regulated financial platform. In that setting the support
-lifecycle of a runtime is a compliance input — an unsupported runtime is an audit finding,
+lifecycle of a runtime is a compliance input, an unsupported runtime is an audit finding,
 not an inconvenience. A greenfield prototype that targets a framework leaving support eight
 weeks from now would be a defect in the decision, however well the code was written.
 
@@ -37,7 +37,7 @@ Target **`net10.0`**, the current LTS. Declare it exactly once, as
 | `net8.0` | Leaves support on 10 November 2026. Defensible only as "match what the client runs today mid-migration", which is an argument for maintaining existing code, not for starting new code. A reviewer would be right to ask why a new system was started on an expiring runtime. |
 | `net9.0` | Already out of support, and was only ever a concession to which SDK the build host happened to have installed. |
 | Multi-target `net8.0;net10.0` | Doubles build and test time and adds conditional-compilation surface for no assessment value. Nothing here needs to be library-portable. |
-| Per-project `<TargetFramework>` | Invites drift across 12+ projects and turns a retarget into a 12-file change — which is exactly the cost this decision has now paid off twice. |
+| Per-project `<TargetFramework>` | Invites drift across 12+ projects and turns a retarget into a 12-file change, which is exactly the cost this decision has now paid off twice. |
 
 ## Consequences
 - The prototype runs on a runtime supported until November 2028.

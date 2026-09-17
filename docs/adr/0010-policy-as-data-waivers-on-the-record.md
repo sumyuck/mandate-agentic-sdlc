@@ -7,7 +7,7 @@
 ## Context
 The brief requires guardrails for security, compliance and change control. Gates already check
 whether a *stage's own output* is acceptable. Policy answers a different question: whether the
-*run as a whole* is still within the rules it is obliged to obey — and the second is not the
+*run as a whole* is still within the rules it is obliged to obey, and the second is not the
 sum of the first. A run can have every gate pass and still have no approval on file, no test
 executed, or a secret committed in a file nobody described.
 
@@ -22,7 +22,7 @@ are overriding.
 
 **Checks are evidence-based and fail closed**, exactly as gate conditions are. A rule whose
 evidence is missing is a violation, not a pass. A rule whose *check* is not registered is also
-a violation — a control nobody can evaluate is not a control that passed.
+a violation: a control nobody can evaluate is not a control that passed.
 
 **A waiver overrides without silencing.** A human can allow a blocking violation through, but:
 
@@ -54,14 +54,14 @@ to the log come from the same evaluation.
   rule nobody declared, an advisory rule that does not block, and any waiver with no reason.
 - **Defence in depth falls out of the separation.** Waiving `CHG-001` (every required approval
   is held) does *not* release the stage, because the stage's own exit gate independently
-  requires the signature. One override does not collapse two controls — asserted by a test.
+  requires the signature. One override does not collapse two controls; asserted by a test.
 - Ten rules is a small pack. It is deliberately a starting set of rules that can actually be
   evaluated from recorded evidence, rather than a longer list of aspirations.
 - The secret scanner is pattern-based and will not find a secret that does not look like one.
   The rule's own rationale says so: a net with a known mesh size, not a proof.
 
 ## Validation
-- Every check the shipped packs name must be registered, asserted by a test — so the packs and
+- Every check the shipped packs name must be registered, asserted by a test, so the packs and
   the checks cannot drift into a pack that reports violations for want of an evaluator.
 - A pack that was not evaluated must fail the gate closed, never pass it.
 - A waived violation must still appear as violated in the evaluation and in the log.

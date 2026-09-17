@@ -64,7 +64,7 @@ returns 404.
 Deleting is permanent; there is no soft delete and no recovery. Keep the existing behaviour
 of every other endpoint unchanged.</p>
 <h2>Reliability</h2>
-<p class="muted">Every figure below is computed from the run's event log. None of them is stored, so none of them can be set &mdash; only caused.</p>
+<p class="muted">Every figure below is computed from the run's event log. None of them is stored, so none of them can be set, only caused.</p>
 <div class="cards">
 <div class="card"><div class="label">success rate</div><div class="value">100%</div><div class="note">10 of 10 attempted</div></div>
 <div class="card"><div class="label">end to end</div><div class="value">2.3m</div><div class="note">179 events</div></div>
@@ -112,7 +112,7 @@ of every other endpoint unchanged.</p>
 <h2>Decisions</h2>
 <div class="decision">
 <div class="q">What authentication/authorization should DELETE /api/v1/links/{code} require, given the request specifies none explicitly?</div>
-<p><strong>Reuse existing endpoint auth pattern</strong> &mdash; This is a brownfield task with existing code available; the convention already in use by other write endpoints is discoverable by inspection rather than requiring a guess about intent, and 'keep the existing behaviour of every other endpoint unchanged' signals consistency with current conventions is expected.</p>
+<p><strong>Reuse existing endpoint auth pattern</strong>: This is a brownfield task with existing code available; the convention already in use by other write endpoints is discoverable by inspection rather than requiring a guess about intent, and 'keep the existing behaviour of every other endpoint unchanged' signals consistency with current conventions is expected.</p>
 <p class="muted">by agent:requirements-analyst, confidence 0.7</p>
 <ul>
 <li>Rejected <strong>No authentication (public delete)</strong>: A destructive, irreversible operation with no access control is a plausible but risky default; if the existing system has any auth on write endpoints, silently omitting it here would be a real security regression, not a minor detail.</li>
@@ -120,7 +120,7 @@ of every other endpoint unchanged.</p>
 </ul></div>
 <div class="decision">
 <div class="q">How should LinkRepository detect and perform the removal of a link and its click statistics for DELETE /api/v1/links/{code}, given both live in one row of one table?</div>
-<p><strong>Single DELETE statement, affected-row count as the existence signal</strong> &mdash; The data model already puts a link and its click count in one row (no separate stats table), so a single DML statement is already atomic for both AC2/AC3/AC10 at once; using its own affected-row count to disambiguate found/not-found needs no extra read, matches the no-TOCTOU precedent ADR 0001 established for create, and gives idempotency (AC9) and the identical-404 requirement (AC7) for free.</p>
+<p><strong>Single DELETE statement, affected-row count as the existence signal</strong>: The data model already puts a link and its click count in one row (no separate stats table), so a single DML statement is already atomic for both AC2/AC3/AC10 at once; using its own affected-row count to disambiguate found/not-found needs no extra read, matches the no-TOCTOU precedent ADR 0001 established for create, and gives idempotency (AC9) and the identical-404 requirement (AC7) for free.</p>
 <p class="muted">by agent:architect, confidence 0.9</p>
 <ul>
 <li>Rejected <strong>SELECT existence check, then DELETE</strong>: Reintroduces the exact time-of-check-to-time-of-use race ADR 0001 already rejected for alias creation; a concurrent delete or recreate between the two statements can make the check stale, and it doubles round-trips on a path the NFRs require to match other single-record writes' latency.</li>
@@ -129,42 +129,42 @@ of every other endpoint unchanged.</p>
 </ul></div>
 <div class="decision">
 <div class="q">What type should carry the result of a delete attempt from LinkRepository through LinkService to the HTTP layer?</div>
-<p><strong>Plain bool (&quot;a row existed and was removed&quot;)</strong> &mdash; Keeps the addition proportional to what it does: a binary fact with no associated payload doesn't need a discriminated type to be introduced into Models.cs; introducing one would be complexity spent on a distinction (naming outcomes) that a bool already conveys unambiguously at the two call sites that consume it.</p>
+<p><strong>Plain bool (&quot;a row existed and was removed&quot;)</strong>: Keeps the addition proportional to what it does: a binary fact with no associated payload doesn't need a discriminated type to be introduced into Models.cs; introducing one would be complexity spent on a distinction (naming outcomes) that a bool already conveys unambiguously at the two call sites that consume it.</p>
 <p class="muted">by agent:architect, confidence 0.75</p>
 <ul>
 <li>Rejected <strong>A new discriminated result type, e.g. DeleteOutcome { Deleted, NotFound }, matching the CreateOutcome/RedirectResult convention</strong>: CreateOutcome and RedirectResult carry outcome-specific data (a code/URL, or an error message) alongside the discriminator; delete has exactly two outcomes and neither carries any payload, so a dedicated type would only wrap a bool in ceremony the codebase's own convention doesn't require — those types exist to carry data, not for discrimination's own sake.</li>
 </ul></div>
 <div class="decision">
 <div class="q">How should the delete outcome be represented between layers</div>
-<p><strong>bool</strong> &mdash; Binary outcome needs no discriminated type; matches minimal-surface principle from ADR 0002</p>
+<p><strong>bool</strong>: Binary outcome needs no discriminated type; matches minimal-surface principle from ADR 0002</p>
 <p class="muted">by agent:implementer, confidence 0.8</p>
 <ul>
 <li>Rejected <strong>enum result type</strong>: Only two outcomes exist; a bool is simpler and sufficiently clear, avoiding an extra type for no benefit</li>
 </ul></div>
 <div class="decision">
 <div class="q">Should delete tests be in separate files or merged with existing test files?</div>
-<p><strong>Separate files per component</strong> &mdash; The implementation split delete into its own methods (DeleteAsync in both LinkRepository and LinkService), so the tests follow that shape. Separate files keep the test organization isomorphic with the implementation, make the suites easier to scan, and avoid pushing existing test files past 250 lines.</p>
+<p><strong>Separate files per component</strong>: The implementation split delete into its own methods (DeleteAsync in both LinkRepository and LinkService), so the tests follow that shape. Separate files keep the test organization isomorphic with the implementation, make the suites easier to scan, and avoid pushing existing test files past 250 lines.</p>
 <p class="muted">by agent:test-engineer, confidence 0.75</p>
 <ul>
 <li>Rejected <strong>Append to existing files</strong>: The existing test files are already 200+ lines each; separating delete tests keeps concerns distinct and makes the test file size manageable for future maintenance. The separate-files pattern also mirrors how the tests discovered the implementation was already written (separate methods in repository and service), making the test organization naturally follow the code organization.</li>
 </ul></div>
 <div class="decision">
 <div class="q">How to fix xUnit analyzer warnings about Assert.True for substrings and Assert.NotNull on value types?</div>
-<p><strong>Use Assert.StartsWith, Assert.Null/Assert.NotNull appropriately</strong> &mdash; The warnings are correct; xUnit's specialized assertions (Assert.StartsWith, Assert.Contains) produce clearer failure messages and are the documented best practice. The fix eliminates technical debt and improves test readability at no cost.</p>
+<p><strong>Use Assert.StartsWith, Assert.Null/Assert.NotNull appropriately</strong>: The warnings are correct; xUnit's specialized assertions (Assert.StartsWith, Assert.Contains) produce clearer failure messages and are the documented best practice. The fix eliminates technical debt and improves test readability at no cost.</p>
 <p class="muted">by agent:test-engineer, confidence 0.95</p>
 <ul>
 <li>Rejected <strong>Suppress warnings</strong>: The warnings identify genuinely better patterns (Assert.Contains/Assert.StartsWith are more readable and provide better failure messages than Assert.True(Contains(...))); silencing them hides real opportunities for test quality.</li>
 </ul></div>
 <div class="decision">
 <div class="q">What should the delete test suite exercise, given that 82% coverage is the measured figure?</div>
-<p><strong>Comprehensive delete coverage (all code paths and side effects)</strong> &mdash; The requirement calls for delete to be observable through other endpoints' behavior (AC5, AC6, AC9, AC11 regression). Tests that only verify delete's own 204/404 response would miss silent regressions where delete silently affects the wrong rows (impact analysis §5). The measured 0.82 coverage figure reflects testing the full interaction surface: delete itself, the immediately-visible side effects (post-delete stats/redirect/double-delete), and the critical invariant (code reuse after delete).</p>
+<p><strong>Comprehensive delete coverage (all code paths and side effects)</strong>: The requirement calls for delete to be observable through other endpoints' behavior (AC5, AC6, AC9, AC11 regression). Tests that only verify delete's own 204/404 response would miss silent regressions where delete silently affects the wrong rows (impact analysis §5). The measured 0.82 coverage figure reflects testing the full interaction surface: delete itself, the immediately-visible side effects (post-delete stats/redirect/double-delete), and the critical invariant (code reuse after delete).</p>
 <p class="muted">by agent:test-engineer, confidence 0.88</p>
 <ul>
 <li>Rejected <strong>Minimal happy-path only</strong>: The previous test run left these behaviors untested; they are the high-value cases the requirement explicitly calls for (AC5, AC6, AC9). A minimal suite would not justify the measured 0.82 coverage or defend against the specific regressions in the impact analysis (§2, §5 of docs/impact-analysis.md).</li>
 </ul></div>
 <div class="decision">
 <div class="q">Whether to recommend go or no-go for this release given the available evidence</div>
-<p><strong>go</strong> &mdash; Every gating signal available in the run context (build, tests, review, security) is clean, and the change is narrowly scoped with explicit test coverage for the new delete behaviour and its interaction with existing GET/stats endpoints.</p>
+<p><strong>go</strong>: Every gating signal available in the run context (build, tests, review, security) is clean, and the change is narrowly scoped with explicit test coverage for the new delete behaviour and its interaction with existing GET/stats endpoints.</p>
 <p class="muted">by agent:release-manager, confidence 0.78</p>
 <ul>
 <li>Rejected <strong>no-go</strong>: No test failures, no review or security findings, ambiguity score is low (0.15), and the blast radius, while high, is fully covered by dedicated delete-path tests for both repository and service layers; nothing in the run context contradicts readiness.</li>
@@ -172,14 +172,14 @@ of every other endpoint unchanged.</p>
 <h2>Audit log</h2>
 <details><summary>179 events, each committing to its predecessor</summary>
 <table><thead><tr><th class="num">#</th><th>event</th><th>stage</th><th>actor</th><th>digest</th></tr></thead><tbody>
-<tr><td class="num">1</td><td>RunPlanned</td><td class="mono">&amp;mdash;</td><td class="mono">engine:orchestrator</td><td class="mono">53a86154</td></tr>
+<tr><td class="num">1</td><td>RunPlanned</td><td class="mono">&amp;ndash;</td><td class="mono">engine:orchestrator</td><td class="mono">53a86154</td></tr>
 <tr><td class="num">2</td><td>ContextFactAdded</td><td class="mono">run</td><td class="mono">engine:orchestrator</td><td class="mono">33e7634d</td></tr>
 <tr><td class="num">3</td><td>ContextFactAdded</td><td class="mono">run</td><td class="mono">engine:orchestrator</td><td class="mono">220c201e</td></tr>
 <tr><td class="num">4</td><td>ContextFactAdded</td><td class="mono">run</td><td class="mono">engine:orchestrator</td><td class="mono">369aab09</td></tr>
 <tr><td class="num">5</td><td>ContextFactAdded</td><td class="mono">run</td><td class="mono">engine:orchestrator</td><td class="mono">737bd874</td></tr>
 <tr><td class="num">6</td><td>ContextFactAdded</td><td class="mono">run</td><td class="mono">engine:orchestrator</td><td class="mono">9394b697</td></tr>
 <tr><td class="num">7</td><td>ContextFactAdded</td><td class="mono">run</td><td class="mono">engine:orchestrator</td><td class="mono">45283df3</td></tr>
-<tr><td class="num">8</td><td>RunStarted</td><td class="mono">&amp;mdash;</td><td class="mono">engine:orchestrator</td><td class="mono">907015fb</td></tr>
+<tr><td class="num">8</td><td>RunStarted</td><td class="mono">&amp;ndash;</td><td class="mono">engine:orchestrator</td><td class="mono">907015fb</td></tr>
 <tr><td class="num">9</td><td>EntryGateEvaluated</td><td class="mono">intake</td><td class="mono">engine:orchestrator</td><td class="mono">d5b59ae9</td></tr>
 <tr><td class="num">10</td><td>NodeStateChanged</td><td class="mono">intake</td><td class="mono">engine:orchestrator</td><td class="mono">460a0d47</td></tr>
 <tr><td class="num">11</td><td>NodeStateChanged</td><td class="mono">intake</td><td class="mono">engine:orchestrator</td><td class="mono">17bd3434</td></tr>
@@ -238,9 +238,9 @@ of every other endpoint unchanged.</p>
 <tr><td class="num">64</td><td>ExitGateEvaluated</td><td class="mono">architecture</td><td class="mono">engine:orchestrator</td><td class="mono">6d6dbb98</td></tr>
 <tr><td class="num">65</td><td>ApprovalRequested</td><td class="mono">architecture</td><td class="mono">engine:orchestrator</td><td class="mono">b1e8e90f</td></tr>
 <tr><td class="num">66</td><td>NodeStateChanged</td><td class="mono">architecture</td><td class="mono">engine:orchestrator</td><td class="mono">6bbc2214</td></tr>
-<tr><td class="num">67</td><td>RunCompleted</td><td class="mono">&amp;mdash;</td><td class="mono">engine:orchestrator</td><td class="mono">42733272</td></tr>
+<tr><td class="num">67</td><td>RunCompleted</td><td class="mono">&amp;ndash;</td><td class="mono">engine:orchestrator</td><td class="mono">42733272</td></tr>
 <tr><td class="num">68</td><td>ApprovalGranted</td><td class="mono">architecture</td><td class="mono">human:alex</td><td class="mono">411f064c</td></tr>
-<tr><td class="num">69</td><td>RunStarted</td><td class="mono">&amp;mdash;</td><td class="mono">engine:orchestrator</td><td class="mono">164e612a</td></tr>
+<tr><td class="num">69</td><td>RunStarted</td><td class="mono">&amp;ndash;</td><td class="mono">engine:orchestrator</td><td class="mono">164e612a</td></tr>
 <tr><td class="num">70</td><td>ExitGateEvaluated</td><td class="mono">architecture</td><td class="mono">engine:orchestrator</td><td class="mono">7a6d5982</td></tr>
 <tr><td class="num">71</td><td>NodeStateChanged</td><td class="mono">architecture</td><td class="mono">agent:architect</td><td class="mono">73c723cb</td></tr>
 <tr><td class="num">72</td><td>EdgeGuardEvaluated</td><td class="mono">requirements</td><td class="mono">engine:orchestrator</td><td class="mono">94bda6ae</td></tr>
@@ -342,15 +342,15 @@ of every other endpoint unchanged.</p>
 <tr><td class="num">168</td><td>ExitGateEvaluated</td><td class="mono">release-readiness</td><td class="mono">engine:orchestrator</td><td class="mono">fae6304d</td></tr>
 <tr><td class="num">169</td><td>ApprovalRequested</td><td class="mono">release-readiness</td><td class="mono">engine:orchestrator</td><td class="mono">c75b15dd</td></tr>
 <tr><td class="num">170</td><td>NodeStateChanged</td><td class="mono">release-readiness</td><td class="mono">engine:orchestrator</td><td class="mono">0ff90abd</td></tr>
-<tr><td class="num">171</td><td>RunCompleted</td><td class="mono">&amp;mdash;</td><td class="mono">engine:orchestrator</td><td class="mono">a05e0b52</td></tr>
+<tr><td class="num">171</td><td>RunCompleted</td><td class="mono">&amp;ndash;</td><td class="mono">engine:orchestrator</td><td class="mono">a05e0b52</td></tr>
 <tr><td class="num">172</td><td>ApprovalGranted</td><td class="mono">release-readiness</td><td class="mono">human:priya</td><td class="mono">33bbbec5</td></tr>
-<tr><td class="num">173</td><td>RunStarted</td><td class="mono">&amp;mdash;</td><td class="mono">engine:orchestrator</td><td class="mono">302be9fd</td></tr>
+<tr><td class="num">173</td><td>RunStarted</td><td class="mono">&amp;ndash;</td><td class="mono">engine:orchestrator</td><td class="mono">302be9fd</td></tr>
 <tr><td class="num">174</td><td>ExitGateEvaluated</td><td class="mono">release-readiness</td><td class="mono">engine:orchestrator</td><td class="mono">2970bccf</td></tr>
 <tr><td class="num">175</td><td>NodeStateChanged</td><td class="mono">release-readiness</td><td class="mono">agent:release-manager</td><td class="mono">b7e9118a</td></tr>
 <tr><td class="num">176</td><td>EdgeGuardEvaluated</td><td class="mono">requirements</td><td class="mono">engine:orchestrator</td><td class="mono">19ab2559</td></tr>
 <tr><td class="num">177</td><td>EdgeGuardEvaluated</td><td class="mono">requirements</td><td class="mono">engine:orchestrator</td><td class="mono">b7c36268</td></tr>
 <tr><td class="num">178</td><td>EdgeGuardEvaluated</td><td class="mono">requirements</td><td class="mono">engine:orchestrator</td><td class="mono">778d7041</td></tr>
-<tr><td class="num">179</td><td>RunCompleted</td><td class="mono">&amp;mdash;</td><td class="mono">engine:orchestrator</td><td class="mono">ca6a079f</td></tr>
+<tr><td class="num">179</td><td>RunCompleted</td><td class="mono">&amp;ndash;</td><td class="mono">engine:orchestrator</td><td class="mono">ca6a079f</td></tr>
 </tbody></table></details>
 <p class="footnote">run_20260917T012835Z_28d1ac: chain intact across 179 event(s). Every figure in this report is derived from that log rather than recorded alongside it, so the report cannot say anything the log does not support. Generated by mandate/0.1.0 (.NETCoreApp,Version=v10.0; .NET 10.0.11).</p>
 </body></html>

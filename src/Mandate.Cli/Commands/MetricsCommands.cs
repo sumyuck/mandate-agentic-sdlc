@@ -130,7 +130,7 @@ internal sealed class MetricsCommand : AsyncCommand<MetricsCommand.Settings>
         AnsiConsole.Write(table);
         AnsiConsole.MarkupLine(
             "[grey]Derived from the run's event log. Nothing here is stored, so nothing here "
-            + "can be set — only caused.[/]");
+            + "can be set, only caused.[/]");
 
         return ExitCode.Success;
     }
@@ -198,7 +198,7 @@ internal sealed class ReportCommand : AsyncCommand<ReportCommand.Settings>
 
         AnsiConsole.MarkupLine(
             $"[green]wrote[/] {output.EscapeMarkup()} "
-            + $"[grey]({html.Length / 1024}kB, self-contained — no network, no script)[/]");
+            + $"[grey]({html.Length / 1024}kB, self-contained, no network, no script)[/]");
 
         return ExitCode.Success;
     }

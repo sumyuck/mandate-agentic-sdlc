@@ -1785,7 +1785,7 @@ internal sealed class RunExecution(
             return (
                 RunStatus.RolledBack,
                 $"The run ended in rollback: {Name(rolledBack)} was undone and the tree "
-                + "returned to its prior state. A rolled-back run is not resumed — start a "
+                + "returned to its prior state. A rolled-back run is not resumed: start a "
                 + "new run once the cause is addressed.");
         }
 

@@ -78,7 +78,7 @@ internal sealed class ValidateWorkflowCommand : Command<ValidateWorkflowCommand.
         if (!errors.IsEmpty)
         {
             AnsiConsole.MarkupLine(
-                $"[red]{definition.Identity.EscapeMarkup()} cannot be executed[/] — "
+                $"[red]{definition.Identity.EscapeMarkup()} cannot be executed[/]: "
                 + $"{errors.Length} blocking problem(s).");
             return ExitCode.Failed;
         }
@@ -129,7 +129,7 @@ internal sealed class ValidateWorkflowCommand : Command<ValidateWorkflowCommand.
         int widest = stages.Max(stage => stage.Length);
 
         AnsiConsole.MarkupLine(
-            $"[green]valid[/] — {graph.Nodes.Count()} nodes, {graph.Definition.Edges.Length} edges, "
+            $"[green]valid[/]: {graph.Nodes.Count()} nodes, {graph.Definition.Edges.Length} edges, "
             + $"widest parallel group {widest}, {conditionalPaths} conditional path(s), "
             + $"{loopBacks} loop-back(s), {approvals} human checkpoint(s), "
             + $"{warningCount} warning(s).");

@@ -192,7 +192,7 @@ public static class RunEvidenceWriter
             DecisionRecordedPayload payload = @event.Payload<DecisionRecordedPayload>();
 
             markdown.AppendLine(CultureInfo.InvariantCulture,
-                $"### `{payload.DecisionId}` — {payload.Question}");
+                $"### `{payload.DecisionId}`: {payload.Question}");
             markdown.AppendLine();
             markdown.AppendLine(CultureInfo.InvariantCulture,
                 $"**Chosen:** {payload.Chosen} (confidence {payload.Confidence:0.##}, "

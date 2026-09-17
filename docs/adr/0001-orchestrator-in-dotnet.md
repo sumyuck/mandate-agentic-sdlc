@@ -23,7 +23,7 @@ event store, gates, policy.
 | .NET + an off-the-shelf workflow engine (Elsa, Workflow Core, Temporal) | Same objection as the Python frameworks, plus heavier infrastructure. Temporal in particular would need a server, breaking the "clone and run" requirement. |
 
 ## Consequences
-- The engine's behaviour is fully ours to explain in an interview — every gate, retry and
+- The engine's behaviour is fully ours to explain in an interview, every gate, retry and
   rollback decision is defensible line by line.
 - More code to write than a framework-based approach; mitigated by the build ordering in
   `PLAN.md`, where the governance core lands before the agents.

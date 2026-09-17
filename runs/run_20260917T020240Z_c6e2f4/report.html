@@ -59,13 +59,13 @@ svg { max-width: 100%; height: auto; }</style>
 Add sensible limits to the create endpoint and make sure abusive clients get throttled
 rather than taking the service down for everyone else.</p>
 <h2>Reliability</h2>
-<p class="muted">Every figure below is computed from the run's event log. None of them is stored, so none of them can be set &mdash; only caused.</p>
+<p class="muted">Every figure below is computed from the run's event log. None of them is stored, so none of them can be set, only caused.</p>
 <div class="cards">
 <div class="card"><div class="label">success rate</div><div class="value">88.9%</div><div class="note">8 of 9 attempted</div></div>
 <div class="card"><div class="label">end to end</div><div class="value">3.6m</div><div class="note">228 events</div></div>
 <div class="card"><div class="label">stages run</div><div class="value">10</div><div class="note">1 not required on this path</div></div>
 <div class="card"><div class="label">retry rate</div><div class="value">28.6%</div><div class="note">4 of 14 attempts</div></div>
-<div class="card"><div class="label">mttr</div><div class="value">&mdash;</div><div class="note">1 never recovered</div></div>
+<div class="card"><div class="label">mttr</div><div class="value">none</div><div class="note">1 never recovered</div></div>
 <div class="card"><div class="label">rollback rate</div><div class="value">0%</div><div class="note">0 compensation(s)</div></div>
 <div class="card"><div class="label">gate block rate</div><div class="value">7%</div><div class="note">3 of 43 conditions</div></div>
 <div class="card"><div class="label">stage p50 / p95</div><div class="value">52ms / 3.2m</div><div class="note">per stage</div></div>
@@ -126,14 +126,14 @@ tests/Service.Tests/ClientKeyResolverTests.cs(20,59): error CS0234: The type or 
 <h2>Decisions</h2>
 <div class="decision">
 <div class="q">How should &quot;one client&quot; be identified for the purpose of rate limiting the create endpoint?</div>
-<p><strong>IP address</strong> &mdash; IP-based limiting is the safe default for a public create endpoint and does not presuppose infrastructure (auth) that isn't confirmed to exist; documented as an assumption to be revisited if the endpoint is or becomes authenticated.</p>
+<p><strong>IP address</strong>: IP-based limiting is the safe default for a public create endpoint and does not presuppose infrastructure (auth) that isn't confirmed to exist; documented as an assumption to be revisited if the endpoint is or becomes authenticated.</p>
 <p class="muted">by agent:requirements-analyst, confidence 0.6</p>
 <ul>
 <li>Rejected <strong>API key / authenticated account id</strong>: No evidence in the request or its framing that the create endpoint requires authentication; assuming an auth layer that may not exist risks building a limiter with no key to read.</li>
 </ul></div>
 <div class="decision">
 <div class="q">Which rate-limiting algorithm should govern the create endpoint?</div>
-<p><strong>Fixed window counter</strong> &mdash; The requester's recorded clarification explicitly says 'Fixed window of 60 create requests per API key per minute,' so this is not a judgment call, it is a given.</p>
+<p><strong>Fixed window counter</strong>: The requester's recorded clarification explicitly says 'Fixed window of 60 create requests per API key per minute,' so this is not a judgment call, it is a given.</p>
 <p class="muted">by agent:requirements-analyst, confidence 0.97</p>
 <ul>
 <li>Rejected <strong>Sliding window log/counter</strong>: Not what the requester specified, and adds implementation complexity (timestamp tracking or interpolation) the clarification did not ask for.</li>
@@ -141,7 +141,7 @@ tests/Service.Tests/ClientKeyResolverTests.cs(20,59): error CS0234: The type or 
 </ul></div>
 <div class="decision">
 <div class="q">How should a 'client' be identified for the purpose of counting requests?</div>
-<p><strong>API key, with client IP as fallback for unkeyed requests</strong> &mdash; Directly matches the recorded clarification: 'Only POST /api/v1/links is limited. Requests without an API key are limited by client IP on the same terms.'</p>
+<p><strong>API key, with client IP as fallback for unkeyed requests</strong>: Directly matches the recorded clarification: 'Only POST /api/v1/links is limited. Requests without an API key are limited by client IP on the same terms.'</p>
 <p class="muted">by agent:requirements-analyst, confidence 0.95</p>
 <ul>
 <li>Rejected <strong>API key only, unkeyed requests unlimited</strong>: Leaves the exact flood vector the request describes — an anonymous client hammering the endpoint — completely unthrottled, defeating the stated purpose.</li>
@@ -149,21 +149,21 @@ tests/Service.Tests/ClientKeyResolverTests.cs(20,59): error CS0234: The type or 
 </ul></div>
 <div class="decision">
 <div class="q">Where should rate-limit counters be stored?</div>
-<p><strong>In-process memory, per instance</strong> &mdash; The clarification states this directly. The known consequence — that a client's effective limit multiplies with instance count — is recorded as an explicit out-of-scope limitation, not silently absorbed.</p>
+<p><strong>In-process memory, per instance</strong>: The clarification states this directly. The known consequence — that a client's effective limit multiplies with instance count — is recorded as an explicit out-of-scope limitation, not silently absorbed.</p>
 <p class="muted">by agent:requirements-analyst, confidence 0.95</p>
 <ul>
 <li>Rejected <strong>Shared external store (e.g. Redis, database)</strong>: Explicitly excluded by the requester's clarification ('no shared store, no distributed coordination'); would also add an infrastructure dependency and failure mode out of scope for this change.</li>
 </ul></div>
 <div class="decision">
 <div class="q">Whether this change is medium or high blast radius</div>
-<p><strong>high</strong> &mdash; The rubric defines high as 'a public contract... or anything on a path where failure is not locally contained.' Both conditions are met here independently: the create endpoint's documented response contract gains a new status and header, and the mechanism (HTTP middleware or endpoint-level policy) sits on the shared ASP.NET Core pipeline where a scoping error bleeds into every other route.</p>
+<p><strong>high</strong>: The rubric defines high as 'a public contract... or anything on a path where failure is not locally contained.' Both conditions are met here independently: the create endpoint's documented response contract gains a new status and header, and the mechanism (HTTP middleware or endpoint-level policy) sits on the shared ASP.NET Core pipeline where a scoping error bleeds into every other route.</p>
 <p class="muted">by agent:codebase-analyst, confidence 0.75</p>
 <ul>
 <li>Rejected <strong>medium</strong>: It still adds a new HTTP status code (429) and a new response header (Retry-After) to a documented, versioned contract in contracts/openapi.yaml, and — per the rubric's own definition — a public contract change is high regardless of how few files are touched. It also sits on a path (the request-handling pipeline in Program.cs) where a scoping mistake does not stay local: ASP.NET Core rate-limiting middleware applied incorrectly affects every route mapped after it, not just the create endpoint.</li>
 </ul></div>
 <div class="decision">
 <div class="q">What mechanism enforces the 60-requests-per-60-seconds-per-client cap, given it must be concurrency-safe, memory-bounded, and use no external store?</div>
-<p><strong>ASP.NET Core built-in RateLimiter middleware (fixed-window, partitioned by client key)</strong> &mdash; It ships in the shared framework (no new package), its FixedWindowRateLimiter is a proven, race-free primitive that satisfies AC10 by construction rather than by careful hand-written locking, it produces Retry-After metadata on rejection for free (AC5), and per-route attachment via RequireRateLimiting keeps every other endpoint (AC8) untouched without relying on careful middleware ordering.</p>
+<p><strong>ASP.NET Core built-in RateLimiter middleware (fixed-window, partitioned by client key)</strong>: It ships in the shared framework (no new package), its FixedWindowRateLimiter is a proven, race-free primitive that satisfies AC10 by construction rather than by careful hand-written locking, it produces Retry-After metadata on rejection for free (AC5), and per-route attachment via RequireRateLimiting keeps every other endpoint (AC8) untouched without relying on careful middleware ordering.</p>
 <p class="muted">by agent:architect, confidence 0.85</p>
 <ul>
 <li>Rejected <strong>Hand-rolled ConcurrentDictionary&lt;string, WindowState&gt; counter</strong>: Duplicates a primitive the framework already implements correctly under concurrency; a naive read-then-write increment is exactly the race the impact analysis flags as the highest-risk bug (AC10), and eviction/expiry would need to be built and tested from scratch.</li>
@@ -172,7 +172,7 @@ tests/Service.Tests/ClientKeyResolverTests.cs(20,59): error CS0234: The type or 
 </ul></div>
 <div class="decision">
 <div class="q">Where does the rate-limit decision happen: inside the HTTP layer before LinkService is invoked, or inside LinkService itself?</div>
-<p><strong>HTTP layer (Program.cs / middleware), before LinkService.CreateAsync is ever called</strong> &mdash; Rate limiting is about a caller's request rate, not about the validity of the link being created — it belongs with the other HTTP-layer-only decision in this codebase (status-code selection), keeps LinkService's existing test suite and behavior stable, and matches the requirement's exact scope (this one route only).</p>
+<p><strong>HTTP layer (Program.cs / middleware), before LinkService.CreateAsync is ever called</strong>: Rate limiting is about a caller's request rate, not about the validity of the link being created — it belongs with the other HTTP-layer-only decision in this codebase (status-code selection), keeps LinkService's existing test suite and behavior stable, and matches the requirement's exact scope (this one route only).</p>
 <p class="muted">by agent:architect, confidence 0.85</p>
 <ul>
 <li>Rejected <strong>Inside LinkService.CreateAsync, via a new parameter and CreateOutcomeKind.RateLimited member</strong>: Breaks the signature of a method all 11 existing LinkServiceTests call directly with a single argument, forcing every test to change for a concern (client identity, request timing) that has nothing to do with link-creation domain rules; it also mixes an HTTP/transport concern (who is calling, how fast) into a layer that the existing design explicitly keeps HTTP-agnostic.</li>
@@ -180,14 +180,14 @@ tests/Service.Tests/ClientKeyResolverTests.cs(20,59): error CS0234: The type or 
 <h2>Audit log</h2>
 <details><summary>228 events, each committing to its predecessor</summary>
 <table><thead><tr><th class="num">#</th><th>event</th><th>stage</th><th>actor</th><th>digest</th></tr></thead><tbody>
-<tr><td class="num">1</td><td>RunPlanned</td><td class="mono">&amp;mdash;</td><td class="mono">engine:orchestrator</td><td class="mono">5f56d16d</td></tr>
+<tr><td class="num">1</td><td>RunPlanned</td><td class="mono">&amp;ndash;</td><td class="mono">engine:orchestrator</td><td class="mono">5f56d16d</td></tr>
 <tr><td class="num">2</td><td>ContextFactAdded</td><td class="mono">run</td><td class="mono">engine:orchestrator</td><td class="mono">79a2da55</td></tr>
 <tr><td class="num">3</td><td>ContextFactAdded</td><td class="mono">run</td><td class="mono">engine:orchestrator</td><td class="mono">94be2703</td></tr>
 <tr><td class="num">4</td><td>ContextFactAdded</td><td class="mono">run</td><td class="mono">engine:orchestrator</td><td class="mono">dbe8f1a1</td></tr>
 <tr><td class="num">5</td><td>ContextFactAdded</td><td class="mono">run</td><td class="mono">engine:orchestrator</td><td class="mono">4a9a67f4</td></tr>
 <tr><td class="num">6</td><td>ContextFactAdded</td><td class="mono">run</td><td class="mono">engine:orchestrator</td><td class="mono">be96b4f4</td></tr>
 <tr><td class="num">7</td><td>ContextFactAdded</td><td class="mono">run</td><td class="mono">engine:orchestrator</td><td class="mono">6a02fe74</td></tr>
-<tr><td class="num">8</td><td>RunStarted</td><td class="mono">&amp;mdash;</td><td class="mono">engine:orchestrator</td><td class="mono">4ecaa7ba</td></tr>
+<tr><td class="num">8</td><td>RunStarted</td><td class="mono">&amp;ndash;</td><td class="mono">engine:orchestrator</td><td class="mono">4ecaa7ba</td></tr>
 <tr><td class="num">9</td><td>EntryGateEvaluated</td><td class="mono">intake</td><td class="mono">engine:orchestrator</td><td class="mono">b7ea7aed</td></tr>
 <tr><td class="num">10</td><td>NodeStateChanged</td><td class="mono">intake</td><td class="mono">engine:orchestrator</td><td class="mono">93f19878</td></tr>
 <tr><td class="num">11</td><td>NodeStateChanged</td><td class="mono">intake</td><td class="mono">engine:orchestrator</td><td class="mono">31ba6ae9</td></tr>
@@ -234,9 +234,9 @@ tests/Service.Tests/ClientKeyResolverTests.cs(20,59): error CS0234: The type or 
 <tr><td class="num">52</td><td>ApprovalRequested</td><td class="mono">clarification</td><td class="mono">engine:orchestrator</td><td class="mono">7470626e</td></tr>
 <tr><td class="num">53</td><td>NodeStateChanged</td><td class="mono">clarification</td><td class="mono">engine:orchestrator</td><td class="mono">8ad5b4e2</td></tr>
 <tr><td class="num">54</td><td>NodeStateChanged</td><td class="mono">impact-analysis</td><td class="mono">engine:orchestrator</td><td class="mono">ace28a32</td></tr>
-<tr><td class="num">55</td><td>RunCompleted</td><td class="mono">&amp;mdash;</td><td class="mono">engine:orchestrator</td><td class="mono">0dfbd945</td></tr>
+<tr><td class="num">55</td><td>RunCompleted</td><td class="mono">&amp;ndash;</td><td class="mono">engine:orchestrator</td><td class="mono">0dfbd945</td></tr>
 <tr><td class="num">56</td><td>ApprovalGranted</td><td class="mono">clarification</td><td class="mono">human:muskan</td><td class="mono">ccea463e</td></tr>
-<tr><td class="num">57</td><td>RunStarted</td><td class="mono">&amp;mdash;</td><td class="mono">engine:orchestrator</td><td class="mono">35474068</td></tr>
+<tr><td class="num">57</td><td>RunStarted</td><td class="mono">&amp;ndash;</td><td class="mono">engine:orchestrator</td><td class="mono">35474068</td></tr>
 <tr><td class="num">58</td><td>NodeStateChanged</td><td class="mono">impact-analysis</td><td class="mono">engine:orchestrator</td><td class="mono">c6380465</td></tr>
 <tr><td class="num">59</td><td>NodeStateChanged</td><td class="mono">impact-analysis</td><td class="mono">engine:orchestrator</td><td class="mono">5379cd04</td></tr>
 <tr><td class="num">60</td><td>NodeStateChanged</td><td class="mono">impact-analysis</td><td class="mono">engine:orchestrator</td><td class="mono">ccaaa78b</td></tr>
@@ -301,9 +301,9 @@ tests/Service.Tests/ClientKeyResolverTests.cs(20,59): error CS0234: The type or 
 <tr><td class="num">119</td><td>ExitGateEvaluated</td><td class="mono">architecture</td><td class="mono">engine:orchestrator</td><td class="mono">df9e06a4</td></tr>
 <tr><td class="num">120</td><td>ApprovalRequested</td><td class="mono">architecture</td><td class="mono">engine:orchestrator</td><td class="mono">bfcdbfa0</td></tr>
 <tr><td class="num">121</td><td>NodeStateChanged</td><td class="mono">architecture</td><td class="mono">engine:orchestrator</td><td class="mono">75b463e6</td></tr>
-<tr><td class="num">122</td><td>RunCompleted</td><td class="mono">&amp;mdash;</td><td class="mono">engine:orchestrator</td><td class="mono">b9be8712</td></tr>
+<tr><td class="num">122</td><td>RunCompleted</td><td class="mono">&amp;ndash;</td><td class="mono">engine:orchestrator</td><td class="mono">b9be8712</td></tr>
 <tr><td class="num">123</td><td>ApprovalGranted</td><td class="mono">architecture</td><td class="mono">human:alex</td><td class="mono">0c8c1b8d</td></tr>
-<tr><td class="num">124</td><td>RunStarted</td><td class="mono">&amp;mdash;</td><td class="mono">engine:orchestrator</td><td class="mono">15923236</td></tr>
+<tr><td class="num">124</td><td>RunStarted</td><td class="mono">&amp;ndash;</td><td class="mono">engine:orchestrator</td><td class="mono">15923236</td></tr>
 <tr><td class="num">125</td><td>ExitGateEvaluated</td><td class="mono">architecture</td><td class="mono">engine:orchestrator</td><td class="mono">d1ef59f0</td></tr>
 <tr><td class="num">126</td><td>ContextFactAdded</td><td class="mono">run</td><td class="mono">engine:orchestrator</td><td class="mono">2b28eae8</td></tr>
 <tr><td class="num">127</td><td>NodeStateChanged</td><td class="mono">architecture</td><td class="mono">agent:architect</td><td class="mono">86518cca</td></tr>
@@ -407,7 +407,7 @@ tests/Service.Tests/ClientKeyResolverTests.cs(20,59): error CS0234: The type or 
 <tr><td class="num">225</td><td>ModelCalled</td><td class="mono">implement</td><td class="mono">agent:implementer</td><td class="mono">e1f60c36</td></tr>
 <tr><td class="num">226</td><td>ExitGateEvaluated</td><td class="mono">implement</td><td class="mono">engine:orchestrator</td><td class="mono">b00db439</td></tr>
 <tr><td class="num">227</td><td>NodeStateChanged</td><td class="mono">implement</td><td class="mono">agent:implementer</td><td class="mono">3a16bb4d</td></tr>
-<tr><td class="num">228</td><td>RunCompleted</td><td class="mono">&amp;mdash;</td><td class="mono">engine:orchestrator</td><td class="mono">9ae73a41</td></tr>
+<tr><td class="num">228</td><td>RunCompleted</td><td class="mono">&amp;ndash;</td><td class="mono">engine:orchestrator</td><td class="mono">9ae73a41</td></tr>
 </tbody></table></details>
 <p class="footnote">run_20260917T020240Z_c6e2f4: chain intact across 228 event(s). Every figure in this report is derived from that log rather than recorded alongside it, so the report cannot say anything the log does not support. Generated by mandate/0.1.0 (.NETCoreApp,Version=v10.0; .NET 10.0.11).</p>
 </body></html>

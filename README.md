@@ -24,21 +24,37 @@ deliverable; the service is the evidence that it works.
 
 No API key required. The model exchanges replay from committed recordings.
 
+One command runs the whole tour:
+
+```bash
+make demo
+```
+
+It checks the toolchain, builds, validates the lifecycle, proves the model layer
+offline, walks all eleven stages with no key and no network, loads the three recorded
+runs and verifies their audit chains. Or take the steps yourself:
+
 ```bash
 make doctor                 # confirm the toolchain matches global.json
-make verify                 # build with warnings as errors, 853 tests, style check
+make verify                 # build with warnings as errors, 867 tests, style check
 make workflow               # validate the lifecycle and show its parallel structure
 make llm                    # prove the model layer works, offline
 make run-model LLM=stub     # walk the whole lifecycle with no key and no network
 ```
 
-Then read what the system actually did:
+Then read what the system actually did. The recorded runs are committed as evidence
+rather than as a database, so the first command loads them into your local store:
 
 ```bash
+dotnet run --project src/Mandate.Cli -- runs import runs
 dotnet run --project src/Mandate.Cli -- runs list
 dotnet run --project src/Mandate.Cli -- runs metrics run_20260917T004505Z_e2258e
 dotnet run --project src/Mandate.Cli -- audit verify
 ```
+
+`audit verify` recomputes the SHA-256 chain over every event of every run, on your
+machine, from the files in this repository. It is the claim this system rests on and
+it is checkable in one command.
 
 And open `runs/run_20260917T004505Z_e2258e/report.html`, a self-contained page with the
 timeline, the gate verdicts, the decisions and their rejected options, and the artifact
@@ -152,7 +168,7 @@ a control, on a real vulnerability, with the reasoning recorded.
 |---|---|
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Components, control flow, governance mechanisms, key decisions, what the system does not do |
 | [`docs/RUNBOOK.md`](docs/RUNBOOK.md) | Installing, running, every command, operating a live run, spend control |
-| [`docs/TESTING.md`](docs/TESTING.md) | The 853 tests and what they pin, the scope boundaries, and the trade-offs behind each design choice |
+| [`docs/TESTING.md`](docs/TESTING.md) | The 867 tests and what they pin, the scope boundaries, and the trade-offs behind each design choice |
 | [`docs/TRACEABILITY.md`](docs/TRACEABILITY.md) | Every requirement in the brief mapped to code, test and evidence |
 | [`docs/FINAL-SUMMARY.md`](docs/FINAL-SUMMARY.md) | Plan, rationale, artifacts, risk controls, assumptions, roadmap |
 | [`docs/scenarios/`](docs/scenarios/) | The three runs, in detail |
@@ -205,9 +221,10 @@ config/                  dated model prices, with the source they came from
 cassettes/               recorded model exchanges, keyed by request content
 scenarios/               the three requirements, as given to the system
 runs/                    committed evidence: events, timelines, HTML reports
+scripts/                 the guided demo, and toolchain resolution
 services/                the URL shortener, produced by Mandate runs
 templates/               trees a run is seeded from
-tests/                   853 tests across 9 projects
+tests/                   867 tests across 9 projects
 docs/                    architecture, ADRs, scenarios, testing, traceability
 ```
 

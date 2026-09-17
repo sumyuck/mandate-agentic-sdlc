@@ -55,7 +55,7 @@ public sealed record AuditVerification(
     /// <summary>A one-line summary for CLI output.</summary>
     public string Summary => IsIntact
         ? $"{RunId}: chain intact across {EventCount} event(s)."
-        : $"{RunId}: chain BROKEN — {Breaks.Length} defect(s) across {EventCount} event(s); "
+        : $"{RunId}: chain BROKEN: {Breaks.Length} defect(s) across {EventCount} event(s); "
           + $"first at sequence {Breaks[0].Sequence} ({Breaks[0].Reason}).";
 }
 

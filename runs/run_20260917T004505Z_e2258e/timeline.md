@@ -41,7 +41,7 @@ Persist links in SQLite. Generate codes as base62 over a monotonic identifier.
 
 ## Decisions
 
-### `requirements-ipv6-private-range-handling` — Whether to block IPv6 loopback/link-local/unique-local addresses alongside the explicitly named IPv4 loopback/link-local/RFC1918 ranges
+### `requirements-ipv6-private-range-handling`: Whether to block IPv6 loopback/link-local/unique-local addresses alongside the explicitly named IPv4 loopback/link-local/RFC1918 ranges
 
 **Chosen:** Extend to IPv6 analogues (confidence 0.7, by agent:requirements-analyst)
 
@@ -49,7 +49,7 @@ The request's intent is clearly SSRF/local-target prevention; RFC 1918 is an IPv
 
 - Rejected **IPv4-only literal reading**: Leaves an SSRF hole for IPv6 loopback/link-local/ULA addresses that is functionally identical to the IPv4 case the request is clearly trying to close; a silent gap here is a security defect, not a style choice.
 
-### `requirements-short-url-base-source` — How the service determines the host/scheme used to build the 'absolute short URL' returned by POST /api/v1/links
+### `requirements-short-url-base-source`: How the service determines the host/scheme used to build the 'absolute short URL' returned by POST /api/v1/links
 
 **Chosen:** Configured base URL (confidence 0.8, by agent:requirements-analyst)
 
@@ -57,7 +57,7 @@ A fixed, operator-controlled base URL is deterministic, safe by default, and the
 
 - Rejected **Derived from request headers**: Trusting client-supplied Host headers to construct a URL that will be persisted/returned invites host-header-injection style abuse and produces non-deterministic output depending on how the service is fronted.
 
-### `requirements-alias-charset` — What character set a user-supplied custom alias may use
+### `requirements-alias-charset`: What character set a user-supplied custom alias may use
 
 **Chosen:** Base62 charset (same as generated codes) (confidence 0.75, by agent:requirements-analyst)
 
@@ -65,7 +65,7 @@ Keeps aliases and generated codes in one uniform, unambiguous key space stored i
 
 - Rejected **Broad URL-safe charset**: Widens the code space beyond what the generator ever produces, complicates routing/escaping, and doesn't change the product's behavior in any way the requester is likely to care about — but a choice still has to be made and recorded.
 
-### `architecture-code-uniqueness-concurrency` — How do we guarantee that alias/generated-code uniqueness (AC4, AC19) and click-count increments (AC12, AC15) are correct under concurrent requests, given SQLite's single-writer model?
+### `architecture-code-uniqueness-concurrency`: How do we guarantee that alias/generated-code uniqueness (AC4, AC19) and click-count increments (AC12, AC15) are correct under concurrent requests, given SQLite's single-writer model?
 
 **Chosen:** Native SQLite serialization + unique constraint + bounded retry (confidence 0.85, by agent:architect)
 
@@ -76,7 +76,7 @@ It gives the exact correctness AC19 demands (a DB-level constraint that cannot b
 - Rejected **Optimistic pre-check (SELECT then INSERT)**: Classic TOCTOU race — two concurrent requests for the same alias can both pass the SELECT before either INSERTs, directly failing AC19.
 - Rejected **Design for multi-instance / distributed coordination**: Explicitly out of scope — the requirements name a single SQLite instance, and SQLite's file locking doesn't extend across processes or machines anyway, so this would be unused complexity for a requirement nobody asked for.
 
-### `release-readiness-go-no-go` — Whether to recommend release given the current evidence set
+### `release-readiness-go-no-go`: Whether to recommend release given the current evidence set
 
 **Chosen:** go (confidence 0.68, by agent:release-manager)
 

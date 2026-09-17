@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using Mandate.Core.Events;
+using Mandate.Core.Execution;
 using Mandate.Core.Identifiers;
 using Mandate.Core.Runs;
 using Mandate.Persistence.Sqlite;
@@ -47,6 +48,39 @@ public sealed class SqliteRunJournalTests : IDisposable
         }
 
         return events;
+    }
+
+    /// <summary>
+    /// Regression: the summary query groups by run id, and a filter appended after the
+    /// GROUP BY binds to the grouping expression rather than to the WHERE clause. That is
+    /// valid SQL which silently matches every run, so asking for a run that does not exist
+    /// returned a different run's summary under the requested id.
+    /// </summary>
+    [Fact]
+    public async Task A_run_that_is_not_in_the_store_is_not_found_even_when_others_are()
+    {
+        using SqliteRunJournal journal = SqliteRunJournal.Open(DatabasePath);
+
+        await WriteRunAsync(journal, Run("aaa111"), 3);
+        await WriteRunAsync(journal, Run("bbb222"), 4);
+
+        Assert.Null(await journal.FindAsync(Run("zzz999"), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Finding_a_run_returns_that_run_and_not_a_neighbour()
+    {
+        using SqliteRunJournal journal = SqliteRunJournal.Open(DatabasePath);
+
+        await WriteRunAsync(journal, Run("aaa111"), 3, scenario: "Greenfield");
+        await WriteRunAsync(journal, Run("bbb222"), 5, scenario: "Brownfield");
+
+        RunSummary? found = await journal.FindAsync(Run("bbb222"), CancellationToken.None);
+
+        Assert.NotNull(found);
+        Assert.Equal(Run("bbb222"), found.RunId);
+        Assert.Equal("Brownfield", found.Scenario);
+        Assert.Equal(5, found.EventCount);
     }
 
     [Fact]

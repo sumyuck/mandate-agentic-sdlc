@@ -22,9 +22,9 @@ All model access goes through an `ILlmClient` port with four implementations:
 | `StubLlmClient` | Deterministic synthetic answers for unit tests and for walking the lifecycle with neither key nor recording |
 | `BudgetedLlmClient` | Decorator that refuses a call which would take the run past its spend ceiling (ADR-0013) |
 
-A cassette is keyed by the **content address of the request** — prompt id, prompt version,
+A cassette is keyed by the **content address of the request**, prompt id, prompt version,
 model, system prompt, conversation and output ceiling, hashed with the same canonical
-serializer the audit chain uses — and filed at
+serializer the audit chain uses, and filed at
 `cassettes/<prompt>.<version>/<fingerprint>.json`. The default mode is `--llm replay`, which
 requires no API key and no network.
 
@@ -32,7 +32,7 @@ requires no API key and no network.
 > `runs/<runId>/llm/`. That is wrong, and the reason is worth recording: a recording filed
 > under the run that made it can only ever be replayed by that run, and every re-execution
 > gets a new run id. Keying by request content instead makes a recording an answer to a
-> *question*, not to an *occasion* — so any run that asks the same question gets it, and
+> *question*, not to an *occasion*, so any run that asks the same question gets it, and
 > the three scenarios naturally share the recordings they have in common. The original
 > layout would have produced a system that recorded everything and could replay nothing.
 
@@ -52,7 +52,7 @@ documented and hoped for:
 |---|---|
 | Live calls only | Reviewer needs a key and a network; evidence is irreproducible; a rate limit can destroy the demo. |
 | Temperature 0 and call it deterministic | Reduces variance, does not remove it, and still requires a key. |
-| Mocks only, no live path | Cheap to demo but impossible to defend — "does it actually work with a model?" would have no answer. |
+| Mocks only, no live path | Cheap to demo but impossible to defend; "does it actually work with a model?" would have no answer. |
 
 ## Consequences
 - The whole submission replays end to end with no credentials, no network, and identical
@@ -60,7 +60,7 @@ documented and hoped for:
 - A cache miss during replay is a hard failure, which keeps the cassettes honest: if a prompt
   changes, the run must be re-recorded rather than silently drifting.
 - Cassettes must be scrubbed before commit; prompts contain repository content.
-- Every response carries its own `Source` — live, replay or stub — and that label travels
+- Every response carries its own `Source`, live, replay or stub, and that label travels
   into the audit log. A stubbed run is not a cheap run: it is a run in which no engineering
   judgment was exercised, and its evidence has to say so.
 - Keeping recorded runs in step with evolving prompts is extra upkeep. Accepted for the

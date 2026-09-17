@@ -74,7 +74,7 @@ internal sealed class DenyCommand : AsyncCommand<DenyCommand.Settings>
         {
             // A refusal with no stated reason cannot be acted on by whoever has to fix it.
             AnsiConsole.MarkupLine(
-                "[red]a refusal needs a reason[/] — pass --note. Whoever has to act on this "
+                "[red]a refusal needs a reason[/]: pass --note. Whoever has to act on this "
                 + "needs to know what was wrong.");
 
             return ExitCode.BadInput;
@@ -100,7 +100,7 @@ internal static class ApprovalDecision
 
         if (string.IsNullOrWhiteSpace(settings.Role))
         {
-            AnsiConsole.MarkupLine("[red]--role is required[/] — an approval is always in a role.");
+            AnsiConsole.MarkupLine("[red]--role is required[/]: an approval is always in a role.");
             return ExitCode.BadInput;
         }
 

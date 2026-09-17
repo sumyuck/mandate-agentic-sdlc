@@ -33,7 +33,7 @@ of every other endpoint unchanged.
 
 ## Decisions
 
-### `requirements-delete-auth-model` — What authentication/authorization should DELETE /api/v1/links/{code} require, given the request specifies none explicitly?
+### `requirements-delete-auth-model`: What authentication/authorization should DELETE /api/v1/links/{code} require, given the request specifies none explicitly?
 
 **Chosen:** Reuse existing endpoint auth pattern (confidence 0.7, by agent:requirements-analyst)
 
@@ -42,7 +42,7 @@ This is a brownfield task with existing code available; the convention already i
 - Rejected **No authentication (public delete)**: A destructive, irreversible operation with no access control is a plausible but risky default; if the existing system has any auth on write endpoints, silently omitting it here would be a real security regression, not a minor detail.
 - Rejected **New elevated/admin-only permission**: Not requested anywhere in the text, and inventing a new authorization tier would expand scope beyond 'add a delete endpoint' without any signal that one is needed.
 
-### `architecture-delete-atomicity-mechanism` — How should LinkRepository detect and perform the removal of a link and its click statistics for DELETE /api/v1/links/{code}, given both live in one row of one table?
+### `architecture-delete-atomicity-mechanism`: How should LinkRepository detect and perform the removal of a link and its click statistics for DELETE /api/v1/links/{code}, given both live in one row of one table?
 
 **Chosen:** Single DELETE statement, affected-row count as the existence signal (confidence 0.9, by agent:architect)
 
@@ -52,7 +52,7 @@ The data model already puts a link and its click count in one row (no separate s
 - Rejected **DELETE ... RETURNING code (mirroring RedirectAsync's pattern)**: RedirectAsync needs RETURNING because it must hand original_url back to the caller; delete has no data to return, only an existence fact, so RETURNING plus a reader is strictly more code and a reader to open/dispose for no benefit over a plain affected-row count.
 - Rejected **Soft delete / tombstone row**: The requirement and its AC8/NFR explicitly forbid any recoverable or hidden state after deletion; any retained row, flagged or not, violates that outright.
 
-### `architecture-delete-outcome-representation` — What type should carry the result of a delete attempt from LinkRepository through LinkService to the HTTP layer?
+### `architecture-delete-outcome-representation`: What type should carry the result of a delete attempt from LinkRepository through LinkService to the HTTP layer?
 
 **Chosen:** Plain bool ("a row existed and was removed") (confidence 0.75, by agent:architect)
 
@@ -60,7 +60,7 @@ Keeps the addition proportional to what it does: a binary fact with no associate
 
 - Rejected **A new discriminated result type, e.g. DeleteOutcome { Deleted, NotFound }, matching the CreateOutcome/RedirectResult convention**: CreateOutcome and RedirectResult carry outcome-specific data (a code/URL, or an error message) alongside the discriminator; delete has exactly two outcomes and neither carries any payload, so a dedicated type would only wrap a bool in ceremony the codebase's own convention doesn't require — those types exist to carry data, not for discrimination's own sake.
 
-### `implement-delete-outcome-shape` — How should the delete outcome be represented between layers
+### `implement-delete-outcome-shape`: How should the delete outcome be represented between layers
 
 **Chosen:** bool (confidence 0.8, by agent:implementer)
 
@@ -68,7 +68,7 @@ Binary outcome needs no discriminated type; matches minimal-surface principle fr
 
 - Rejected **enum result type**: Only two outcomes exist; a bool is simpler and sufficiently clear, avoiding an extra type for no benefit
 
-### `test-test-organization` — Should delete tests be in separate files or merged with existing test files?
+### `test-test-organization`: Should delete tests be in separate files or merged with existing test files?
 
 **Chosen:** Separate files per component (confidence 0.75, by agent:test-engineer)
 
@@ -76,7 +76,7 @@ The implementation split delete into its own methods (DeleteAsync in both LinkRe
 
 - Rejected **Append to existing files**: The existing test files are already 200+ lines each; separating delete tests keeps concerns distinct and makes the test file size manageable for future maintenance. The separate-files pattern also mirrors how the tests discovered the implementation was already written (separate methods in repository and service), making the test organization naturally follow the code organization.
 
-### `test-xunit-warning-fixes` — How to fix xUnit analyzer warnings about Assert.True for substrings and Assert.NotNull on value types?
+### `test-xunit-warning-fixes`: How to fix xUnit analyzer warnings about Assert.True for substrings and Assert.NotNull on value types?
 
 **Chosen:** Use Assert.StartsWith, Assert.Null/Assert.NotNull appropriately (confidence 0.95, by agent:test-engineer)
 
@@ -84,7 +84,7 @@ The warnings are correct; xUnit's specialized assertions (Assert.StartsWith, Ass
 
 - Rejected **Suppress warnings**: The warnings identify genuinely better patterns (Assert.Contains/Assert.StartsWith are more readable and provide better failure messages than Assert.True(Contains(...))); silencing them hides real opportunities for test quality.
 
-### `test-delete-test-coverage-scope` — What should the delete test suite exercise, given that 82% coverage is the measured figure?
+### `test-delete-test-coverage-scope`: What should the delete test suite exercise, given that 82% coverage is the measured figure?
 
 **Chosen:** Comprehensive delete coverage (all code paths and side effects) (confidence 0.88, by agent:test-engineer)
 
@@ -92,7 +92,7 @@ The requirement calls for delete to be observable through other endpoints' behav
 
 - Rejected **Minimal happy-path only**: The previous test run left these behaviors untested; they are the high-value cases the requirement explicitly calls for (AC5, AC6, AC9). A minimal suite would not justify the measured 0.82 coverage or defend against the specific regressions in the impact analysis (§2, §5 of docs/impact-analysis.md).
 
-### `release-readiness-go-no-go` — Whether to recommend go or no-go for this release given the available evidence
+### `release-readiness-go-no-go`: Whether to recommend go or no-go for this release given the available evidence
 
 **Chosen:** go (confidence 0.78, by agent:release-manager)
 

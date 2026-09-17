@@ -14,7 +14,7 @@ the system.
 | | |
 |---|---|
 | Source | 10 projects, 234 C# files |
-| Tests | 853, all passing, warnings as errors |
+| Tests | 867, all passing, warnings as errors |
 | Decisions | 17 ADRs |
 | Lifecycle | 11 stages, 17 edges, 3 conditional paths, 3 loop-backs, 3 human checkpoints |
 | Runs recorded | 3, totalling 578 events, all chains intact |
@@ -200,7 +200,7 @@ Verified mechanically, and reproducible by anyone with the repository:
 - The service builds and passes 96 tests **outside** the orchestrator. A test result the
   system grades itself on is not evidence, so that check is run independently.
 - All three audit chains verify. The store refuses UPDATE and DELETE at the database level.
-- 853 tests pass with warnings as errors and `dotnet format` clean.
+- 867 tests pass with warnings as errors and `dotnet format` clean.
 - The architecture rules are tests, so breaking them fails the build rather than the review.
 
 Where the boundaries of that verification sit:

@@ -36,7 +36,7 @@ namespace Mandate.Agents.Model;
 public static partial class ContractStubResponder
 {
     /// <summary>The line every stubbed document opens with.</summary>
-    public const string Marker = "STUB — no model produced this. Structure only, no judgment.";
+    public const string Marker = "STUB: no model produced this. Structure only, no judgment.";
 
     /// <summary>Builds a contract-satisfying answer for a rendered prompt.</summary>
     public static string Respond(LlmRequest request)

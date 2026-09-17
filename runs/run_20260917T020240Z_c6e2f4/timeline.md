@@ -29,7 +29,7 @@ tests/Service.Tests/ClientKeyResolverTests.cs(20,59): error CS0234: The type or 
 
 ## Decisions
 
-### `requirements-client-identifier-choice` — How should "one client" be identified for the purpose of rate limiting the create endpoint?
+### `requirements-client-identifier-choice`: How should "one client" be identified for the purpose of rate limiting the create endpoint?
 
 **Chosen:** IP address (confidence 0.6, by agent:requirements-analyst)
 
@@ -37,7 +37,7 @@ IP-based limiting is the safe default for a public create endpoint and does not 
 
 - Rejected **API key / authenticated account id**: No evidence in the request or its framing that the create endpoint requires authentication; assuming an auth layer that may not exist risks building a limiter with no key to read.
 
-### `requirements-rate-limit-algorithm` — Which rate-limiting algorithm should govern the create endpoint?
+### `requirements-rate-limit-algorithm`: Which rate-limiting algorithm should govern the create endpoint?
 
 **Chosen:** Fixed window counter (confidence 0.97, by agent:requirements-analyst)
 
@@ -46,7 +46,7 @@ The requester's recorded clarification explicitly says 'Fixed window of 60 creat
 - Rejected **Sliding window log/counter**: Not what the requester specified, and adds implementation complexity (timestamp tracking or interpolation) the clarification did not ask for.
 - Rejected **Token bucket**: Permits bursts above the flat 60/window figure the requester gave, which would silently change the guarantee they asked for.
 
-### `requirements-client-identification` — How should a 'client' be identified for the purpose of counting requests?
+### `requirements-client-identification`: How should a 'client' be identified for the purpose of counting requests?
 
 **Chosen:** API key, with client IP as fallback for unkeyed requests (confidence 0.95, by agent:requirements-analyst)
 
@@ -55,7 +55,7 @@ Directly matches the recorded clarification: 'Only POST /api/v1/links is limited
 - Rejected **API key only, unkeyed requests unlimited**: Leaves the exact flood vector the request describes — an anonymous client hammering the endpoint — completely unthrottled, defeating the stated purpose.
 - Rejected **IP only for all requests, ignore API key**: Punishes multiple distinct keyed clients sharing an egress IP (e.g. behind NAT or a corporate proxy) as one client, which the requester did not ask for and which is a worse default than keying by identity when identity is available.
 
-### `requirements-counter-storage` — Where should rate-limit counters be stored?
+### `requirements-counter-storage`: Where should rate-limit counters be stored?
 
 **Chosen:** In-process memory, per instance (confidence 0.95, by agent:requirements-analyst)
 
@@ -63,7 +63,7 @@ The clarification states this directly. The known consequence — that a client'
 
 - Rejected **Shared external store (e.g. Redis, database)**: Explicitly excluded by the requester's clarification ('no shared store, no distributed coordination'); would also add an infrastructure dependency and failure mode out of scope for this change.
 
-### `impact-analysis-blast-radius-classification` — Whether this change is medium or high blast radius
+### `impact-analysis-blast-radius-classification`: Whether this change is medium or high blast radius
 
 **Chosen:** high (confidence 0.75, by agent:codebase-analyst)
 
@@ -71,7 +71,7 @@ The rubric defines high as 'a public contract... or anything on a path where fai
 
 - Rejected **medium**: It still adds a new HTTP status code (429) and a new response header (Retry-After) to a documented, versioned contract in contracts/openapi.yaml, and — per the rubric's own definition — a public contract change is high regardless of how few files are touched. It also sits on a path (the request-handling pipeline in Program.cs) where a scoping mistake does not stay local: ASP.NET Core rate-limiting middleware applied incorrectly affects every route mapped after it, not just the create endpoint.
 
-### `architecture-rate-limiter-mechanism` — What mechanism enforces the 60-requests-per-60-seconds-per-client cap, given it must be concurrency-safe, memory-bounded, and use no external store?
+### `architecture-rate-limiter-mechanism`: What mechanism enforces the 60-requests-per-60-seconds-per-client cap, given it must be concurrency-safe, memory-bounded, and use no external store?
 
 **Chosen:** ASP.NET Core built-in RateLimiter middleware (fixed-window, partitioned by client key) (confidence 0.85, by agent:architect)
 
@@ -81,7 +81,7 @@ It ships in the shared framework (no new package), its FixedWindowRateLimiter is
 - Rejected **External store (Redis / distributed cache) backed counter**: Explicitly out of scope: the clarification states 'no shared store, no distributed coordination,' and the NFRs forbid new external dependencies.
 - Rejected **Sliding-window or token-bucket algorithm**: The requirement specifies a fixed window with no burst allowance; this out-of-scope algorithm class is explicitly excluded in docs/requirements.md §3.
 
-### `architecture-check-placement` — Where does the rate-limit decision happen: inside the HTTP layer before LinkService is invoked, or inside LinkService itself?
+### `architecture-check-placement`: Where does the rate-limit decision happen: inside the HTTP layer before LinkService is invoked, or inside LinkService itself?
 
 **Chosen:** HTTP layer (Program.cs / middleware), before LinkService.CreateAsync is ever called (confidence 0.85, by agent:architect)
 

@@ -5,14 +5,14 @@
 - **Decider:** Human (Muskan Jain)
 
 ## Context
-The brief asks the system to track reliability metrics — success rate, retry and rollback
+The brief asks the system to track reliability metrics; success rate, retry and rollback
 frequency, MTTR, end-to-end latency. The conventional implementation increments counters as
 things happen and stores the totals.
 
 That produces numbers, and it produces a second source of truth. A counter can be incremented
 by code that did not do the thing it counts, missed by a path that forgot to call it, or
 adjusted later. None of those leave a trace. For a system whose central claim is that its
-record is trustworthy, a metric that can disagree with the record is worse than no metric —
+record is trustworthy, a metric that can disagree with the record is worse than no metric;
 it lends the appearance of measurement to whatever the counter happens to say.
 
 ## Decision
@@ -50,8 +50,8 @@ the page.
   statements about what a log can be made to say.
 - Computation is O(events) per request rather than O(1). Irrelevant at a few hundred events
   per run; noted as a scaling limit rather than discovered later.
-- Tracing is emitted separately through `ActivitySource` — a run is a trace, each attempt a
-  span — using the base library so the engine takes no vendor dependency and keeps referencing
+- Tracing is emitted separately through `ActivitySource`, a run is a trace, each attempt a
+  span, using the base library so the engine takes no vendor dependency and keeps referencing
   only the domain. Where those spans go is the operator's decision.
 - Operational logging is a decorator over the journal rather than a second set of call sites,
   so the operational log and the audit log cannot describe different runs.

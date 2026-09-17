@@ -122,6 +122,11 @@ internal static class Program
             runs.AddCommand<ExportRunCommand>("export")
                 .WithDescription("Write a run's evidence to a reviewable directory.")
                 .WithExample("runs", "export", "run_20260916T142500Z_a1b2c3");
+
+            runs.AddCommand<ImportRunsCommand>("import")
+                .WithDescription("Load exported run evidence into the local store.")
+                .WithExample("runs", "import")
+                .WithExample("runs", "import", "runs/run_20260916T142500Z_a1b2c3");
         });
 
         config.AddBranch("llm", llm =>

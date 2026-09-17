@@ -186,6 +186,73 @@ public sealed partial class RunsAndAuditCommandTests
             .ExitCode.ShouldBe(ExitCode.BadInput);
     }
 
+    // ---- runs import ----
+
+    [Fact]
+    public void Exported_evidence_imports_into_an_empty_store_and_verifies_there()
+    {
+        using TemporaryWorkspace source = new();
+        string runId = Seed(source);
+        string evidence = source.Path_("evidence");
+
+        CliHarness.Run("runs", "export", runId, "--to", evidence, "--store", source.Store)
+            .ExitCode.ShouldBe(ExitCode.Success);
+
+        // A different store entirely, standing in for a reviewer's fresh clone.
+        using TemporaryWorkspace reviewer = new();
+
+        CliResult imported = CliHarness.Run(
+            "runs", "import", evidence, "--store", reviewer.Store);
+
+        imported.ExitCode.ShouldBe(ExitCode.Success);
+        imported.Rendered.ShouldContain("chain intact");
+        imported.Rendered.ShouldContain("1 run(s) imported");
+
+        CliHarness.Run("runs", "list", "--store", reviewer.Store)
+            .Rendered.ShouldContain("greenfield");
+
+        CliHarness.Run("audit", "verify", "--store", reviewer.Store)
+            .ExitCode.ShouldBe(ExitCode.Success);
+    }
+
+    [Fact]
+    public void Importing_a_run_the_store_already_holds_reports_it_and_changes_nothing()
+    {
+        using TemporaryWorkspace workspace = new();
+        string runId = Seed(workspace);
+        string evidence = workspace.Path_("evidence");
+
+        CliHarness.Run("runs", "export", runId, "--to", evidence, "--store", workspace.Store);
+
+        CliResult result = CliHarness.Run(
+            "runs", "import", evidence, "--store", workspace.Store);
+
+        result.ExitCode.ShouldBe(ExitCode.Success);
+        result.Rendered.ShouldContain("already present");
+        result.Rendered.ShouldContain("0 run(s) imported");
+    }
+
+    [Fact]
+    public void Importing_from_a_directory_that_does_not_exist_is_refused()
+    {
+        using TemporaryWorkspace workspace = new();
+
+        CliHarness.Run(
+                "runs", "import", workspace.Path_("nowhere"), "--store", workspace.Store)
+            .ExitCode.ShouldBe(ExitCode.BadInput);
+    }
+
+    [Fact]
+    public void Importing_a_directory_holding_no_exports_is_refused()
+    {
+        using TemporaryWorkspace workspace = new();
+        string empty = workspace.Path_("empty");
+        Directory.CreateDirectory(empty);
+
+        CliHarness.Run("runs", "import", empty, "--store", workspace.Store)
+            .ExitCode.ShouldBe(ExitCode.BadInput);
+    }
+
     // ---- audit verify ----
 
     [Fact]

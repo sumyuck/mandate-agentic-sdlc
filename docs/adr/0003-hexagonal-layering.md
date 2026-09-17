@@ -8,7 +8,7 @@
 The orchestration engine needs persistence, policy evaluation, telemetry and LLM access. The
 naive wiring is `Orchestrator -> Persistence, Policy, Observability, Agents`. That makes the
 engine untestable without a database, and makes "what does the engine actually decide?"
-impossible to answer in isolation — which is precisely the question this assessment asks.
+impossible to answer in isolation, which is precisely the question this assessment asks.
 
 ## Decision
 `Mandate.Core` owns the domain model *and* every port (interface) the engine needs.

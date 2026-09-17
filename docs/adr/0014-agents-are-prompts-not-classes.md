@@ -59,11 +59,11 @@ swallowing it. A "decision" with nothing rejected is a statement.
   not read C#.
 - The prompt library's fingerprint is recorded on every run, so "which instructions produced
   this evidence" is answerable from the evidence.
-- Prompts are rendered only from the requirement, the scoped context and the tree — never
+- Prompts are rendered only from the requirement, the scoped context and the tree; never
   from the run id or the attempt number, so the same question is asked on a retry and a run
   can be replayed (ADR-0007).
-- **A gap that was recorded here and has since been closed.** Three context facts —
-  `implementation.builds`, `test.coverage` and `test.failures` — were originally the model's
+- **A gap that was recorded here and has since been closed.** Three context facts,
+  `implementation.builds`, `test.coverage` and `test.failures`, were originally the model's
   own assertion about its own work, which made three gates check a claim rather than a fact.
   [ADR-0015](0015-verified-not-claimed.md) replaced them with measurements from a real
   `dotnet build` and `dotnet test`, and made a stage that overstates its own results fail.

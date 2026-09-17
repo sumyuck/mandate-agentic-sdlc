@@ -88,7 +88,7 @@ public interface IWorkspaceVerifier
 
     private sealed class DisabledWorkspaceVerifier : IWorkspaceVerifier
     {
-        public string Description => "disabled — build and test results are unverified claims";
+        public string Description => "disabled: build and test results are unverified claims";
 
         public bool IsAvailable => false;
 

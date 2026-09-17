@@ -178,7 +178,7 @@ public sealed class ModelStageAgent : IStageAgent
         {
             return StageResult.Failed(
                 $"The model ran out of room after {response.Usage.OutputTokens} tokens. A "
-                + $"truncated answer is a failed stage, not a short one — raise "
+                + $"truncated answer is a failed stage, not a short one, so raise "
                 + $"'max-output-tokens' in {_prompt.Identity}.",
                 modelCalls: calls);
         }
@@ -673,7 +673,7 @@ public sealed class ModelStageAgent : IStageAgent
 
         if (omitted.Count > 0)
         {
-            rendered.AppendLine("Contents withheld for these files — do not assume anything "
+            rendered.AppendLine("Contents withheld for these files. Do not assume anything "
                                 + "about what they contain:");
 
             foreach (string note in omitted)

@@ -234,8 +234,8 @@ block, and cannot cause a state transition the machine forbids.
 | Depth of decomposition and execution quality | 11 stages, 17 edges, 3 conditional paths, 3 loop-backs; the lifecycle is data and validated by 34 rules |
 | Realism and quality of outputs | A service that compiles and passes 96 tests when built outside the orchestrator |
 | Validation and risk management rigour | Measured verification, severity ceilings, policy packs with audited waivers, spend guard that refuses |
-| Clarity and defensibility of decisions | 17 ADRs with alternatives rejected and reasons; 23 commits written as a narrative of each defect |
-| Modular, testable, reliable, secure code with safe change management | 10 projects with an enforced dependency rule, 853 tests, warnings as errors, per-stage commits with real revert |
+| Clarity and defensibility of decisions | 17 ADRs with alternatives rejected and reasons, and a commit history that states the reasoning behind each change |
+| Modular, testable, reliable, secure code with safe change management | 10 projects with an enforced dependency rule, 867 tests, warnings as errors, per-stage commits with real revert |
 | Engineering judgment | [`FINAL-SUMMARY.md`](FINAL-SUMMARY.md), and the limitations stated in [`TESTING.md`](TESTING.md) rather than omitted |
 
 ---

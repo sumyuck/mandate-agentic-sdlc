@@ -65,7 +65,7 @@ internal sealed class AmendCommand : AsyncCommand<AmendCommand.Settings>
         {
             // An amendment discards completed work. The record has to say what justified it.
             AnsiConsole.MarkupLine(
-                "[red]an amendment needs a reason[/] — pass --reason. This discards work that "
+                "[red]an amendment needs a reason[/]: pass --reason. This discards work that "
                 + "was already done, and the record has to say why.");
 
             return ExitCode.BadInput;

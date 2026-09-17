@@ -249,6 +249,92 @@ internal sealed class ExportRunCommand : AsyncCommand<ExportRunCommand.Settings>
     }
 }
 
+/// <summary>Loads exported run evidence into the local store.</summary>
+/// <remarks>
+/// The inverse of <see cref="ExportRunCommand"/>, and what makes committed evidence
+/// reviewable rather than merely readable. A reviewer who clones this repository has the
+/// exported runs but an empty store; importing puts them in front of every command that
+/// inspects a run, including the audit verification, so the chain is checked on their
+/// machine rather than taken on the word of a file that claims it is intact.
+/// </remarks>
+internal sealed class ImportRunsCommand : AsyncCommand<ImportRunsCommand.Settings>
+{
+    internal sealed class Settings : StoreSettings
+    {
+        [CommandArgument(0, "[source]")]
+        [Description("An exported run directory, or a directory of them. Defaults to runs/.")]
+        public string Source { get; init; } = "runs";
+    }
+
+    protected override async Task<int> ExecuteAsync(
+        CommandContext context, Settings settings, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+
+        ImmutableArray<ExportedRun> exported;
+
+        try
+        {
+            exported = RunEvidenceReader.ReadAll(settings.Source);
+        }
+        catch (Exception exception) when (
+            exception is DirectoryNotFoundException or FileNotFoundException or InvalidDataException)
+        {
+            AnsiConsole.MarkupLine($"[red]{exception.Message.EscapeMarkup()}[/]");
+            return ExitCode.BadInput;
+        }
+
+        if (exported.IsEmpty)
+        {
+            AnsiConsole.MarkupLine(
+                $"[yellow]No exported runs under {settings.Source.EscapeMarkup()}.[/]");
+            return ExitCode.BadInput;
+        }
+
+        using SqliteRunJournal journal = SqliteRunJournal.Open(settings.Store);
+
+        int imported = 0;
+        int skipped = 0;
+        bool anyAltered = false;
+
+        foreach (ExportedRun run in exported)
+        {
+            if (await journal.FindAsync(run.RunId, cancellationToken).ConfigureAwait(false)
+                is not null)
+            {
+                AnsiConsole.MarkupLine(
+                    $"[grey]already present[/] {run.RunId.Value.EscapeMarkup()}");
+                skipped++;
+                continue;
+            }
+
+            await journal.ImportAsync(run.RunId, run.Events, cancellationToken)
+                .ConfigureAwait(false);
+
+            // Verify what was just written rather than what was read, so the report covers
+            // the round trip a reviewer is about to rely on.
+            ImmutableArray<RunEvent> stored =
+                await journal.ReadAsync(run.RunId, cancellationToken).ConfigureAwait(false);
+            AuditVerification verification = AuditChain.Verify(run.RunId, stored);
+
+            AnsiConsole.MarkupLine(
+                $"[green]imported[/] {run.RunId.Value.EscapeMarkup()} "
+                + $"[grey]{stored.Length} event(s), "
+                + $"{(verification.IsIntact ? "chain intact" : "CHAIN ALTERED")}[/]");
+
+            anyAltered |= !verification.IsIntact;
+            imported++;
+        }
+
+        AnsiConsole.WriteLine();
+        AnsiConsole.MarkupLine(
+            $"{imported} run(s) imported, {skipped} already present. "
+            + "[grey]Inspect them with `mandate runs list`.[/]");
+
+        return anyAltered ? ExitCode.Failed : ExitCode.Success;
+    }
+}
+
 /// <summary>Shared rendering helpers.</summary>
 internal static class RunStatusMarkup
 {

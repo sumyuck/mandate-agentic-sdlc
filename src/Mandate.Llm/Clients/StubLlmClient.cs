@@ -69,7 +69,7 @@ public sealed class StubLlmClient(Func<LlmRequest, string>? responder = null) : 
     {
         StringBuilder text = new();
 
-        text.AppendLine(CultureInfo.InvariantCulture, $"STUB RESPONSE — no model was called.");
+        text.AppendLine(CultureInfo.InvariantCulture, $"STUB RESPONSE: no model was called.");
         text.AppendLine(CultureInfo.InvariantCulture, $"prompt: {request.PromptId}.{request.PromptVersion}");
         text.AppendLine(CultureInfo.InvariantCulture, $"model requested: {request.Model}");
         text.AppendLine(CultureInfo.InvariantCulture, $"request fingerprint: {request.Fingerprint.Hex}");

@@ -117,9 +117,9 @@ public static class MermaidWorkflowRenderer
     {
         diagram.AppendLine("    subgraph legend[\"legend\"]");
         diagram.AppendLine("        direction LR");
-        diagram.AppendLine("        l1[\"L2 — acts, low-risk output auto-accepted\"]");
-        diagram.AppendLine("        l2[\"L1 — acts in the run workspace\"]");
-        diagram.AppendLine("        l3{{\"L0 — proposes only; a human decides\"}}");
+        diagram.AppendLine("        l1[\"L2: acts, low-risk output auto-accepted\"]");
+        diagram.AppendLine("        l2[\"L1: acts in the run workspace\"]");
+        diagram.AppendLine("        l3{{\"L0: proposes only; a human decides\"}}");
         diagram.AppendLine("    end");
         diagram.AppendLine("    class l1 autoAccept;");
         diagram.AppendLine("    class l2 sandbox;");

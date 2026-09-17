@@ -21,16 +21,24 @@ export PATH="$HOME/.dotnet:$PATH"
 ## Five minutes, start to finish
 
 ```bash
+make demo        # all of the below, in order, with narration
+```
+
+Or step through it:
+
+```bash
 make doctor      # confirm the toolchain matches global.json
-make verify      # build with warnings as errors, run 853 tests, check style
+make verify      # build with warnings as errors, run 867 tests, check style
 make workflow    # validate the lifecycle and show its parallel structure
 make llm         # prove the model layer works, offline, from recordings
 make run-model LLM=stub   # walk the whole lifecycle with no key and no network
 ```
 
-Then read a recorded run:
+Then read a recorded run. Evidence is committed under `runs/` as files rather than as
+a database, so load it into the local store first:
 
 ```bash
+dotnet run --project src/Mandate.Cli -- runs import runs
 dotnet run --project src/Mandate.Cli -- runs list
 dotnet run --project src/Mandate.Cli -- runs show run_20260917T004505Z_e2258e
 dotnet run --project src/Mandate.Cli -- runs metrics run_20260917T004505Z_e2258e
@@ -162,7 +170,16 @@ mandate runs metrics <runId>            # Reliability figures, derived from the 
 mandate runs metrics <runId> --json     # The same, machine readable
 mandate runs report <runId>             # Self-contained HTML
 mandate runs export <runId>             # events.jsonl, run.json, timeline.md
+mandate runs import                     # Load committed evidence from runs/
+mandate runs import <dir>                # Load one exported run, or a directory of them
 ```
+
+`import` is the inverse of `export`, and it is what makes committed evidence
+reviewable rather than merely readable. Digests are loaded as recorded, never
+recomputed, so a file that was edited after export imports and then fails
+verification. That is the outcome that makes the check worth running: if import
+recomputed the hashes, every imported log would verify by construction and prove
+nothing.
 
 ### Verifying
 

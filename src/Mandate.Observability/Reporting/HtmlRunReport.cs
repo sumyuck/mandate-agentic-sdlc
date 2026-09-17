@@ -85,7 +85,7 @@ public static class HtmlRunReport
         page.AppendLine("<h2>Reliability</h2>");
         page.AppendLine(
             """<p class="muted">Every figure below is computed from the run's event log. """
-            + "None of them is stored, so none of them can be set &mdash; only caused.</p>");
+            + "None of them is stored, so none of them can be set, only caused.</p>");
 
         page.AppendLine("<div class=\"cards\">");
 
@@ -97,7 +97,7 @@ public static class HtmlRunReport
         Card(page, "retry rate", Percent(metrics.RetryRate),
             $"{metrics.Retries} of {metrics.Attempts} attempts");
         Card(page, "mttr",
-            metrics.MeanTimeToRecovery is { } mttr ? Duration(mttr) : "&mdash;",
+            metrics.MeanTimeToRecovery is { } mttr ? Duration(mttr) : "none",
             metrics.UnrecoveredFailures > 0
                 ? $"{metrics.UnrecoveredFailures} never recovered"
                 : $"{metrics.Failures.Length} failure(s)");
@@ -109,7 +109,7 @@ public static class HtmlRunReport
             $"{Duration(metrics.MedianStageDuration)} / {Duration(metrics.NinetyFifthStageDuration)}",
             "per stage");
         Card(page, "approval wait",
-            metrics.MeanApprovalWait is { } wait ? Duration(wait) : "&mdash;",
+            metrics.MeanApprovalWait is { } wait ? Duration(wait) : "none",
             $"{metrics.ApprovalsGranted} granted, {metrics.ApprovalsDenied} refused");
         Card(page, "autonomy ratio", Percent(metrics.AutonomyRatio),
             $"{metrics.Attempts} agent attempt(s) vs human decisions");
@@ -329,7 +329,7 @@ public static class HtmlRunReport
             page.AppendLine(CultureInfo.InvariantCulture,
                 $"<div class=\"q\">{H(payload.Question)}</div>");
             page.AppendLine(CultureInfo.InvariantCulture,
-                $"""<p><strong>{H(payload.Chosen)}</strong> &mdash; {H(payload.Rationale)}</p>""");
+                $"""<p><strong>{H(payload.Chosen)}</strong>: {H(payload.Rationale)}</p>""");
             page.AppendLine(CultureInfo.InvariantCulture,
                 $"""<p class="muted">by {H(@event.Actor.Value)}, confidence """
                 + $"{payload.Confidence.ToString("0.##", CultureInfo.InvariantCulture)}</p>");
@@ -360,7 +360,7 @@ public static class HtmlRunReport
         {
             page.AppendLine(CultureInfo.InvariantCulture,
                 $"<tr><td class=\"num\">{@event.Sequence}</td><td>{H(@event.Kind.ToString())}</td>"
-                + $"<td class=\"mono\">{H(@event.NodeId?.Value ?? "&mdash;")}</td>"
+                + $"<td class=\"mono\">{H(@event.NodeId?.Value ?? "&ndash;")}</td>"
                 + $"<td class=\"mono\">{H(@event.Actor.Value)}</td>"
                 + $"<td class=\"mono\">{H(@event.Hash.Abbreviated)}</td></tr>");
         }

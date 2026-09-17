@@ -56,7 +56,7 @@ internal sealed class StopRunCommand : AsyncCommand<StopRunCommand.Settings>
             .ConfigureAwait(false);
 
         AnsiConsole.MarkupLine(
-            $"[yellow]stop requested[/] for {runId.Value.EscapeMarkup()} — the run will halt at "
+            $"[yellow]stop requested[/] for {runId.Value.EscapeMarkup()}, the run will halt at "
             + "its next safe boundary with completed work preserved.");
 
         return ExitCode.Success;

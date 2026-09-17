@@ -207,9 +207,10 @@ block, and cannot cause a state transition the machine forbids.
 > Include plan/rationale, artifacts, risks/trade-offs/validation, assumptions, and
 > limitations.
 
-[`docs/FINAL-SUMMARY.md`](FINAL-SUMMARY.md), with supporting detail in
-[`PLAN.md`](../PLAN.md), the 17 ADRs in [`docs/adr/`](adr/), and
-[`TESTING.md`](TESTING.md).
+[`docs/FINAL-SUMMARY.md`](FINAL-SUMMARY.md), with supporting detail in the 17 ADRs in
+[`docs/adr/`](adr/) and in [`TESTING.md`](TESTING.md). The ADRs carry the rationale
+decision by decision, each naming the alternatives that were weighed and why each was
+rejected.
 
 ---
 

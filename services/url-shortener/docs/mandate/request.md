@@ -1,0 +1,29 @@
+# Request: URL Shortener Service
+
+## Requirement
+
+Build a URL shortener service.
+
+POST /api/v1/links accepts JSON with `url` (required), `alias` (optional) and `expiresAt`
+(optional, ISO-8601 UTC). It returns 201 with the short code and the absolute short URL. A
+requested alias that is already taken returns 409 and creates nothing.
+
+GET /{code} returns 302 Found to the original URL and increments that link's click count. An
+unknown code returns 404. A link past its expiry returns 410 Gone.
+
+GET /api/v1/links/{code}/stats returns the code, the original URL, the creation time, the
+expiry if one is set, and the click count.
+
+Reject with 400 any URL whose scheme is not http or https. Reject with 400 any URL whose host
+is an IP literal in a loopback, link-local, or RFC 1918 private range. Do not perform DNS
+resolution; check the literal host only.
+
+Persist links in SQLite. Generate codes as base62 over a monotonic identifier.
+
+## Scenario
+
+Greenfield development.
+
+## Existing Code
+
+No existing code is involved.

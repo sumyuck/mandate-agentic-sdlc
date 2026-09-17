@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Globalization;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Mandate.Core.Execution;
 
@@ -23,7 +24,7 @@ namespace Mandate.Persistence.Verification;
 /// next stage's commit would carry build output as though an agent had authored it.
 /// </para>
 /// </remarks>
-public sealed class DotnetWorkspaceVerifier : IWorkspaceVerifier
+public sealed partial class DotnetWorkspaceVerifier : IWorkspaceVerifier
 {
     /// <summary>How long a single toolchain invocation may take.</summary>
     public static TimeSpan DefaultTimeout { get; } = TimeSpan.FromMinutes(5);
@@ -292,8 +293,79 @@ public sealed class DotnetWorkspaceVerifier : IWorkspaceVerifier
             .Replace(resolved + Path.DirectorySeparatorChar, string.Empty, StringComparison.Ordinal)
             .Replace(resolved, string.Empty, StringComparison.Ordinal);
 
-        return outcome with { Summary = Strip(outcome.Summary), Output = Strip(outcome.Output) };
+        return outcome with
+        {
+            Summary = Stabilise(Strip(outcome.Summary)),
+            Output = Stabilise(Strip(outcome.Output)),
+        };
     }
+
+    /// <summary>
+    /// Removes the parts of the toolchain's output that differ between identical runs.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This output is fed back into a retry's prompt so the stage can fix what it broke,
+    /// which means it is part of the prompt — and a prompt that changes between two
+    /// identical runs can never be replayed from a recording. Timings change on every run.
+    /// So does the results directory, which carries a fresh id.
+    /// </para>
+    /// <para>
+    /// Found the hard way: the first offline replay of a successful run diverged the moment
+    /// it reached a retried stage, because the retry asked a question whose wording included
+    /// how many milliseconds the previous test run had taken.
+    /// </para>
+    /// </remarks>
+    private static string Stabilise(string text)
+    {
+        string temp = Path.GetFullPath(Path.GetTempPath());
+
+        string stabilised = text
+            .Replace("/private" + temp, string.Empty, StringComparison.Ordinal)
+            .Replace(temp, string.Empty, StringComparison.Ordinal);
+
+        stabilised = Milliseconds().Replace(stabilised, "<ms>");
+        stabilised = Duration().Replace(stabilised, "Duration: <duration>");
+        stabilised = Elapsed().Replace(stabilised, "Time Elapsed <elapsed>");
+        stabilised = SandboxId().Replace(stabilised, "<temp>");
+
+        // The TRX file is named for the machine and the wall clock, the coverage
+        // attachment for a fresh guid, and every xunit console line is stamped with how
+        // long the run had been going. None of it tells a retry anything; all of it would
+        // make the retry's prompt different on every run.
+        stabilised = TrxName().Replace(stabilised, "<trx>");
+        stabilised = Identifier().Replace(stabilised, "<id>");
+        stabilised = ConsoleStamp().Replace(stabilised, "[xunit]");
+
+        return stabilised;
+    }
+
+    [GeneratedRegex(@"\b\d+(\.\d+)?\s*ms\b", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex Milliseconds();
+
+    [GeneratedRegex(@"Duration:\s*[^\r\n,\]]+", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex Duration();
+
+    [GeneratedRegex(@"Time Elapsed\s*[\d:.]+", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex Elapsed();
+
+    [GeneratedRegex(@"mandate-(sandbox|verify)-[0-9a-f]+", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex SandboxId();
+
+    [GeneratedRegex(
+        @"_[^/\\\s]+_\d{4}-\d{2}-\d{2}_\d{2}_\d{2}_\d{2}[^/\\\s]*\.trx",
+        RegexOptions.None, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex TrxName();
+
+    [GeneratedRegex(
+        @"\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b",
+        RegexOptions.None, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex Identifier();
+
+    [GeneratedRegex(
+        @"\[xUnit\.net \d{2}:\d{2}:\d{2}\.\d{2}\]",
+        RegexOptions.None, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex ConsoleStamp();
 
     private static long Elapsed(long startedTicks) =>
         (long)Stopwatch.GetElapsedTime(startedTicks).TotalMilliseconds;

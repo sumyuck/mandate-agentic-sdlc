@@ -63,8 +63,25 @@ already present, plus your addition. Returning only the part you changed deletes
 and the suite stops compiling for want of the xunit reference you never meant to remove.
 If you do not need to change a file, do not return it.
 
-Be economical. Your whole answer has to fit in one response: cover the behaviour that
-matters rather than every permutation, and do not write out reasoning before the JSON.
+**Write a focused suite, not an exhaustive one — aim for eight to fifteen tests.** A
+smaller suite that passes is worth more than a large one that does not compile, and every
+test you add is another chance to assume something about the implementation that is not
+true. Spend them where they buy the most:
+
+1. **Pure logic first** — validators, encoders, parsers. Call the method, assert the
+   result. These are the most valuable tests here and the least likely to be wrong.
+2. **Then the data layer**, against a real temporary SQLite file, for the two or three
+   behaviours that actually matter: round-tripping a record, the uniqueness constraint,
+   the expiry check.
+
+**Do not write HTTP-level or endpoint tests.** The test project has no web host harness and
+no package reference for one, so a test that tries to start the application will not
+compile. Test the types the endpoints call, not the endpoints.
+
+Do not write concurrency tests. They are slow, they are flaky, and a flaky test in a gate
+is worse than no test at all.
+
+Be economical in the answer too: no reasoning before the JSON.
 
 Then write the `test-report` to `docs/mandate/test-report.md`: what you covered, what you
 deliberately did not, and where the suite is weakest. The weakest part is the useful part of

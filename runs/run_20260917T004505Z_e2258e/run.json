@@ -1,0 +1,730 @@
+{
+  "runId": "run_20260917T004505Z_e2258e",
+  "workflow": "sdlc@v1",
+  "scenario": "Greenfield",
+  "request": "Build a URL shortener service.\n\nPOST /api/v1/links accepts JSON with \u0060url\u0060 (required), \u0060alias\u0060 (optional) and \u0060expiresAt\u0060\n(optional, ISO-8601 UTC). It returns 201 with the short code and the absolute short URL. A\nrequested alias that is already taken returns 409 and creates nothing.\n\nGET /{code} returns 302 Found to the original URL and increments that link\u0027s click count. An\nunknown code returns 404. A link past its expiry returns 410 Gone.\n\nGET /api/v1/links/{code}/stats returns the code, the original URL, the creation time, the\nexpiry if one is set, and the click count.\n\nReject with 400 any URL whose scheme is not http or https. Reject with 400 any URL whose host\nis an IP literal in a loopback, link-local, or RFC 1918 private range. Do not perform DNS\nresolution; check the literal host only.\n\nPersist links in SQLite. Generate codes as base62 over a monotonic identifier.",
+  "status": "Succeeded",
+  "startedAt": "2026-09-17T00:45:05.875845+00:00",
+  "updatedAt": "2026-09-17T00:48:33.611338+00:00",
+  "eventCount": 171,
+  "chainIntact": true,
+  "nodes": [
+    {
+      "id": "architecture",
+      "state": "Succeeded",
+      "attempts": 1,
+      "elapsedMilliseconds": 9419.597,
+      "detail": "Approved; exit gate passed without re-running the stage."
+    },
+    {
+      "id": "clarification",
+      "state": "Skipped",
+      "attempts": 0,
+      "elapsedMilliseconds": null,
+      "detail": "Join policy \u0027All\u0027 cannot be satisfied: \u0027requirements\u0027 (guard false). The stage is not required on this path."
+    },
+    {
+      "id": "code-review",
+      "state": "Succeeded",
+      "attempts": 1,
+      "elapsedMilliseconds": 118.698,
+      "detail": "Exit gate passed."
+    },
+    {
+      "id": "documentation",
+      "state": "Succeeded",
+      "attempts": 1,
+      "elapsedMilliseconds": 210.2,
+      "detail": "Exit gate passed."
+    },
+    {
+      "id": "impact-analysis",
+      "state": "Skipped",
+      "attempts": 0,
+      "elapsedMilliseconds": null,
+      "detail": "Join policy \u0027All\u0027 cannot be satisfied: \u0027requirements\u0027 (guard false). The stage is not required on this path."
+    },
+    {
+      "id": "implement",
+      "state": "Succeeded",
+      "attempts": 1,
+      "elapsedMilliseconds": 2942.152,
+      "detail": "Exit gate passed."
+    },
+    {
+      "id": "intake",
+      "state": "Succeeded",
+      "attempts": 1,
+      "elapsedMilliseconds": 210.85,
+      "detail": "Exit gate passed."
+    },
+    {
+      "id": "release-readiness",
+      "state": "Succeeded",
+      "attempts": 1,
+      "elapsedMilliseconds": 70058.423,
+      "detail": "Approved; exit gate passed without re-running the stage."
+    },
+    {
+      "id": "requirements",
+      "state": "Succeeded",
+      "attempts": 1,
+      "elapsedMilliseconds": 138.607,
+      "detail": "Exit gate passed."
+    },
+    {
+      "id": "security-scan",
+      "state": "Succeeded",
+      "attempts": 1,
+      "elapsedMilliseconds": 289.233,
+      "detail": "Exit gate passed."
+    },
+    {
+      "id": "test",
+      "state": "Succeeded",
+      "attempts": 2,
+      "elapsedMilliseconds": 124590.927,
+      "detail": "Exit gate passed."
+    }
+  ],
+  "artifacts": [
+    {
+      "hash": "400598ef8d9af68df9f0c39f2084c0c69740034df34daf6aa0e05864684d0c12",
+      "kind": "SourcePatch",
+      "name": "CodeGenerator.cs",
+      "producedBy": "agent:implementer",
+      "derivedFrom": [
+        "347e12428c8f329ebdc2f3cb05b29bc9995e804caa6d2c4516572ff9c9d6e8ed",
+        "351a43599172e3b658b4de9bec620ec7026b82efa0d170f28de685ec2986dd60",
+        "681ead9393c69b55260cb63b8a65b1888047e4351559b4dcaa19c45a547f9a6b",
+        "7a50ee703f6c55f0da96318236e4afe8e307e74fb7823ac73f18356180d082e2",
+        "bc06449306c28262b84fcff8deb5d11f31bf47f2deb079d0ddfa6ec497fcd70b",
+        "f34fd1b57639a419db3807d721c38df2685268b388033648fe9cafd7e4a42578"
+      ]
+    },
+    {
+      "hash": "307836782cf7d36fada12a73d0f9a0d8a12ea45aa88c57ac34a377c355856252",
+      "kind": "SourcePatch",
+      "name": "LinkRepository.cs",
+      "producedBy": "agent:implementer",
+      "derivedFrom": [
+        "347e12428c8f329ebdc2f3cb05b29bc9995e804caa6d2c4516572ff9c9d6e8ed",
+        "351a43599172e3b658b4de9bec620ec7026b82efa0d170f28de685ec2986dd60",
+        "681ead9393c69b55260cb63b8a65b1888047e4351559b4dcaa19c45a547f9a6b",
+        "7a50ee703f6c55f0da96318236e4afe8e307e74fb7823ac73f18356180d082e2",
+        "bc06449306c28262b84fcff8deb5d11f31bf47f2deb079d0ddfa6ec497fcd70b",
+        "f34fd1b57639a419db3807d721c38df2685268b388033648fe9cafd7e4a42578"
+      ]
+    },
+    {
+      "hash": "b0b847c1433f8863b8b179cd8ba050c391ecc9cfa63564b3d00463b116881ead",
+      "kind": "SourcePatch",
+      "name": "LinkService.cs",
+      "producedBy": "agent:implementer",
+      "derivedFrom": [
+        "347e12428c8f329ebdc2f3cb05b29bc9995e804caa6d2c4516572ff9c9d6e8ed",
+        "351a43599172e3b658b4de9bec620ec7026b82efa0d170f28de685ec2986dd60",
+        "681ead9393c69b55260cb63b8a65b1888047e4351559b4dcaa19c45a547f9a6b",
+        "7a50ee703f6c55f0da96318236e4afe8e307e74fb7823ac73f18356180d082e2",
+        "bc06449306c28262b84fcff8deb5d11f31bf47f2deb079d0ddfa6ec497fcd70b",
+        "f34fd1b57639a419db3807d721c38df2685268b388033648fe9cafd7e4a42578"
+      ]
+    },
+    {
+      "hash": "41dfc197ecd902f2583787916752b0b88983585f4d606118bbd8c1dc07f44a51",
+      "kind": "SourcePatch",
+      "name": "Models.cs",
+      "producedBy": "agent:implementer",
+      "derivedFrom": [
+        "347e12428c8f329ebdc2f3cb05b29bc9995e804caa6d2c4516572ff9c9d6e8ed",
+        "351a43599172e3b658b4de9bec620ec7026b82efa0d170f28de685ec2986dd60",
+        "681ead9393c69b55260cb63b8a65b1888047e4351559b4dcaa19c45a547f9a6b",
+        "7a50ee703f6c55f0da96318236e4afe8e307e74fb7823ac73f18356180d082e2",
+        "bc06449306c28262b84fcff8deb5d11f31bf47f2deb079d0ddfa6ec497fcd70b",
+        "f34fd1b57639a419db3807d721c38df2685268b388033648fe9cafd7e4a42578"
+      ]
+    },
+    {
+      "hash": "2b54c704a472a48d7a3d8648fec4de4f59794570b3b85cabfeb7ce9f5c75885a",
+      "kind": "SourcePatch",
+      "name": "Program.cs",
+      "producedBy": "agent:implementer",
+      "derivedFrom": [
+        "347e12428c8f329ebdc2f3cb05b29bc9995e804caa6d2c4516572ff9c9d6e8ed",
+        "351a43599172e3b658b4de9bec620ec7026b82efa0d170f28de685ec2986dd60",
+        "681ead9393c69b55260cb63b8a65b1888047e4351559b4dcaa19c45a547f9a6b",
+        "7a50ee703f6c55f0da96318236e4afe8e307e74fb7823ac73f18356180d082e2",
+        "bc06449306c28262b84fcff8deb5d11f31bf47f2deb079d0ddfa6ec497fcd70b",
+        "f34fd1b57639a419db3807d721c38df2685268b388033648fe9cafd7e4a42578"
+      ]
+    },
+    {
+      "hash": "3cf70cb32ac373465530514ffbef4298816e3bf30ffb0bd01d6a336c6ce5735b",
+      "kind": "Documentation",
+      "name": "README.md",
+      "producedBy": "agent:technical-writer",
+      "derivedFrom": [
+        "2b54c704a472a48d7a3d8648fec4de4f59794570b3b85cabfeb7ce9f5c75885a",
+        "307836782cf7d36fada12a73d0f9a0d8a12ea45aa88c57ac34a377c355856252",
+        "347e12428c8f329ebdc2f3cb05b29bc9995e804caa6d2c4516572ff9c9d6e8ed",
+        "350e6cd647cf7e89898b1b4dad3322612221f1d74cf92aa306c24a2082eb4863",
+        "351a43599172e3b658b4de9bec620ec7026b82efa0d170f28de685ec2986dd60",
+        "400598ef8d9af68df9f0c39f2084c0c69740034df34daf6aa0e05864684d0c12",
+        "41dfc197ecd902f2583787916752b0b88983585f4d606118bbd8c1dc07f44a51",
+        "681ead9393c69b55260cb63b8a65b1888047e4351559b4dcaa19c45a547f9a6b",
+        "7a50ee703f6c55f0da96318236e4afe8e307e74fb7823ac73f18356180d082e2",
+        "b0b847c1433f8863b8b179cd8ba050c391ecc9cfa63564b3d00463b116881ead",
+        "bc06449306c28262b84fcff8deb5d11f31bf47f2deb079d0ddfa6ec497fcd70b",
+        "d56b877979dfa981cf18ad1b2874aa23b57fa3d8b036366fc2e9d1a541aef2cf",
+        "f34fd1b57639a419db3807d721c38df2685268b388033648fe9cafd7e4a42578",
+        "fdf88491fd1d2d98d73e13621f24384ab6621264652d143f0984e16875d9923c"
+      ]
+    },
+    {
+      "hash": "350e6cd647cf7e89898b1b4dad3322612221f1d74cf92aa306c24a2082eb4863",
+      "kind": "SourcePatch",
+      "name": "SchemaInitializer.cs",
+      "producedBy": "agent:implementer",
+      "derivedFrom": [
+        "347e12428c8f329ebdc2f3cb05b29bc9995e804caa6d2c4516572ff9c9d6e8ed",
+        "351a43599172e3b658b4de9bec620ec7026b82efa0d170f28de685ec2986dd60",
+        "681ead9393c69b55260cb63b8a65b1888047e4351559b4dcaa19c45a547f9a6b",
+        "7a50ee703f6c55f0da96318236e4afe8e307e74fb7823ac73f18356180d082e2",
+        "bc06449306c28262b84fcff8deb5d11f31bf47f2deb079d0ddfa6ec497fcd70b",
+        "f34fd1b57639a419db3807d721c38df2685268b388033648fe9cafd7e4a42578"
+      ]
+    },
+    {
+      "hash": "fdf88491fd1d2d98d73e13621f24384ab6621264652d143f0984e16875d9923c",
+      "kind": "SourcePatch",
+      "name": "UrlValidator.cs",
+      "producedBy": "agent:implementer",
+      "derivedFrom": [
+        "347e12428c8f329ebdc2f3cb05b29bc9995e804caa6d2c4516572ff9c9d6e8ed",
+        "351a43599172e3b658b4de9bec620ec7026b82efa0d170f28de685ec2986dd60",
+        "681ead9393c69b55260cb63b8a65b1888047e4351559b4dcaa19c45a547f9a6b",
+        "7a50ee703f6c55f0da96318236e4afe8e307e74fb7823ac73f18356180d082e2",
+        "bc06449306c28262b84fcff8deb5d11f31bf47f2deb079d0ddfa6ec497fcd70b",
+        "f34fd1b57639a419db3807d721c38df2685268b388033648fe9cafd7e4a42578"
+      ]
+    },
+    {
+      "hash": "d56b877979dfa981cf18ad1b2874aa23b57fa3d8b036366fc2e9d1a541aef2cf",
+      "kind": "SourcePatch",
+      "name": "appsettings.json",
+      "producedBy": "agent:implementer",
+      "derivedFrom": [
+        "347e12428c8f329ebdc2f3cb05b29bc9995e804caa6d2c4516572ff9c9d6e8ed",
+        "351a43599172e3b658b4de9bec620ec7026b82efa0d170f28de685ec2986dd60",
+        "681ead9393c69b55260cb63b8a65b1888047e4351559b4dcaa19c45a547f9a6b",
+        "7a50ee703f6c55f0da96318236e4afe8e307e74fb7823ac73f18356180d082e2",
+        "bc06449306c28262b84fcff8deb5d11f31bf47f2deb079d0ddfa6ec497fcd70b",
+        "f34fd1b57639a419db3807d721c38df2685268b388033648fe9cafd7e4a42578"
+      ]
+    },
+    {
+      "hash": "7a50ee703f6c55f0da96318236e4afe8e307e74fb7823ac73f18356180d082e2",
+      "kind": "ApiContract",
+      "name": "contracts/openapi.yaml",
+      "producedBy": "agent:architect",
+      "derivedFrom": [
+        "347e12428c8f329ebdc2f3cb05b29bc9995e804caa6d2c4516572ff9c9d6e8ed",
+        "351a43599172e3b658b4de9bec620ec7026b82efa0d170f28de685ec2986dd60",
+        "bc06449306c28262b84fcff8deb5d11f31bf47f2deb079d0ddfa6ec497fcd70b"
+      ]
+    },
+    {
+      "hash": "f34fd1b57639a419db3807d721c38df2685268b388033648fe9cafd7e4a42578",
+      "kind": "ArchitectureDecisionRecord",
+      "name": "docs/adr/0001-sqlite-write-serialization.md",
+      "producedBy": "agent:architect",
+      "derivedFrom": [
+        "347e12428c8f329ebdc2f3cb05b29bc9995e804caa6d2c4516572ff9c9d6e8ed",
+        "351a43599172e3b658b4de9bec620ec7026b82efa0d170f28de685ec2986dd60",
+        "bc06449306c28262b84fcff8deb5d11f31bf47f2deb079d0ddfa6ec497fcd70b"
+      ]
+    },
+    {
+      "hash": "bc06449306c28262b84fcff8deb5d11f31bf47f2deb079d0ddfa6ec497fcd70b",
+      "kind": "AmbiguityReport",
+      "name": "docs/ambiguity.md",
+      "producedBy": "agent:requirements-analyst",
+      "derivedFrom": [
+        "347e12428c8f329ebdc2f3cb05b29bc9995e804caa6d2c4516572ff9c9d6e8ed"
+      ]
+    },
+    {
+      "hash": "681ead9393c69b55260cb63b8a65b1888047e4351559b4dcaa19c45a547f9a6b",
+      "kind": "DesignDoc",
+      "name": "docs/design.md",
+      "producedBy": "agent:architect",
+      "derivedFrom": [
+        "347e12428c8f329ebdc2f3cb05b29bc9995e804caa6d2c4516572ff9c9d6e8ed",
+        "351a43599172e3b658b4de9bec620ec7026b82efa0d170f28de685ec2986dd60",
+        "bc06449306c28262b84fcff8deb5d11f31bf47f2deb079d0ddfa6ec497fcd70b"
+      ]
+    },
+    {
+      "hash": "96abd5cd4d4da5bca8042d5bec003d9749debcfd645c01d2882822fbd735f0e1",
+      "kind": "MetricsReport",
+      "name": "docs/mandate/metrics-report.md",
+      "producedBy": "agent:release-manager",
+      "derivedFrom": [
+        "15fe8d0a8640ee94103dd7addc9b9801da1190d95b4f201a4ab04b6977f9aadd",
+        "2b54c704a472a48d7a3d8648fec4de4f59794570b3b85cabfeb7ce9f5c75885a",
+        "2fc66a62395c21ecdc2caee04369a788e12f071d4ee27fccaf38b9d464aa1a45",
+        "307836782cf7d36fada12a73d0f9a0d8a12ea45aa88c57ac34a377c355856252",
+        "347e12428c8f329ebdc2f3cb05b29bc9995e804caa6d2c4516572ff9c9d6e8ed",
+        "350e6cd647cf7e89898b1b4dad3322612221f1d74cf92aa306c24a2082eb4863",
+        "351a43599172e3b658b4de9bec620ec7026b82efa0d170f28de685ec2986dd60",
+        "3cf70cb32ac373465530514ffbef4298816e3bf30ffb0bd01d6a336c6ce5735b",
+        "400598ef8d9af68df9f0c39f2084c0c69740034df34daf6aa0e05864684d0c12",
+        "41dfc197ecd902f2583787916752b0b88983585f4d606118bbd8c1dc07f44a51",
+        "506d47ad59f6a91bcc5a49b6e87107a9a4228a1d710260c120407a371959afdd",
+        "681ead9393c69b55260cb63b8a65b1888047e4351559b4dcaa19c45a547f9a6b",
+        "735ea5ed5087f612dd117f5dd1e2c694b926cf103b9202cedc66aceeff3d8dd7",
+        "7a50ee703f6c55f0da96318236e4afe8e307e74fb7823ac73f18356180d082e2",
+        "91e1fa43e3f87abe0804fe63a505678b4957f96ba48b1bc1b9ac409f9e540919",
+        "9ffae8349b8b137d9c5c33b47f5cbee6b02de3323eba4fab19088bb710d3821e",
+        "a7b62ff30981f2637e76eac5b145180ddd17d06c3639488441b02de10a7b2889",
+        "b0b847c1433f8863b8b179cd8ba050c391ecc9cfa63564b3d00463b116881ead",
+        "ba46661459caaac5bbb9019251620b46e81475cebf0c283087e664ca6bcb8d0a",
+        "bc06449306c28262b84fcff8deb5d11f31bf47f2deb079d0ddfa6ec497fcd70b",
+        "cb1001c219a5af38bb076d6bf3f0b6f7dc6392f9affe0ecffac055a307d45bf1",
+        "d56b877979dfa981cf18ad1b2874aa23b57fa3d8b036366fc2e9d1a541aef2cf",
+        "e97e85dcde85155cff910dd95a5dd78a0007fcb38b4457e846f3f1838cb044f6",
+        "efd0a15268aec26f534007fb896c683106abd99b281a290a77007a620d0f823a",
+        "f34fd1b57639a419db3807d721c38df2685268b388033648fe9cafd7e4a42578",
+        "fd0ea5929c84a286dd9140951115d7bb32ab586507b7d3f1066db61fd2798fab",
+        "fdf88491fd1d2d98d73e13621f24384ab6621264652d143f0984e16875d9923c"
+      ]
+    },
+    {
+      "hash": "d0cf480c68071a143400e39648284c4672ed13781173343591ebda3789d1a330",
+      "kind": "ReleaseChecklist",
+      "name": "docs/mandate/release-checklist.md",
+      "producedBy": "agent:release-manager",
+      "derivedFrom": [
+        "15fe8d0a8640ee94103dd7addc9b9801da1190d95b4f201a4ab04b6977f9aadd",
+        "2b54c704a472a48d7a3d8648fec4de4f59794570b3b85cabfeb7ce9f5c75885a",
+        "2fc66a62395c21ecdc2caee04369a788e12f071d4ee27fccaf38b9d464aa1a45",
+        "307836782cf7d36fada12a73d0f9a0d8a12ea45aa88c57ac34a377c355856252",
+        "347e12428c8f329ebdc2f3cb05b29bc9995e804caa6d2c4516572ff9c9d6e8ed",
+        "350e6cd647cf7e89898b1b4dad3322612221f1d74cf92aa306c24a2082eb4863",
+        "351a43599172e3b658b4de9bec620ec7026b82efa0d170f28de685ec2986dd60",
+        "3cf70cb32ac373465530514ffbef4298816e3bf30ffb0bd01d6a336c6ce5735b",
+        "400598ef8d9af68df9f0c39f2084c0c69740034df34daf6aa0e05864684d0c12",
+        "41dfc197ecd902f2583787916752b0b88983585f4d606118bbd8c1dc07f44a51",
+        "506d47ad59f6a91bcc5a49b6e87107a9a4228a1d710260c120407a371959afdd",
+        "681ead9393c69b55260cb63b8a65b1888047e4351559b4dcaa19c45a547f9a6b",
+        "735ea5ed5087f612dd117f5dd1e2c694b926cf103b9202cedc66aceeff3d8dd7",
+        "7a50ee703f6c55f0da96318236e4afe8e307e74fb7823ac73f18356180d082e2",
+        "91e1fa43e3f87abe0804fe63a505678b4957f96ba48b1bc1b9ac409f9e540919",
+        "9ffae8349b8b137d9c5c33b47f5cbee6b02de3323eba4fab19088bb710d3821e",
+        "a7b62ff30981f2637e76eac5b145180ddd17d06c3639488441b02de10a7b2889",
+        "b0b847c1433f8863b8b179cd8ba050c391ecc9cfa63564b3d00463b116881ead",
+        "ba46661459caaac5bbb9019251620b46e81475cebf0c283087e664ca6bcb8d0a",
+        "bc06449306c28262b84fcff8deb5d11f31bf47f2deb079d0ddfa6ec497fcd70b",
+        "cb1001c219a5af38bb076d6bf3f0b6f7dc6392f9affe0ecffac055a307d45bf1",
+        "d56b877979dfa981cf18ad1b2874aa23b57fa3d8b036366fc2e9d1a541aef2cf",
+        "e97e85dcde85155cff910dd95a5dd78a0007fcb38b4457e846f3f1838cb044f6",
+        "efd0a15268aec26f534007fb896c683106abd99b281a290a77007a620d0f823a",
+        "f34fd1b57639a419db3807d721c38df2685268b388033648fe9cafd7e4a42578",
+        "fd0ea5929c84a286dd9140951115d7bb32ab586507b7d3f1066db61fd2798fab",
+        "fdf88491fd1d2d98d73e13621f24384ab6621264652d143f0984e16875d9923c"
+      ]
+    },
+    {
+      "hash": "347e12428c8f329ebdc2f3cb05b29bc9995e804caa6d2c4516572ff9c9d6e8ed",
+      "kind": "Request",
+      "name": "docs/mandate/request.md",
+      "producedBy": "agent:intake",
+      "derivedFrom": []
+    },
+    {
+      "hash": "91e1fa43e3f87abe0804fe63a505678b4957f96ba48b1bc1b9ac409f9e540919",
+      "kind": "ReviewReport",
+      "name": "docs/mandate/review-report.md",
+      "producedBy": "agent:reviewer",
+      "derivedFrom": [
+        "2b54c704a472a48d7a3d8648fec4de4f59794570b3b85cabfeb7ce9f5c75885a",
+        "307836782cf7d36fada12a73d0f9a0d8a12ea45aa88c57ac34a377c355856252",
+        "347e12428c8f329ebdc2f3cb05b29bc9995e804caa6d2c4516572ff9c9d6e8ed",
+        "350e6cd647cf7e89898b1b4dad3322612221f1d74cf92aa306c24a2082eb4863",
+        "351a43599172e3b658b4de9bec620ec7026b82efa0d170f28de685ec2986dd60",
+        "400598ef8d9af68df9f0c39f2084c0c69740034df34daf6aa0e05864684d0c12",
+        "41dfc197ecd902f2583787916752b0b88983585f4d606118bbd8c1dc07f44a51",
+        "681ead9393c69b55260cb63b8a65b1888047e4351559b4dcaa19c45a547f9a6b",
+        "7a50ee703f6c55f0da96318236e4afe8e307e74fb7823ac73f18356180d082e2",
+        "b0b847c1433f8863b8b179cd8ba050c391ecc9cfa63564b3d00463b116881ead",
+        "bc06449306c28262b84fcff8deb5d11f31bf47f2deb079d0ddfa6ec497fcd70b",
+        "d56b877979dfa981cf18ad1b2874aa23b57fa3d8b036366fc2e9d1a541aef2cf",
+        "f34fd1b57639a419db3807d721c38df2685268b388033648fe9cafd7e4a42578",
+        "fdf88491fd1d2d98d73e13621f24384ab6621264652d143f0984e16875d9923c"
+      ]
+    },
+    {
+      "hash": "15fe8d0a8640ee94103dd7addc9b9801da1190d95b4f201a4ab04b6977f9aadd",
+      "kind": "SecurityReport",
+      "name": "docs/mandate/security-report.md",
+      "producedBy": "agent:security-scanner",
+      "derivedFrom": [
+        "2b54c704a472a48d7a3d8648fec4de4f59794570b3b85cabfeb7ce9f5c75885a",
+        "307836782cf7d36fada12a73d0f9a0d8a12ea45aa88c57ac34a377c355856252",
+        "347e12428c8f329ebdc2f3cb05b29bc9995e804caa6d2c4516572ff9c9d6e8ed",
+        "350e6cd647cf7e89898b1b4dad3322612221f1d74cf92aa306c24a2082eb4863",
+        "351a43599172e3b658b4de9bec620ec7026b82efa0d170f28de685ec2986dd60",
+        "400598ef8d9af68df9f0c39f2084c0c69740034df34daf6aa0e05864684d0c12",
+        "41dfc197ecd902f2583787916752b0b88983585f4d606118bbd8c1dc07f44a51",
+        "681ead9393c69b55260cb63b8a65b1888047e4351559b4dcaa19c45a547f9a6b",
+        "7a50ee703f6c55f0da96318236e4afe8e307e74fb7823ac73f18356180d082e2",
+        "b0b847c1433f8863b8b179cd8ba050c391ecc9cfa63564b3d00463b116881ead",
+        "bc06449306c28262b84fcff8deb5d11f31bf47f2deb079d0ddfa6ec497fcd70b",
+        "d56b877979dfa981cf18ad1b2874aa23b57fa3d8b036366fc2e9d1a541aef2cf",
+        "f34fd1b57639a419db3807d721c38df2685268b388033648fe9cafd7e4a42578",
+        "fdf88491fd1d2d98d73e13621f24384ab6621264652d143f0984e16875d9923c"
+      ]
+    },
+    {
+      "hash": "9ffae8349b8b137d9c5c33b47f5cbee6b02de3323eba4fab19088bb710d3821e",
+      "kind": "TestReport",
+      "name": "docs/mandate/test-report.md",
+      "producedBy": "agent:test-engineer",
+      "derivedFrom": [
+        "2b54c704a472a48d7a3d8648fec4de4f59794570b3b85cabfeb7ce9f5c75885a",
+        "307836782cf7d36fada12a73d0f9a0d8a12ea45aa88c57ac34a377c355856252",
+        "347e12428c8f329ebdc2f3cb05b29bc9995e804caa6d2c4516572ff9c9d6e8ed",
+        "350e6cd647cf7e89898b1b4dad3322612221f1d74cf92aa306c24a2082eb4863",
+        "351a43599172e3b658b4de9bec620ec7026b82efa0d170f28de685ec2986dd60",
+        "400598ef8d9af68df9f0c39f2084c0c69740034df34daf6aa0e05864684d0c12",
+        "41dfc197ecd902f2583787916752b0b88983585f4d606118bbd8c1dc07f44a51",
+        "681ead9393c69b55260cb63b8a65b1888047e4351559b4dcaa19c45a547f9a6b",
+        "7a50ee703f6c55f0da96318236e4afe8e307e74fb7823ac73f18356180d082e2",
+        "b0b847c1433f8863b8b179cd8ba050c391ecc9cfa63564b3d00463b116881ead",
+        "bc06449306c28262b84fcff8deb5d11f31bf47f2deb079d0ddfa6ec497fcd70b",
+        "d56b877979dfa981cf18ad1b2874aa23b57fa3d8b036366fc2e9d1a541aef2cf",
+        "f34fd1b57639a419db3807d721c38df2685268b388033648fe9cafd7e4a42578",
+        "fdf88491fd1d2d98d73e13621f24384ab6621264652d143f0984e16875d9923c"
+      ]
+    },
+    {
+      "hash": "fd0ea5929c84a286dd9140951115d7bb32ab586507b7d3f1066db61fd2798fab",
+      "kind": "TestReport",
+      "name": "docs/mandate/test-report.md",
+      "producedBy": "agent:test-engineer",
+      "derivedFrom": [
+        "2b54c704a472a48d7a3d8648fec4de4f59794570b3b85cabfeb7ce9f5c75885a",
+        "307836782cf7d36fada12a73d0f9a0d8a12ea45aa88c57ac34a377c355856252",
+        "347e12428c8f329ebdc2f3cb05b29bc9995e804caa6d2c4516572ff9c9d6e8ed",
+        "350e6cd647cf7e89898b1b4dad3322612221f1d74cf92aa306c24a2082eb4863",
+        "351a43599172e3b658b4de9bec620ec7026b82efa0d170f28de685ec2986dd60",
+        "400598ef8d9af68df9f0c39f2084c0c69740034df34daf6aa0e05864684d0c12",
+        "41dfc197ecd902f2583787916752b0b88983585f4d606118bbd8c1dc07f44a51",
+        "681ead9393c69b55260cb63b8a65b1888047e4351559b4dcaa19c45a547f9a6b",
+        "7a50ee703f6c55f0da96318236e4afe8e307e74fb7823ac73f18356180d082e2",
+        "b0b847c1433f8863b8b179cd8ba050c391ecc9cfa63564b3d00463b116881ead",
+        "bc06449306c28262b84fcff8deb5d11f31bf47f2deb079d0ddfa6ec497fcd70b",
+        "d56b877979dfa981cf18ad1b2874aa23b57fa3d8b036366fc2e9d1a541aef2cf",
+        "f34fd1b57639a419db3807d721c38df2685268b388033648fe9cafd7e4a42578",
+        "fdf88491fd1d2d98d73e13621f24384ab6621264652d143f0984e16875d9923c"
+      ]
+    },
+    {
+      "hash": "351a43599172e3b658b4de9bec620ec7026b82efa0d170f28de685ec2986dd60",
+      "kind": "RequirementSpec",
+      "name": "docs/requirements.md",
+      "producedBy": "agent:requirements-analyst",
+      "derivedFrom": [
+        "347e12428c8f329ebdc2f3cb05b29bc9995e804caa6d2c4516572ff9c9d6e8ed"
+      ]
+    },
+    {
+      "hash": "efd0a15268aec26f534007fb896c683106abd99b281a290a77007a620d0f823a",
+      "kind": "TestSuite",
+      "name": "tests/Service.Tests/CodeGeneratorTests.cs",
+      "producedBy": "agent:test-engineer",
+      "derivedFrom": [
+        "2b54c704a472a48d7a3d8648fec4de4f59794570b3b85cabfeb7ce9f5c75885a",
+        "307836782cf7d36fada12a73d0f9a0d8a12ea45aa88c57ac34a377c355856252",
+        "347e12428c8f329ebdc2f3cb05b29bc9995e804caa6d2c4516572ff9c9d6e8ed",
+        "350e6cd647cf7e89898b1b4dad3322612221f1d74cf92aa306c24a2082eb4863",
+        "351a43599172e3b658b4de9bec620ec7026b82efa0d170f28de685ec2986dd60",
+        "400598ef8d9af68df9f0c39f2084c0c69740034df34daf6aa0e05864684d0c12",
+        "41dfc197ecd902f2583787916752b0b88983585f4d606118bbd8c1dc07f44a51",
+        "681ead9393c69b55260cb63b8a65b1888047e4351559b4dcaa19c45a547f9a6b",
+        "7a50ee703f6c55f0da96318236e4afe8e307e74fb7823ac73f18356180d082e2",
+        "b0b847c1433f8863b8b179cd8ba050c391ecc9cfa63564b3d00463b116881ead",
+        "bc06449306c28262b84fcff8deb5d11f31bf47f2deb079d0ddfa6ec497fcd70b",
+        "d56b877979dfa981cf18ad1b2874aa23b57fa3d8b036366fc2e9d1a541aef2cf",
+        "f34fd1b57639a419db3807d721c38df2685268b388033648fe9cafd7e4a42578",
+        "fdf88491fd1d2d98d73e13621f24384ab6621264652d143f0984e16875d9923c"
+      ]
+    },
+    {
+      "hash": "e97e85dcde85155cff910dd95a5dd78a0007fcb38b4457e846f3f1838cb044f6",
+      "kind": "TestSuite",
+      "name": "tests/Service.Tests/CodeGeneratorTests.cs",
+      "producedBy": "agent:test-engineer",
+      "derivedFrom": [
+        "2b54c704a472a48d7a3d8648fec4de4f59794570b3b85cabfeb7ce9f5c75885a",
+        "307836782cf7d36fada12a73d0f9a0d8a12ea45aa88c57ac34a377c355856252",
+        "347e12428c8f329ebdc2f3cb05b29bc9995e804caa6d2c4516572ff9c9d6e8ed",
+        "350e6cd647cf7e89898b1b4dad3322612221f1d74cf92aa306c24a2082eb4863",
+        "351a43599172e3b658b4de9bec620ec7026b82efa0d170f28de685ec2986dd60",
+        "400598ef8d9af68df9f0c39f2084c0c69740034df34daf6aa0e05864684d0c12",
+        "41dfc197ecd902f2583787916752b0b88983585f4d606118bbd8c1dc07f44a51",
+        "681ead9393c69b55260cb63b8a65b1888047e4351559b4dcaa19c45a547f9a6b",
+        "7a50ee703f6c55f0da96318236e4afe8e307e74fb7823ac73f18356180d082e2",
+        "b0b847c1433f8863b8b179cd8ba050c391ecc9cfa63564b3d00463b116881ead",
+        "bc06449306c28262b84fcff8deb5d11f31bf47f2deb079d0ddfa6ec497fcd70b",
+        "d56b877979dfa981cf18ad1b2874aa23b57fa3d8b036366fc2e9d1a541aef2cf",
+        "f34fd1b57639a419db3807d721c38df2685268b388033648fe9cafd7e4a42578",
+        "fdf88491fd1d2d98d73e13621f24384ab6621264652d143f0984e16875d9923c"
+      ]
+    },
+    {
+      "hash": "a7b62ff30981f2637e76eac5b145180ddd17d06c3639488441b02de10a7b2889",
+      "kind": "TestSuite",
+      "name": "tests/Service.Tests/LinkRepositoryTests.cs",
+      "producedBy": "agent:test-engineer",
+      "derivedFrom": [
+        "2b54c704a472a48d7a3d8648fec4de4f59794570b3b85cabfeb7ce9f5c75885a",
+        "307836782cf7d36fada12a73d0f9a0d8a12ea45aa88c57ac34a377c355856252",
+        "347e12428c8f329ebdc2f3cb05b29bc9995e804caa6d2c4516572ff9c9d6e8ed",
+        "350e6cd647cf7e89898b1b4dad3322612221f1d74cf92aa306c24a2082eb4863",
+        "351a43599172e3b658b4de9bec620ec7026b82efa0d170f28de685ec2986dd60",
+        "400598ef8d9af68df9f0c39f2084c0c69740034df34daf6aa0e05864684d0c12",
+        "41dfc197ecd902f2583787916752b0b88983585f4d606118bbd8c1dc07f44a51",
+        "681ead9393c69b55260cb63b8a65b1888047e4351559b4dcaa19c45a547f9a6b",
+        "7a50ee703f6c55f0da96318236e4afe8e307e74fb7823ac73f18356180d082e2",
+        "b0b847c1433f8863b8b179cd8ba050c391ecc9cfa63564b3d00463b116881ead",
+        "bc06449306c28262b84fcff8deb5d11f31bf47f2deb079d0ddfa6ec497fcd70b",
+        "d56b877979dfa981cf18ad1b2874aa23b57fa3d8b036366fc2e9d1a541aef2cf",
+        "f34fd1b57639a419db3807d721c38df2685268b388033648fe9cafd7e4a42578",
+        "fdf88491fd1d2d98d73e13621f24384ab6621264652d143f0984e16875d9923c"
+      ]
+    },
+    {
+      "hash": "2fc66a62395c21ecdc2caee04369a788e12f071d4ee27fccaf38b9d464aa1a45",
+      "kind": "TestSuite",
+      "name": "tests/Service.Tests/LinkRepositoryTests.cs",
+      "producedBy": "agent:test-engineer",
+      "derivedFrom": [
+        "2b54c704a472a48d7a3d8648fec4de4f59794570b3b85cabfeb7ce9f5c75885a",
+        "307836782cf7d36fada12a73d0f9a0d8a12ea45aa88c57ac34a377c355856252",
+        "347e12428c8f329ebdc2f3cb05b29bc9995e804caa6d2c4516572ff9c9d6e8ed",
+        "350e6cd647cf7e89898b1b4dad3322612221f1d74cf92aa306c24a2082eb4863",
+        "351a43599172e3b658b4de9bec620ec7026b82efa0d170f28de685ec2986dd60",
+        "400598ef8d9af68df9f0c39f2084c0c69740034df34daf6aa0e05864684d0c12",
+        "41dfc197ecd902f2583787916752b0b88983585f4d606118bbd8c1dc07f44a51",
+        "681ead9393c69b55260cb63b8a65b1888047e4351559b4dcaa19c45a547f9a6b",
+        "7a50ee703f6c55f0da96318236e4afe8e307e74fb7823ac73f18356180d082e2",
+        "b0b847c1433f8863b8b179cd8ba050c391ecc9cfa63564b3d00463b116881ead",
+        "bc06449306c28262b84fcff8deb5d11f31bf47f2deb079d0ddfa6ec497fcd70b",
+        "d56b877979dfa981cf18ad1b2874aa23b57fa3d8b036366fc2e9d1a541aef2cf",
+        "f34fd1b57639a419db3807d721c38df2685268b388033648fe9cafd7e4a42578",
+        "fdf88491fd1d2d98d73e13621f24384ab6621264652d143f0984e16875d9923c"
+      ]
+    },
+    {
+      "hash": "735ea5ed5087f612dd117f5dd1e2c694b926cf103b9202cedc66aceeff3d8dd7",
+      "kind": "TestSuite",
+      "name": "tests/Service.Tests/LinkServiceTests.cs",
+      "producedBy": "agent:test-engineer",
+      "derivedFrom": [
+        "2b54c704a472a48d7a3d8648fec4de4f59794570b3b85cabfeb7ce9f5c75885a",
+        "307836782cf7d36fada12a73d0f9a0d8a12ea45aa88c57ac34a377c355856252",
+        "347e12428c8f329ebdc2f3cb05b29bc9995e804caa6d2c4516572ff9c9d6e8ed",
+        "350e6cd647cf7e89898b1b4dad3322612221f1d74cf92aa306c24a2082eb4863",
+        "351a43599172e3b658b4de9bec620ec7026b82efa0d170f28de685ec2986dd60",
+        "400598ef8d9af68df9f0c39f2084c0c69740034df34daf6aa0e05864684d0c12",
+        "41dfc197ecd902f2583787916752b0b88983585f4d606118bbd8c1dc07f44a51",
+        "681ead9393c69b55260cb63b8a65b1888047e4351559b4dcaa19c45a547f9a6b",
+        "7a50ee703f6c55f0da96318236e4afe8e307e74fb7823ac73f18356180d082e2",
+        "b0b847c1433f8863b8b179cd8ba050c391ecc9cfa63564b3d00463b116881ead",
+        "bc06449306c28262b84fcff8deb5d11f31bf47f2deb079d0ddfa6ec497fcd70b",
+        "d56b877979dfa981cf18ad1b2874aa23b57fa3d8b036366fc2e9d1a541aef2cf",
+        "f34fd1b57639a419db3807d721c38df2685268b388033648fe9cafd7e4a42578",
+        "fdf88491fd1d2d98d73e13621f24384ab6621264652d143f0984e16875d9923c"
+      ]
+    },
+    {
+      "hash": "ba46661459caaac5bbb9019251620b46e81475cebf0c283087e664ca6bcb8d0a",
+      "kind": "TestSuite",
+      "name": "tests/Service.Tests/LinkServiceTests.cs",
+      "producedBy": "agent:test-engineer",
+      "derivedFrom": [
+        "2b54c704a472a48d7a3d8648fec4de4f59794570b3b85cabfeb7ce9f5c75885a",
+        "307836782cf7d36fada12a73d0f9a0d8a12ea45aa88c57ac34a377c355856252",
+        "347e12428c8f329ebdc2f3cb05b29bc9995e804caa6d2c4516572ff9c9d6e8ed",
+        "350e6cd647cf7e89898b1b4dad3322612221f1d74cf92aa306c24a2082eb4863",
+        "351a43599172e3b658b4de9bec620ec7026b82efa0d170f28de685ec2986dd60",
+        "400598ef8d9af68df9f0c39f2084c0c69740034df34daf6aa0e05864684d0c12",
+        "41dfc197ecd902f2583787916752b0b88983585f4d606118bbd8c1dc07f44a51",
+        "681ead9393c69b55260cb63b8a65b1888047e4351559b4dcaa19c45a547f9a6b",
+        "7a50ee703f6c55f0da96318236e4afe8e307e74fb7823ac73f18356180d082e2",
+        "b0b847c1433f8863b8b179cd8ba050c391ecc9cfa63564b3d00463b116881ead",
+        "bc06449306c28262b84fcff8deb5d11f31bf47f2deb079d0ddfa6ec497fcd70b",
+        "d56b877979dfa981cf18ad1b2874aa23b57fa3d8b036366fc2e9d1a541aef2cf",
+        "f34fd1b57639a419db3807d721c38df2685268b388033648fe9cafd7e4a42578",
+        "fdf88491fd1d2d98d73e13621f24384ab6621264652d143f0984e16875d9923c"
+      ]
+    },
+    {
+      "hash": "506d47ad59f6a91bcc5a49b6e87107a9a4228a1d710260c120407a371959afdd",
+      "kind": "TestSuite",
+      "name": "tests/Service.Tests/UrlValidatorTests.cs",
+      "producedBy": "agent:test-engineer",
+      "derivedFrom": [
+        "2b54c704a472a48d7a3d8648fec4de4f59794570b3b85cabfeb7ce9f5c75885a",
+        "307836782cf7d36fada12a73d0f9a0d8a12ea45aa88c57ac34a377c355856252",
+        "347e12428c8f329ebdc2f3cb05b29bc9995e804caa6d2c4516572ff9c9d6e8ed",
+        "350e6cd647cf7e89898b1b4dad3322612221f1d74cf92aa306c24a2082eb4863",
+        "351a43599172e3b658b4de9bec620ec7026b82efa0d170f28de685ec2986dd60",
+        "400598ef8d9af68df9f0c39f2084c0c69740034df34daf6aa0e05864684d0c12",
+        "41dfc197ecd902f2583787916752b0b88983585f4d606118bbd8c1dc07f44a51",
+        "681ead9393c69b55260cb63b8a65b1888047e4351559b4dcaa19c45a547f9a6b",
+        "7a50ee703f6c55f0da96318236e4afe8e307e74fb7823ac73f18356180d082e2",
+        "b0b847c1433f8863b8b179cd8ba050c391ecc9cfa63564b3d00463b116881ead",
+        "bc06449306c28262b84fcff8deb5d11f31bf47f2deb079d0ddfa6ec497fcd70b",
+        "d56b877979dfa981cf18ad1b2874aa23b57fa3d8b036366fc2e9d1a541aef2cf",
+        "f34fd1b57639a419db3807d721c38df2685268b388033648fe9cafd7e4a42578",
+        "fdf88491fd1d2d98d73e13621f24384ab6621264652d143f0984e16875d9923c"
+      ]
+    },
+    {
+      "hash": "cb1001c219a5af38bb076d6bf3f0b6f7dc6392f9affe0ecffac055a307d45bf1",
+      "kind": "TestSuite",
+      "name": "tests/Service.Tests/UrlValidatorTests.cs",
+      "producedBy": "agent:test-engineer",
+      "derivedFrom": [
+        "2b54c704a472a48d7a3d8648fec4de4f59794570b3b85cabfeb7ce9f5c75885a",
+        "307836782cf7d36fada12a73d0f9a0d8a12ea45aa88c57ac34a377c355856252",
+        "347e12428c8f329ebdc2f3cb05b29bc9995e804caa6d2c4516572ff9c9d6e8ed",
+        "350e6cd647cf7e89898b1b4dad3322612221f1d74cf92aa306c24a2082eb4863",
+        "351a43599172e3b658b4de9bec620ec7026b82efa0d170f28de685ec2986dd60",
+        "400598ef8d9af68df9f0c39f2084c0c69740034df34daf6aa0e05864684d0c12",
+        "41dfc197ecd902f2583787916752b0b88983585f4d606118bbd8c1dc07f44a51",
+        "681ead9393c69b55260cb63b8a65b1888047e4351559b4dcaa19c45a547f9a6b",
+        "7a50ee703f6c55f0da96318236e4afe8e307e74fb7823ac73f18356180d082e2",
+        "b0b847c1433f8863b8b179cd8ba050c391ecc9cfa63564b3d00463b116881ead",
+        "bc06449306c28262b84fcff8deb5d11f31bf47f2deb079d0ddfa6ec497fcd70b",
+        "d56b877979dfa981cf18ad1b2874aa23b57fa3d8b036366fc2e9d1a541aef2cf",
+        "f34fd1b57639a419db3807d721c38df2685268b388033648fe9cafd7e4a42578",
+        "fdf88491fd1d2d98d73e13621f24384ab6621264652d143f0984e16875d9923c"
+      ]
+    }
+  ],
+  "context": [
+    {
+      "key": "architecture.components",
+      "value": "HttpApiLayer, LinkService, LinkRepository, UrlValidator, CodeGenerator, SchemaInitializer, Configuration",
+      "revisions": 1
+    },
+    {
+      "key": "documentation.written",
+      "value": "true",
+      "revisions": 1
+    },
+    {
+      "key": "implementation.builds",
+      "value": "true",
+      "revisions": 1
+    },
+    {
+      "key": "implementation.commit",
+      "value": "Implement URL shortener API over SQLite",
+      "revisions": 1
+    },
+    {
+      "key": "implementation.files-changed",
+      "value": "8",
+      "revisions": 1
+    },
+    {
+      "key": "intake.recorded",
+      "value": "true",
+      "revisions": 1
+    },
+    {
+      "key": "release.decision",
+      "value": "go",
+      "revisions": 1
+    },
+    {
+      "key": "requirements.acceptance-criteria",
+      "value": "20",
+      "revisions": 1
+    },
+    {
+      "key": "requirements.ambiguity-score",
+      "value": "0.3",
+      "revisions": 1
+    },
+    {
+      "key": "requirements.scope",
+      "value": "Build a URL shortener REST API service (SQLite-backed) that creates, redirects, and reports click stats for short links.",
+      "revisions": 1
+    },
+    {
+      "key": "review.findings",
+      "value": "2",
+      "revisions": 1
+    },
+    {
+      "key": "review.highest-severity",
+      "value": "medium",
+      "revisions": 1
+    },
+    {
+      "key": "run.has-existing-code",
+      "value": "false",
+      "revisions": 1
+    },
+    {
+      "key": "run.id",
+      "value": "run_20260917T004505Z_e2258e",
+      "revisions": 1
+    },
+    {
+      "key": "run.initiated-by",
+      "value": "human:muskan",
+      "revisions": 1
+    },
+    {
+      "key": "run.request",
+      "value": "Build a URL shortener service.\n\nPOST /api/v1/links accepts JSON with \u0060url\u0060 (required), \u0060alias\u0060 (optional) and \u0060expiresAt\u0060\n(optional, ISO-8601 UTC). It returns 201 with the short code and the absolute short URL. A\nrequested alias that is already taken returns 409 and creates nothing.\n\nGET /{code} returns 302 Found to the original URL and increments that link\u0027s click count. An\nunknown code returns 404. A link past its expiry returns 410 Gone.\n\nGET /api/v1/links/{code}/stats returns the code, the original URL, the creation time, the\nexpiry if one is set, and the click count.\n\nReject with 400 any URL whose scheme is not http or https. Reject with 400 any URL whose host\nis an IP literal in a loopback, link-local, or RFC 1918 private range. Do not perform DNS\nresolution; check the literal host only.\n\nPersist links in SQLite. Generate codes as base62 over a monotonic identifier.",
+      "revisions": 1
+    },
+    {
+      "key": "run.scenario",
+      "value": "greenfield",
+      "revisions": 1
+    },
+    {
+      "key": "run.workflow",
+      "value": "sdlc@v1",
+      "revisions": 1
+    },
+    {
+      "key": "security.findings",
+      "value": "0",
+      "revisions": 1
+    },
+    {
+      "key": "security.secrets-found",
+      "value": "false",
+      "revisions": 1
+    },
+    {
+      "key": "test.coverage",
+      "value": "0.8259",
+      "revisions": 1
+    },
+    {
+      "key": "test.failures",
+      "value": "0",
+      "revisions": 1
+    }
+  ]
+}

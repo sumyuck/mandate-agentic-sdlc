@@ -134,6 +134,55 @@ public sealed class DotnetWorkspaceVerifierTests
     }
 
     [Fact]
+    public async Task Two_identical_verifications_report_identical_text()
+    {
+        // This output is fed into a retry's prompt so the stage can fix what it broke,
+        // which makes it part of the prompt — and a prompt that differs between two
+        // identical runs can never be replayed from a recording. The first offline replay
+        // of a successful run diverged at exactly this point, because the retry's question
+        // included how many milliseconds the previous test run had taken.
+        ImmutableArray<WorkspaceFile> failing =
+        [
+            new WorkspaceFile(
+                "tests/Service.Tests/FailingTests.cs",
+                """
+                namespace Service.Tests;
+
+                public sealed class FailingTests
+                {
+                    [Fact]
+                    public void This_one_is_meant_to_fail() => Assert.Equal(1, 2);
+                }
+                """),
+        ];
+
+        VerificationOutcome first = await Verifier.VerifyAsync(
+            Tree, failing, VerificationKind.Test, CancellationToken.None);
+
+        VerificationOutcome second = await Verifier.VerifyAsync(
+            Tree, failing, VerificationKind.Test, CancellationToken.None);
+
+        first.Summary.ShouldBe(second.Summary);
+        first.Output.ShouldBe(second.Output);
+    }
+
+    [Fact]
+    public async Task No_absolute_sandbox_path_survives_into_the_output()
+    {
+        // The sandbox path carries a fresh id. It reached a retry's prompt once, telling
+        // the stage its files lived somewhere they did not.
+        VerificationOutcome outcome = await Verifier.VerifyAsync(
+            Tree,
+            [new WorkspaceFile("Broken.cs", "this is not C#")],
+            VerificationKind.Build,
+            CancellationToken.None);
+
+        outcome.Output.ShouldNotContain(Path.GetTempPath());
+        outcome.Output.ShouldNotContain("mandate-sandbox-");
+        outcome.Summary.ShouldNotContain("mandate-sandbox-");
+    }
+
+    [Fact]
     public void The_disabled_verifier_says_it_is_disabled()
     {
         IWorkspaceVerifier.Disabled.IsAvailable.ShouldBeFalse();

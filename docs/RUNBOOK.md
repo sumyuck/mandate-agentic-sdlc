@@ -196,6 +196,13 @@ mandate llm check                       # Prove the model layer works
 mandate info --json                     # Engine identity and host diagnostics
 ```
 
+### On a machine that is not yours
+
+`make verify` and `make demo` are the same checks continuous integration runs. Every push
+and pull request runs all three CI jobs from a clean clone, and the workflow also accepts a
+manual run from the repository's Actions tab, so the checks can be demonstrated on request
+rather than described. See [`.github/workflows/ci.yml`](../.github/workflows/ci.yml).
+
 ## Using a real model
 
 Only needed if you want to record new runs. The committed recordings cover everything

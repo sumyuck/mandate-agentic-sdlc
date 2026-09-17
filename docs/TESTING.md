@@ -199,6 +199,39 @@ concerns the fixture's infrastructure; all eight concern the system that produce
 richer fixture would have consumed effort that belongs in the orchestrator, and would have
 made the brownfield scenario slower to run without making it more revealing.
 
+## Continuous integration
+
+The suite is only meaningful if it runs somewhere other than the machine it was written
+on. [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) runs on every push and pull
+request, and can be started by hand from the Actions tab.
+
+Three jobs, each beginning from a clean clone:
+
+- **`build / test / style`** restores, builds with warnings as errors, runs all 867 tests
+  and checks formatting. Because the architecture rules are tests, this job also enforces
+  ADR-0001 through ADR-0003.
+- **`offline demo`** runs `make demo`: the lifecycle validator, the model layer in replay,
+  all eleven stages against stub agents, then an import of the three committed runs and a
+  verification of their audit chains. The job sets no `ANTHROPIC_API_KEY`, which makes
+  "this runs offline" a property the pipeline enforces rather than a claim in a document.
+- **`generated service`** builds and tests the URL shortener on its own, outside the
+  orchestrator, for the reason given above: a result the system grades itself on is not
+  evidence.
+
+**What CI caught that local testing could not.** The first run on the public repository
+failed to compile. A `.gitignore` pattern written for the .NET SDK's build output,
+`artifacts/`, also matched `src/Mandate.Core/Artifacts/`, and on a case-insensitive
+filesystem `git add` skipped the directory without reporting anything. Every local build
+and all 867 tests passed, because the files were on disk; a clean clone had no artifact
+domain model and no test for it.
+
+The fix anchored the pattern, and
+[`scripts/check-sources-tracked.sh`](../scripts/check-sources-tracked.sh) now fails
+`make verify` if any source file is being hidden from the repository, so the same class of
+defect is caught on the machine where it is still cheap to fix. Writing that check
+immediately found a second latent instance: `[Rr]elease/` would have swallowed any future
+`src/.../Release/` directory the same way.
+
 ## Running the tests
 
 ```bash

@@ -67,6 +67,34 @@ Full command reference: [`docs/RUNBOOK.md`](docs/RUNBOOK.md).
 
 ---
 
+## Continuous integration
+
+Everything above is checked on every push, on a clean Ubuntu machine that has none of the
+author's tooling or state. Three jobs run in parallel
+([`ci.yml`](.github/workflows/ci.yml)):
+
+| Job | What it proves |
+|---|---|
+| `build / test / style` | The code compiles from a clean clone with warnings as errors, 867 tests pass, and `dotnet format` reports no changes |
+| `offline demo` | The five-minute path above still works. It runs the whole lifecycle, loads the committed run evidence and verifies every audit chain |
+| `generated service` | The URL shortener Mandate wrote passes its 96 tests, built on its own, outside the orchestrator |
+
+The demo job is the interesting one. **No API key is set anywhere in it**, so if any part
+of the offline path quietly needed to reach a model provider, that job fails rather than
+the reviewer discovering it. It is also the difference between claiming the evidence is
+verifiable and demonstrating it: the job imports the three recorded runs and recomputes
+their hash chains on a machine that has never seen them before.
+
+This is not decoration. The first CI run on this repository failed, because a `.gitignore`
+pattern intended for build output was also matching a source directory, so the artifact
+domain model was missing from the repository. It built perfectly on the machine that had
+the files on disk. Nothing but a clean checkout would have found that.
+
+To run the checks yourself, use `make verify` and `make demo`, or trigger the workflow from
+the Actions tab, which accepts a manual run.
+
+---
+
 ## What makes it a governed system rather than an agent loop
 
 Most agentic systems are a loop: call a model, look at the output, call it again. That works

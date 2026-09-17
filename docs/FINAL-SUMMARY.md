@@ -202,6 +202,10 @@ Verified mechanically, and reproducible by anyone with the repository:
 - All three audit chains verify. The store refuses UPDATE and DELETE at the database level.
 - 867 tests pass with warnings as errors and `dotnet format` clean.
 - The architecture rules are tests, so breaking them fails the build rather than the review.
+- All of the above runs in CI on every push, from a clean clone, on a machine holding none
+  of this project's local state. The job that walks the offline demo has no API key, so the
+  claim that the whole system runs without a model provider is enforced rather than
+  asserted.
 
 Where the boundaries of that verification sit:
 

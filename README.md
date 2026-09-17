@@ -1,181 +1,188 @@
 # Mandate
 
 **A governed agentic software-engineering system.**
-Mandate turns a requirement into a reviewable engineering outcome by orchestrating the full
-SDLC — requirements, design, implementation, test, review, documentation, release readiness —
-as an explicit dependency graph with gates, policy guardrails, human approvals, bounded
-retries, rollback, and an audit chain you can verify.
+
+Mandate turns a requirement written in plain English into a reviewable engineering outcome.
+It decomposes the work across an explicit dependency graph, has language models perform each
+stage, holds their output to gates it cannot skip, stops for a named human at the decisions
+that matter, and records every step in a log you can verify has not been altered.
 
 > **Principle:** agents execute under a mandate; humans grant it, bound it, and revoke it.
 >
-> In this domain a *mandate* is the document that states exactly what an agent may and may
-> not do on someone else's behalf — its limits, its prohibited actions, its reporting
-> obligations. That is precisely what an autonomy boundary is, which is why the system is
-> named for it. Agents execute inside declared boundaries. Humans own oversight, approvals,
-> and final quality.
+> A *mandate* is the document stating exactly what an agent may and may not do on someone
+> else's behalf: its limits, its prohibited actions, its reporting obligations. That is
+> precisely what an autonomy boundary is, which is why the system is named for it.
 
-The system's proving ground is a real service: a **URL shortener** with create/redirect APIs,
-click analytics and reliability features, built and then modified *by* Mandate rather than
-by hand. Two products, one repository — the orchestrator is the deliverable, the service is
-the evidence that it works.
+The proving ground is a real service. The **URL shortener** in [`services/`](services/) was
+written by Mandate, not by hand: its code, its tests, its OpenAPI contract, its architecture
+decision record and its README. Two products in one repository. The orchestrator is the
+deliverable; the service is the evidence that it works.
 
 ---
 
-## Status
+## Try it in five minutes
 
-This repository is being built in ordered parts (see [PLAN.md](PLAN.md)). The governance core
-lands before the agents, so the orchestrator is defensible even at an intermediate state.
-
-| | Part | State |
-|---|---|---|
-| P0 | Repository skeleton, build governance, ADRs | **done** |
-| P1 | Core domain: graph, state machine, hash-chained events, artifact provenance, decisions, context | **done** |
-| P2 | Guard grammar, strict YAML loader, static validation, diagram renderer, the lifecycle itself | **done** |
-| P3 | Engine: scheduler, join policies, guard-driven skipping, gates, bounded concurrency | **done** |
-| P4 | Durable event store, run catalogue, `audit verify`, evidence export | **done** |
-| P5 | Reliability: git workspace, bounded retries, fallback, real rollback, safe-stop | **done** |
-| P6 | Human approvals, refusals, and resume from the log | **done** |
-| P7 | Policy guardrails: security, compliance, change control, audited waivers | **done** |
-| P8 | Dynamic re-planning: lazy invalidation, loop-backs, governance re-applied | **done** |
-| P9 | Observability: derived metrics, traces, structured logs, HTML run report | **done** |
-| P10 | Model-backed agents: LLM port, prompts, record/replay cassettes | next |
-| P11–P16 | The three scenarios, the URL shortener, documentation | planned |
-
-**678 tests** currently pass, with warnings treated as errors across the solution — including
-40 that drive the CLI end to end through the same command definitions the binary exposes, and
-a set that exercise rollback against real git rather than a stub.
-
-The lifecycle runs end to end today against *scripted* agents — which produce real
-content-addressed artifacts with real provenance, contribute the context facts their nodes
-declare, and record decisions. What is not yet real is the engineering judgment inside each
-stage; that arrives with the model-backed agents in P11. Runs stop at the first human
-checkpoint, because approvals land in P6.
+No API key required. The model exchanges replay from committed recordings.
 
 ```bash
-make run                                  # greenfield
-make run SCENARIO=brownfield              # takes the impact-analysis path
-make run SCENARIO=ambiguous               # diverts to a human, and refuses to design
-
-make runs                                 # list recorded runs
-make audit                                # prove no run's log has been altered
-
-# Exercise the reliability machinery: retry, backoff, exhaustion, handoff.
-make run FAIL=requirements-analyst
+make doctor                 # confirm the toolchain matches global.json
+make verify                 # build with warnings as errors, 853 tests, style check
+make workflow               # validate the lifecycle and show its parallel structure
+make llm                    # prove the model layer works, offline
+make run-model LLM=stub     # walk the whole lifecycle with no key and no network
 ```
 
-See how a run actually went:
+Then read what the system actually did:
 
 ```bash
-dotnet run --project src/Mandate.Cli -- runs metrics <runId>          # derived figures
-dotnet run --project src/Mandate.Cli -- runs report  <runId>          # one HTML page
+dotnet run --project src/Mandate.Cli -- runs list
+dotnet run --project src/Mandate.Cli -- runs metrics run_20260917T004505Z_e2258e
+dotnet run --project src/Mandate.Cli -- audit verify
 ```
 
-Inspect and evaluate the guardrails:
+And open `runs/run_20260917T004505Z_e2258e/report.html`, a self-contained page with the
+timeline, the gate verdicts, the decisions and their rejected options, and the artifact
+provenance. No network, no script.
 
-```bash
-dotnet run --project src/Mandate.Cli -- policy list
-dotnet run --project src/Mandate.Cli -- policy check <runId>
-dotnet run --project src/Mandate.Cli -- waive <runId> --rule CHG-003 --as alex --reason "..."
+Full command reference: [`docs/RUNBOOK.md`](docs/RUNBOOK.md).
+
+---
+
+## What makes it a governed system rather than an agent loop
+
+Most agentic systems are a loop: call a model, look at the output, call it again. That works
+until something goes wrong, and then there is nothing to inspect, no boundary that was
+enforced, and no way to answer "why did it do that".
+
+Five things are different here.
+
+**The lifecycle is data, not code.** It lives in
+[`workflows/sdlc.v1.yaml`](workflows/sdlc.v1.yaml) as a graph of stages, dependencies,
+guards and gates. The engine knows nothing about software development. Changing how software
+gets built is a configuration change under review, not a deployment.
+
+**Agents propose; the engine applies.** No agent writes to the workspace. They return files
+they would like written, and the engine validates every path and commits them as that
+stage's commit. The autonomy boundary is enforced, not described.
+
+**Claims are measured, not accepted.** A stage that says the tests pass does not define what
+passing means. `dotnet build` and `dotnet test` run over the proposed tree before anything
+is committed, and the measured figure replaces the claim. A stage that overstates its
+results fails, naming both numbers.
+
+**Humans own the irreversible decisions.** The design everything is built on, and the
+release itself, both require a named human who is not the requester. Approving work that
+re-planning has since invalidated is impossible, because invalidation revokes the approval.
+
+**The record is the product.** Every state change, gate verdict, approval, artifact,
+decision and model call is an event in a SHA-256 hash chain. Metrics are derived from that
+log rather than stored beside it, so no number in a report can be set. It can only be caused.
+
+---
+
+## The lifecycle
+
+Eleven stages, seventeen edges, three conditional paths, three loop-backs, three human
+checkpoints. Rendered from the definition itself.
+
+```
+intake
+  |
+requirements
+  |-- (ambiguity >= 0.3) --> clarification --[on success]--> requirements
+  |-- (has existing code) --> impact-analysis
+  |
+architecture                       [human: tech-lead]
+  |
+implement
+  |
+  +-------> test ---------[on failure]-------> implement
+  +-------> code-review --[on failure]-------> implement
+  +-------> security-scan
+  +-------> documentation
+  |
+release-readiness                  [human: release-approver]
 ```
 
-Change your mind about an input the run already acted on:
+It is not linear. An ambiguous requirement diverts to a human and loops back. Work against
+existing code earns an extra analysis stage. Four stages run concurrently and
+`release-readiness` waits for all of them. A failing test or a severe review finding
+returns the work to implementation.
 
-```bash
-dotnet run --project src/Mandate.Cli -- amend <runId> --stage requirements \
-    --as muskan --reason "Expiry means a TTL, not one-time use."
-dotnet run --project src/Mandate.Cli -- resume <runId>
-```
+---
 
-Close the human loop on a parked run:
+## Three recorded scenarios
 
-```bash
-dotnet run --project src/Mandate.Cli -- approve <runId> --role tech-lead --as alex --note "..."
-dotnet run --project src/Mandate.Cli -- deny    <runId> --role tech-lead --as alex --note "..."
-dotnet run --project src/Mandate.Cli -- resume  <runId>
-```
+Each replays offline with no key. Each has its events, timeline and HTML report committed.
 
-Runs persist by default to `.mandate/runs.db`. Inspect, verify or export one:
+| | Scenario | Outcome | What it demonstrates |
+|---|---|---|---|
+| [S1](docs/scenarios/s1-greenfield.md) | Greenfield | Succeeded, 171 events | Decomposition, parallel execution with a barrier, both human checkpoints, measured validation |
+| [S2](docs/scenarios/s2-brownfield.md) | Brownfield | Succeeded, 179 events | Codebase reasoning over real code the system wrote, conditional routing that adds a stage, compensation on a real git tree |
+| [S3](docs/scenarios/s3-ambiguous.md) | Ambiguous | Held at the test gate, 228 events | Ambiguity scored and routed on, clarification to a human, three re-plans, convergence from 0.35 to 0.1 |
 
-```bash
-dotnet run --project src/Mandate.Cli -- runs show <runId>
-dotnet run --project src/Mandate.Cli -- audit verify <runId>
-dotnet run --project src/Mandate.Cli -- runs export <runId>   # -> runs/<runId>/
-```
+The third run is the most interesting of the three. A deliberately vague requirement was
+scored, routed to a human, answered, re-planned three times, and converged from 0.35 to
+0.1. The rate limiter was then implemented and verified by a measured build, reviewed,
+scanned and documented.
 
-Only the commands listed below exist today. Nothing in this README describes behaviour that
-is not yet implemented.
+Then the run stops, and that is the part worth looking at. The test stage produced no
+measured result, so the gate standing in front of release had no test evidence to read,
+and it declined to advance the work. It is the one run in the set where a control actually
+bites, which makes it the run that proves the controls are real. A system that shipped the
+feature anyway, on the strength of a stage's own assurance that it had written tests,
+would be the broken one.
+
+### What the review stage caught in the system's own output
+
+Reviewing code **the system had written itself**, the review stage found that IPv4-mapped
+IPv6 literals (`::ffff:127.0.0.1`) parse as `InterNetworkV6`, miss all three IPv6 range
+checks and reach loopback, defeating the private-range blocking the requirement asked for.
+It named the file, the mechanism, the consequence and the fix, and the severity gate held
+the change back until it was addressed.
+
+That is the whole argument for the design in one example. A generated change was stopped by
+a control, on a real vulnerability, with the reasoning recorded.
+
+---
+
+## Documentation
+
+| Document | What it covers |
+|---|---|
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Components, control flow, governance mechanisms, key decisions, what the system does not do |
+| [`docs/RUNBOOK.md`](docs/RUNBOOK.md) | Installing, running, every command, operating a live run, spend control |
+| [`docs/TESTING.md`](docs/TESTING.md) | The 853 tests and what they pin, the scope boundaries, and the trade-offs behind each design choice |
+| [`docs/TRACEABILITY.md`](docs/TRACEABILITY.md) | Every requirement in the brief mapped to code, test and evidence |
+| [`docs/FINAL-SUMMARY.md`](docs/FINAL-SUMMARY.md) | Plan, rationale, artifacts, risk controls, assumptions, roadmap |
+| [`docs/scenarios/`](docs/scenarios/) | The three runs, in detail |
+| [`docs/adr/`](docs/adr/) | 17 architecture decision records with the alternatives rejected |
+
+The 17 ADRs are worth reading alongside the code. Each records the alternatives that were
+weighed and the specific reason each was rejected.
+
+---
 
 ## Requirements
 
-- **.NET 10 SDK** (pinned in [`global.json`](global.json))
+- **.NET 10 SDK**, pinned in [`global.json`](global.json)
 - `git`
-- `make` (optional — every target is a one-line `dotnet` command)
+- `make`, optional
 
-**No API key is required.** Model calls replay from the recordings committed under
-[`cassettes/`](cassettes/); nothing reaches a provider unless you ask for a mode that does.
-
-.NET 10 is the current LTS release (supported to November 2028) and the deliberate target;
-in a regulated domain the support lifecycle is a compliance input, not a preference. See
-[ADR-0002](docs/adr/0002-target-framework.md). If it is not on your `PATH`:
+.NET 10 is the current LTS, supported to November 2028. In a regulated domain the support
+lifecycle is a compliance input rather than a preference. See
+[ADR-0002](docs/adr/0002-target-framework.md).
 
 ```bash
 curl -fsSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 10.0
 export PATH="$HOME/.dotnet:$PATH"
 ```
 
-## Quick start
-
-```bash
-make doctor     # confirm the toolchain matches global.json
-make verify     # toolchain, build (warnings are errors), all tests, code style
-make info       # print engine identity and host diagnostics
-make workflow   # validate the lifecycle definition and show its parallel structure
-make llm        # prove the model layer works — offline, from the committed recordings
-make help       # list available targets
-```
-
-Inspect the lifecycle directly:
-
-```bash
-dotnet run --project src/Mandate.Cli -- workflow validate
-dotnet run --project src/Mandate.Cli -- workflow render --markdown
-```
-
-Inspect the model layer:
-
-```bash
-dotnet run --project src/Mandate.Cli -- llm prompts     # the versioned prompts, with hashes
-dotnet run --project src/Mandate.Cli -- llm check       # replay a recorded exchange, offline
-```
-
-Run the lifecycle with model-backed agents, offline and with no key:
-
-```bash
-make run-model LLM=stub
-```
-
-Each of the eleven agents is a versioned prompt plus a declaration in the workflow, not a
-class — see [ADR-0014](docs/adr/0014-agents-are-prompts-not-classes.md). What the workflow
-declares a stage produces is enforced against what the model actually returns, in both
-directions.
-
-Build and test results are **measured, not claimed**: before the engine commits anything, the
-real `dotnet build` and `dotnet test` run over a copy of the tree with the stage's proposed
-files applied, and a stage that overstates its own coverage or test results fails. See
-[ADR-0015](docs/adr/0015-verified-not-claimed.md).
-
-To call a provider for real, set `ANTHROPIC_API_KEY` and add `--llm live` (or `--llm record`
-to keep the exchange). Spend is capped and every call is an audited event — see
+To call a model for real, set `ANTHROPIC_API_KEY` and pass `--llm live` or `--llm record`.
+Spend is capped per run and every call is an audited event. See
 [ADR-0013](docs/adr/0013-model-spend-as-a-governed-budget.md).
 
-Every target accepts a `DOTNET` override, e.g. `make verify DOTNET=$HOME/.dotnet/dotnet`.
-
-Without `make`:
-
-```bash
-dotnet build --nologo && dotnet test --nologo
-dotnet run --project src/Mandate.Cli -- info --json
-```
+---
 
 ## Repository layout
 
@@ -183,187 +190,52 @@ dotnet run --project src/Mandate.Cli -- info --json
 src/
   Mandate.Core/          domain model and every port the engine depends on
   Mandate.Orchestrator/  the engine: scheduling, gates, retries, rollback, re-planning
-  Mandate.Policy/        declarative security / compliance / change-control rules
-  Mandate.Agents/        stage agents (requirements, design, implement, test, review, docs, release)
-  Mandate.Llm/           model provider port, prompts, record/replay cassettes
-  Mandate.Persistence/   event store, artifact store, git-backed workspace
-  Mandate.Observability/ structured logs, traces, metrics, run reports
-  Mandate.Cli/           `mandate` - the sole composition root
+  Mandate.Workflows/     YAML lifecycle loader, validator, diagram renderer
+  Mandate.Agents/        the eleven stage agents, and scripted agents for testing
+  Mandate.Llm/           model port, prompt library, record and replay, spend ceiling
+  Mandate.Policy/        declarative security, compliance and change-control rules
+  Mandate.Persistence/   event store, git workspace, toolchain verification
+  Mandate.Observability/ metrics derived from the log, HTML run report
+  Mandate.Cli/           `mandate`, the sole composition root
   Mandate.Api/           read-only run inspection surface
-services/                 Product A: the URL shortener, produced by Mandate runs
-workflows/                the SDLC graph, policy packs, autonomy matrix
-prompts/                  versioned prompt templates, one file per prompt per version
-cassettes/                recorded model exchanges, keyed by request content
-config/                   dated model price list, so a run can be costed
-runs/                     committed run evidence: events, artifacts, metrics
-tests/                    unit, architecture and integration tests
-docs/                     architecture, ADRs, scenarios, testing, traceability
+
+workflows/               the lifecycle graph and the policy packs
+prompts/                 one versioned file per agent
+config/                  dated model prices, with the source they came from
+cassettes/               recorded model exchanges, keyed by request content
+scenarios/               the three requirements, as given to the system
+runs/                    committed evidence: events, timelines, HTML reports
+services/                the URL shortener, produced by Mandate runs
+templates/               trees a run is seeded from
+tests/                   853 tests across 9 projects
+docs/                    architecture, ADRs, scenarios, testing, traceability
 ```
 
-## The lifecycle
-
-[`workflows/sdlc.v1.yaml`](workflows/sdlc.v1.yaml) is the plan — the engine holds no lifecycle
-control flow of its own. The diagram in
-[`docs/diagrams/sdlc.v1.mmd`](docs/diagrams/sdlc.v1.mmd) is generated from that same file, so
-the two cannot drift apart.
-
-It is deliberately not a chain:
-
-- **Conditional paths.** Impact analysis runs only against existing code. Requirements whose
-  ambiguity score exceeds the threshold divert to a human and loop back.
-- **Parallel work with a synchronising barrier.** Test, code review, security scan and
-  documentation run concurrently from one implementation, and all four must land before a
-  release decision is even considered.
-- **Bounded returns.** A failing test returns to implementation along a declared loop-back
-  edge, bounded by that stage's retry budget — non-linear without being unbounded.
-- **Human checkpoints at the irreversible decisions.** The design everything is built on, and
-  the release itself. Both enforce segregation of duties: the participant that produced the
-  work cannot approve it.
-- **Autonomy declared per stage.** L0 to L2, matched to the risk of the stage. L3 (fully
-  autonomous) is representable and deliberately unassigned.
-- **Model capability matched to stage risk**, and recorded per stage in the audit log, so model
-  provenance is part of the evidence.
-
-Twenty-two tests in `ShippedWorkflowTests` guard these properties, because the lifecycle is
-configuration and nothing in the compiler stops someone weakening it.
-
-## What the core model already guarantees
-
-The domain is built so that the governance properties are enforced by types rather than by
-discipline:
-
-- **Illegal state changes are impossible.** Every node transition goes through one table, so
-  a node cannot reach `Succeeded` without running, the engine cannot clear its own policy
-  block, and work parked for approval can be invalidated by an upstream change instead of
-  being approved stale.
-- **An unattributed action cannot be recorded.** Events, artifacts, decisions and context
-  facts all refuse to exist without an actor, which is what makes segregation of duties
-  checkable rather than aspirational.
-- **An indefensible decision cannot be recorded.** `Decision` rejects a choice with fewer than
-  two options, or a rejected option with no stated reason. Rationale is captured when the
-  choice is made, because ADRs are generated from these records.
-- **Tampering with the audit log is detectable.** Editing, deleting, reordering, duplicating,
-  backdating or splicing events all break the hash chain at an identifiable point.
-- **Provenance is structural.** Artifacts are content-addressed and name what they were
-  derived from, so lineage needs no trace document and re-plan invalidation is an exact digest
-  comparison rather than a heuristic.
-- **A workflow that cannot execute is rejected before a run exists**, with every problem
-  reported at once — cycles in the forward graph, nodes wired into no path, contradictory
-  autonomy, a compensation fallback with nothing to compensate, an attempt with no timeout.
-- **The workflow file cannot execute code.** Conditional paths use a closed predicate grammar
-  with no function calls, arithmetic, member access or interpolation, so a change-controlled
-  configuration file never becomes a code-execution surface. Guards fail closed, and a guard
-  reading a context key no stage produces is rejected at load rather than halting a run.
-- **Nothing is read loosely.** An unknown key, a misspelled enum, a malformed duration or a
-  duplicate mapping is an error naming the file, the line and the accepted values — never a
-  silently dropped setting.
-- **The engine refuses to start a run it cannot finish.** An agent the workflow names but
-  nothing provides, or a gate condition nothing can judge, fails at construction with every
-  problem listed. An unjudgeable gate is the dangerous case: skipped, it would appear in the
-  audit log as a check that passed.
-- **Gates are evidence-based and fail closed.** `tests-pass` reads a recorded test result, not
-  an agent's opinion of its own code. Absent evidence fails, because a check that passes for
-  want of data is worse than no check.
-- **A run can be rebuilt from its log alone.** Live execution and replay go through the same
-  reducer, so a rebuilt run cannot disagree with the one that was executed — asserted by a
-  test over the full lifecycle, and again against the durable store.
-- **The log is append-only at the storage layer**, not merely by convention: database triggers
-  refuse an `UPDATE` or `DELETE` on the event table whoever issues it. A forged *insert* is
-  still possible through raw SQL — and that is what the hash chain catches, which a test
-  demonstrates by forging one.
-- **The run listing is a query over the events**, not a second table recording the same facts,
-  so there is no denormalised status that can drift away from the log.
-- **Agents propose file changes; the engine applies them.** Every path is validated against
-  the workspace boundary before anything touches disk, so a stage cannot write a git hook or
-  escape its tree — and a refused write fails the *stage*, not the engine, so it goes through
-  the same retry and compensation machinery as any other failure.
-- **Rollback is a real `git revert`.** After compensation the tree can be inspected: added
-  files are gone, edited files are as they were, the tree is clean. Both the change and its
-  reversal stay in the history, because erasing the record of a mistake is the wrong instinct
-  for a system built to be audited.
-- **Retries are bounded and jittered.** Backoff grows, respects a ceiling, and is spread, so
-  stages that failed together do not retry together against whatever was already struggling.
-- **A stop halts at a coherent boundary**, between stages rather than mid-stage, and preserves
-  completed work rather than relabelling it.
-- **An approved stage completes without being re-run.** The work was finished before the
-  approval was sought; re-executing on the strength of a signature would mean the human
-  approved something other than what ships. Enforced by the state machine, which also makes
-  it impossible to park a stage *before* it has run — that would open a path to success that
-  never executed anything.
-- **The person who asks for the work cannot sign it off.** In an agent-driven lifecycle the
-  producer is almost always an agent, so comparing approver to producer alone would be close
-  to vacuous. The control that bites is maker-checker against the run's initiator — with one
-  deliberate exception, the clarification, where the question is being put back to the
-  requester and anyone else would be the wrong person.
-- **A refusal is not the same as silence.** "Nobody has looked at this" and "somebody looked
-  and said no" are tracked separately, so a resumed run never waits on a decision that has
-  already been made.
-- **A resumed run is reconstructed entirely from its own log** — state and original request
-  both — so resuming cannot quietly change what was asked for, and the run is never re-planned
-  or re-seeded.
-- **Policy is three readable files, not code.** Ten rules across security, compliance and
-  change control, each stating what must hold, why it matters, and the check that evaluates
-  it. "What does this system enforce?" is answerable by a compliance reviewer, not only by a
-  developer.
-- **A waiver overrides without silencing.** A human can let a blocking violation through, but
-  the rule is still evaluated and still reported as violated — with the waiver, its reason and
-  its author in the hash-chained log. An auditor's question is not "were there violations?"
-  but "what did we knowingly let through, and who said so?", and a suppressed check cannot
-  answer it.
-- **Defence in depth is structural.** Waiving the rule that requires approvals does *not*
-  release the stage, because the stage's own exit gate independently requires the signature.
-  One override does not collapse two controls.
-- **Re-planning is incremental, not a restart.** An amendment invalidates only the stage it
-  names. Whether anything downstream is invalidated is decided *after* that stage re-runs, by
-  comparing what it produced against what it produced before — an exact comparison, because
-  artifacts are content-addressed. A re-run that changes nothing disturbs nothing.
-- **Invalidating a stage withdraws the approval given for it.** A signature was given for work
-  that is now being redone; carrying it forward would put a human's name against output they
-  never saw.
-- **Loop-backs declare which outcome fires them.** A clarification returns to requirements when
-  it *succeeds*; a test returns to implementation when it *fails*. Defaulting this was a real
-  bug: the test loop-back re-planned the implementation every time the tests passed.
-- **No metric is stored.** Success rate, retry and rollback frequency, MTTR, stage latency,
-  gate block rate, approval wait and autonomy ratio are all computed by folding over the event
-  log. They cannot be set, only caused — and anyone holding the exported log can recompute
-  them and get the same answer.
-- **The run report is one self-contained HTML file** — no network, no script, no CDN. Evidence
-  that only renders with network access is evidence with a dependency it should not have, and
-  it has to keep working years from now in an archive.
-- **Exit codes distinguish "failed" from "needs a human."** A run waiting on an approval
-  returns `3`, not `1`, because a CI job or a demo script has to tell them apart — treating a
-  human checkpoint as an error would misrepresent the thing the system is built to do.
-
-## Design in one page
-
-Five choices shape everything else:
-
-1. **The workflow is data, not code.** The SDLC graph lives in versioned YAML — nodes, guarded
-   edges, join barriers, gates, retry policies, compensations, autonomy levels. It is
-   validated before it runs and can be rendered as a diagram.
-   ([ADR-0004](docs/adr/0004-declarative-workflow.md))
-2. **State is an append-only event stream, hash-chained.** Current state is a projection. Every
-   transition, gate verdict, policy decision, approval and retry is an event whose hash
-   commits to its predecessor, so `audit verify` can prove the log was not edited — and every
-   reliability metric is derived from that stream rather than stored.
-   ([ADR-0005](docs/adr/0005-event-sourced-state.md))
-3. **Rollback is a real revert.** Agents write into a per-run git workspace and each node
-   commits its own output, so compensation reverts commits and the tree provably returns to
-   its prior state. ([ADR-0006](docs/adr/0006-git-backed-workspace.md))
-4. **The engine depends on ports only.** `Mandate.Orchestrator` references nothing but the
-   domain, so governance logic is unit-testable with no database, no policy file and no model
-   provider. Enforced by a test, not a convention.
-   ([ADR-0003](docs/adr/0003-hexagonal-layering.md))
-5. **Model calls are recorded and replayable.** The default demo path needs no API key and no
-   network, and produces identical evidence every time.
-   ([ADR-0007](docs/adr/0007-llm-record-replay.md))
-
-Full decision log: [docs/adr](docs/adr/README.md). Build order and rationale: [PLAN.md](PLAN.md).
+---
 
 ## Engineering conventions
 
-- **Warnings are errors** in every project, with .NET analyzers at `latest-recommended`.
-- **One target framework** (.NET 10 LTS), declared once in `Directory.Build.props`.
-- **Central package management** — every NuGet version in a single reviewable file.
-- **Architecture tests** assert the structural ADRs, so layering violations fail CI.
-- Underscored, sentence-shaped test names; the runner output reads as a specification.
+- **One target framework**, declared once in `Directory.Build.props`.
+- **Warnings are errors** in `src/`, with analysers at `latest-recommended`. No project
+  opts out, and a test asserts none does.
+- **Central package management.** Every NuGet version is declared once.
+- **Architecture rules are tests.** The engine may depend only on the domain, no adapter may
+  depend on the engine, and exactly one project may reference the model vendor's SDK.
+  Breaking any of those fails the build rather than the review.
+- **Deterministic builds**, so identical inputs produce identical outputs.
+- **Test names are sentences**, so the runner output reads as a specification.
+
+---
+
+## Exit codes
+
+| Code | Meaning |
+|---|---|
+| `0` | The command did what was asked |
+| `1` | The work failed, or verification found a defect |
+| `2` | Bad input: an unknown id, a missing file, an unusable configuration |
+| `3` | The run is complete as far as it can go and is waiting on a human |
+
+Code 3 is deliberately distinct. A run parked at an approval is the lifecycle working, and
+a script that could not tell the difference would report the system's central behaviour as
+a failure.

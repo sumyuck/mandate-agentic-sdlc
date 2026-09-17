@@ -310,6 +310,68 @@ public sealed class ModelStageAgentTests
         result.Failure!.ShouldContain("docs/mandate/");
     }
 
+    [Fact]
+    public async Task A_retry_is_told_what_the_previous_attempt_got_wrong()
+    {
+        // Without this, a retry asks an identical question and gets an identical answer, so
+        // the retry budget is decorative against any deterministic failure — a compiler
+        // error, a contract violation. Three attempts, three identical failures, three
+        // prompts spent learning nothing.
+        List<LlmRequest> sent = [];
+
+        ModelStageAgent agent = new(
+            "implementer",
+            Prompts.Get("implementer"),
+            new ScriptedLlmClient(request =>
+            {
+                sent.Add(request);
+                return GoodIntake;
+            }),
+            Prices,
+            new TestClock());
+
+        WorkflowNode node = Graph.Node(NodeId.Parse("implement"));
+
+        await agent.ExecuteAsync(Executions.For(node), CancellationToken.None);
+
+        await agent.ExecuteAsync(
+            Executions.For(node) with { Attempt = 2, PreviousFailure = "error CS9135: nope" },
+            CancellationToken.None);
+
+        sent[0].Messages.Single().Text.ShouldContain("this is the first attempt");
+        sent[1].Messages.Single().Text.ShouldContain("error CS9135: nope");
+    }
+
+    [Fact]
+    public async Task The_same_failure_produces_the_same_retry_prompt()
+    {
+        // Reproducibility survives, because the failure is itself deterministic: the same
+        // history produces the same first failure, so it produces the same second prompt.
+        List<LlmRequest> sent = [];
+
+        ModelStageAgent agent = new(
+            "implementer",
+            Prompts.Get("implementer"),
+            new ScriptedLlmClient(request =>
+            {
+                sent.Add(request);
+                return GoodIntake;
+            }),
+            Prices,
+            new TestClock());
+
+        WorkflowNode node = Graph.Node(NodeId.Parse("implement"));
+
+        StageExecution retry = Executions.For(node)
+            with
+        { Attempt = 2, PreviousFailure = "error CS9135: nope" };
+
+        await agent.ExecuteAsync(retry, CancellationToken.None);
+        await agent.ExecuteAsync(retry, CancellationToken.None);
+
+        sent[0].Fingerprint.ShouldBe(sent[1].Fingerprint);
+    }
+
     private sealed class ScriptedLlmClient(
         Func<LlmRequest, string> responder, string stopReason = "end_turn") : ILlmClient
     {

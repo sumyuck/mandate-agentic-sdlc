@@ -578,6 +578,10 @@ internal sealed class RunExecution(
     {
         Actor actor = Actor.Agent(node.Agent);
 
+        // Carried into the next attempt so a retry can act on what went wrong. Scoped to
+        // this node's loop: a failure belongs to the stage that produced it.
+        string? previousFailure = null;
+
         while (true)
         {
             int attempt = _state.Nodes[node.Id].AttemptsMade + 1;
@@ -599,8 +603,8 @@ internal sealed class RunExecution(
                 request.Id, node.Id.Value, node.Stage.ToString(), node.Agent, node.Model,
                 node.Autonomy.ToString(), attempt);
 
-            StageResult result = await InvokeAgentAsync(node, attempt, actor, cancellationToken)
-                .ConfigureAwait(false);
+            StageResult result = await InvokeAgentAsync(
+                node, attempt, actor, previousFailure, cancellationToken).ConfigureAwait(false);
             long elapsedMilliseconds = (long)Stopwatch.GetElapsedTime(startedTicks).TotalMilliseconds;
 
             RunActivity.RecordOutcome(span, result.Succeeded, result.Failure);
@@ -640,6 +644,7 @@ internal sealed class RunExecution(
                 .ConfigureAwait(false);
 
             string failure = result.Failure ?? "The stage reported failure without a reason.";
+            previousFailure = failure;
 
             await TransitionAsync(node.Id, NodeState.Failed, Actor.Engine, failure, cancellationToken)
                 .ConfigureAwait(false);
@@ -925,7 +930,11 @@ internal sealed class RunExecution(
     }
 
     private async Task<StageResult> InvokeAgentAsync(
-        WorkflowNode node, int attempt, Actor actor, CancellationToken cancellationToken)
+        WorkflowNode node,
+        int attempt,
+        Actor actor,
+        string? previousFailure,
+        CancellationToken cancellationToken)
     {
         IStageAgent agent = agents.Resolve(node.Agent)
                             ?? throw new EngineConfigurationException(
@@ -938,7 +947,8 @@ internal sealed class RunExecution(
             _state.Context.ScopedTo(ContextScopeFor(node)),
             InputsFor(node),
             actor,
-            _workspace.Reader);
+            _workspace.Reader,
+            previousFailure);
 
         try
         {

@@ -4,6 +4,7 @@ version: v1
 description: >-
   Writes tests against the acceptance criteria and reports what running them actually showed.
 inputs:
+  - previous-failure
   - request
   - context
   - workspace
@@ -13,6 +14,7 @@ verbatim:
   # Content produced upstream, passed through unchanged. Exempt from the repeatability
   # scan: a design document properly contains dates, and refusing the stage's own input
   # for containing one would be refusing the work.
+  - previous-failure
   - context
   - workspace
 max-output-tokens: 32000
@@ -142,6 +144,13 @@ These are enforced by the engine, not advice. Breaking any of them fails the sta
 - `decisions` may be empty. `documents` and `facts` may not.
 
 ## user
+
+If an earlier attempt at this stage failed, this is what went wrong. Read it first and fix
+exactly that — the rest of your previous answer was not kept, so produce the whole thing
+again with the problem corrected. "(this is the first attempt)" means there is nothing to
+fix yet.
+
+{{previous-failure}}
 
 Write and assess tests for the code in this workspace.
 

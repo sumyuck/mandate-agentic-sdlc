@@ -48,8 +48,12 @@ public sealed class ModelStageAgent : IStageAgent
     /// <remarks>
     /// A ceiling, not a target. Without one, the implementation stage's prompt grows with
     /// the repository it is building and eventually costs more than the work is worth.
+    /// Raised from 60,000 after a real run: the tree reached 90 kB, a third of it was
+    /// withheld, and the test stage wrote thirty-odd tests against an API it had been shown
+    /// only part of. A withheld file is cheaper than a wrong one only until the stage
+    /// guesses at it.
     /// </remarks>
-    public const int MaxWorkspaceCharacters = 60_000;
+    public const int MaxWorkspaceCharacters = 200_000;
 
     /// <summary>How far a claimed coverage figure may exceed the measured one.</summary>
     /// <remarks>
@@ -473,12 +477,15 @@ public sealed class ModelStageAgent : IStageAgent
                 + Excerpt(measured.Output));
         }
 
+        // The toolchain's own output goes with it. "37 tests failed" tells a retry that it
+        // was wrong but not what to change, which is the same defect as a retry that cannot
+        // see its previous failure at all — it just fails one level further in.
         return (
             values.ToImmutable(),
             overclaims.Count == 0
                 ? null
                 : "Measured verification contradicts what the stage reported: "
-                  + string.Join("; ", overclaims) + ".");
+                  + string.Join("; ", overclaims) + ". " + Excerpt(measured.Output));
     }
 
     /// <summary>The tail of the toolchain's output, which is where its errors are.</summary>
@@ -491,7 +498,9 @@ public sealed class ModelStageAgent : IStageAgent
             return "It produced no output.";
         }
 
-        const int limit = 600;
+        // Generous, because this is what a retry has to work from: a compiler diagnostic
+        // or a failing assertion is only actionable with the surrounding lines.
+        const int limit = 6000;
         return "Output: " + (trimmed.Length <= limit ? trimmed : "…" + trimmed[^limit..]);
     }
 
@@ -551,6 +560,9 @@ public sealed class ModelStageAgent : IStageAgent
                 ", ", execution.Node.Produces.Select(kind => Hyphenate(kind.ToString()))),
             ["produces-context"] = string.Join(", ", execution.Node.ProducesContext),
             ["inputs"] = RenderInputs(execution.Inputs),
+            ["previous-failure"] = execution.PreviousFailure is { } failure
+                ? failure
+                : "(this is the first attempt)",
         };
 
         Dictionary<string, string> supplied = new(StringComparer.Ordinal);

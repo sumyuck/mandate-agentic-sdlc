@@ -72,7 +72,7 @@ public sealed class DotnetWorkspaceVerifier : IWorkspaceVerifier
                     + "no files.");
             }
 
-            return kind switch
+            VerificationOutcome outcome = kind switch
             {
                 VerificationKind.Build => await BuildAsync(sandbox, cancellationToken)
                     .ConfigureAwait(false),
@@ -81,6 +81,13 @@ public sealed class DotnetWorkspaceVerifier : IWorkspaceVerifier
                 _ => throw new ArgumentOutOfRangeException(
                     nameof(kind), kind, "Not a verification kind."),
             };
+
+            // The sandbox lives at a path with a fresh random id in it. That path appears in
+            // every compiler diagnostic, and a retry that shows the stage its own errors
+            // would then carry a value that changes on every run — the prompt would never
+            // match a recording again. Stripped to workspace-relative, which is the form a
+            // reader wants anyway.
+            return Relativise(outcome, sandbox);
         }
         finally
         {
@@ -267,6 +274,25 @@ public sealed class DotnetWorkspaceVerifier : IWorkspaceVerifier
         {
             TryDelete(results);
         }
+    }
+
+    /// <summary>Rewrites absolute sandbox paths in the output as workspace-relative ones.</summary>
+    private static VerificationOutcome Relativise(VerificationOutcome outcome, string sandbox)
+    {
+        string resolved = Path.GetFullPath(sandbox);
+
+        // The /private variants go first. macOS reports /private/var where the path was
+        // handed over as /var, so stripping the short form first leaves the "/private"
+        // prefix stranded against the next path segment — the first attempt at this
+        // produced "/privatetests/Service.Tests/..." and fed it straight into a retry's
+        // prompt, telling the model its files lived somewhere they did not.
+        string Strip(string text) => text
+            .Replace("/private" + resolved + Path.DirectorySeparatorChar, string.Empty, StringComparison.Ordinal)
+            .Replace("/private" + resolved, string.Empty, StringComparison.Ordinal)
+            .Replace(resolved + Path.DirectorySeparatorChar, string.Empty, StringComparison.Ordinal)
+            .Replace(resolved, string.Empty, StringComparison.Ordinal);
+
+        return outcome with { Summary = Strip(outcome.Summary), Output = Strip(outcome.Output) };
     }
 
     private static long Elapsed(long startedTicks) =>

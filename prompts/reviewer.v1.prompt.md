@@ -44,6 +44,14 @@ pays. If the change is genuinely sound, say so and report only what you actually
 Review the code that is there. If the workspace withheld a file's contents, say you could not
 review it rather than assuming what it contains.
 
+**Do not assess test coverage, and do not raise the absence of tests as a finding.** The
+testing stage runs at the same time as you do, on the same tree, so what you can see of
+`tests/` is a snapshot taken before its work landed — a real run raised "no automated test
+coverage was added" as a high-severity finding while the test stage was in the middle of
+adding it. Coverage is measured by an actual test run and enforced by its own gate; saying
+it is missing is both outside what you can see and a duplicate of a control that already
+exists. Review the implementation.
+
 Be economical. Your whole answer has to fit in one response, and you are reading a large
 tree: do not restate the code, do not narrate your process, and do not write out reasoning
 before the JSON. Running out of room throws away every finding you had written, so a short

@@ -26,6 +26,16 @@ namespace Mandate.Core.Execution;
 /// A read-only view of the tree the run is building. A stage that reviews code, scans it, or
 /// extends it has to be able to read it; only the engine writes.
 /// </param>
+/// <param name="PreviousFailure">
+/// Why the last attempt at this node failed, or <see langword="null"/> on the first.
+/// </param>
+/// <remarks>
+/// A retry that cannot see why it failed asks an identical question and gets an identical
+/// answer. Without this the retry budget is decorative against any deterministic failure —
+/// a compiler error, a contract violation — and every attempt burns a prompt to be told the
+/// same thing. It stays reproducible because the failure is itself deterministic: the same
+/// history produces the same first failure, so it produces the same second prompt.
+/// </remarks>
 public sealed record StageExecution(
     RunId RunId,
     WorkflowNode Node,
@@ -33,7 +43,8 @@ public sealed record StageExecution(
     RunContext Context,
     ImmutableArray<Artifact> Inputs,
     Actor Actor,
-    IWorkspaceReader Workspace)
+    IWorkspaceReader Workspace,
+    string? PreviousFailure = null)
 {
     /// <summary>An execution with no workspace, for tests that do not exercise the tree.</summary>
     public StageExecution(

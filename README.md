@@ -1,6 +1,6 @@
 # Mandate
 
-[![ci](https://github.com/13muskanjain/mandate-agentic-sdlc/actions/workflows/ci.yml/badge.svg)](https://github.com/13muskanjain/mandate-agentic-sdlc/actions/workflows/ci.yml)
+[![ci](https://github.com/sumyuck/mandate-agentic-sdlc/actions/workflows/ci.yml/badge.svg)](https://github.com/sumyuck/mandate-agentic-sdlc/actions/workflows/ci.yml)
 [![.NET 10](https://img.shields.io/badge/.NET-10.0%20LTS-512BD4)](global.json)
 
 **A governed agentic software-engineering system.**

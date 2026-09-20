@@ -2,7 +2,7 @@
 
 ## The short version
 
-867 tests across 9 projects, all passing, zero warnings with warnings treated as errors.
+868 tests across 9 projects, all passing, zero warnings with warnings treated as errors.
 Run them with `make test`, or the full gate including style with `make verify`.
 
 | Project | Tests | Covers |
@@ -207,7 +207,7 @@ request, and can be started by hand from the Actions tab.
 
 Three jobs, each beginning from a clean clone:
 
-- **`build / test / style`** restores, builds with warnings as errors, runs all 867 tests
+- **`build / test / style`** restores, builds with warnings as errors, runs all 868 tests
   and checks formatting. Because the architecture rules are tests, this job also enforces
   ADR-0001 through ADR-0003.
 - **`offline demo`** runs `make demo`: the lifecycle validator, the model layer in replay,
@@ -229,7 +229,7 @@ likely to break the pipeline are the ones that must keep triggering it.
 failed to compile. A `.gitignore` pattern written for the .NET SDK's build output,
 `artifacts/`, also matched `src/Mandate.Core/Artifacts/`, and on a case-insensitive
 filesystem `git add` skipped the directory without reporting anything. Every local build
-and all 867 tests passed, because the files were on disk; a clean clone had no artifact
+and the whole suite passed, because the files were on disk; a clean clone had no artifact
 domain model and no test for it.
 
 The fix anchored the pattern, and

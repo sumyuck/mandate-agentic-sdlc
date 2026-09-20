@@ -236,7 +236,7 @@ rejected.
 | Realism and quality of outputs | A service that compiles and passes 96 tests when built outside the orchestrator |
 | Validation and risk management rigour | Measured verification, severity ceilings, policy packs with audited waivers, spend guard that refuses |
 | Clarity and defensibility of decisions | 17 ADRs with alternatives rejected and reasons, and a commit history that states the reasoning behind each change |
-| Modular, testable, reliable, secure code with safe change management | 10 projects with an enforced dependency rule, 867 tests, warnings as errors, per-stage commits with real revert, and CI running build, tests, style and the offline demo from a clean clone on every push |
+| Modular, testable, reliable, secure code with safe change management | 10 projects with an enforced dependency rule, 868 tests, warnings as errors, per-stage commits with real revert, and CI running build, tests, style and the offline demo from a clean clone on every push |
 | Engineering judgment | [`FINAL-SUMMARY.md`](FINAL-SUMMARY.md), and the limitations stated in [`TESTING.md`](TESTING.md) rather than omitted |
 
 ---

@@ -28,7 +28,7 @@ Or step through it:
 
 ```bash
 make doctor      # confirm the toolchain matches global.json
-make verify      # sources tracked, build with warnings as errors, 867 tests, style
+make verify      # sources tracked, build with warnings as errors, 868 tests, style
 make workflow    # validate the lifecycle and show its parallel structure
 make llm         # prove the model layer works, offline, from recordings
 make run-model LLM=stub   # walk the whole lifecycle with no key and no network

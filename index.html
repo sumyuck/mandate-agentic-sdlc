@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mandate — a governed agentic software-engineering system</title>
+<meta name="description" content="Mandate turns a plain-English requirement into a reviewable engineering outcome: a declarative lifecycle graph, gates that measure rather than believe, human approval at the irreversible decisions, and a hash-chained audit log.">
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface: #f7f8fa;
+    --border: #e3e6ea;
+    --ink: #14181f;
+    --ink-soft: #545c6b;
+    --ink-faint: #858d9b;
+    --accent: #1f6feb;
+    --ok: #1a7f37;
+    --warn: #9a6700;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, Helvetica, Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #272e38;
+      --ink: #e6edf3;
+      --ink-soft: #9aa5b1;
+      --ink-faint: #6e7781;
+      --accent: #58a6ff;
+      --ok: #3fb950;
+      --warn: #d29922;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0d1117; --surface: #161b22; --border: #272e38;
+    --ink: #e6edf3; --ink-soft: #9aa5b1; --ink-faint: #6e7781;
+    --accent: #58a6ff; --ok: #3fb950; --warn: #d29922;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 17px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 0 16px; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  header { padding: 72px 0 8px; }
+  h1 {
+    margin: 0 0 6px;
+    font-size: 44px; line-height: 1.1; letter-spacing: -0.022em; font-weight: 700;
+  }
+  .tagline { margin: 0 0 20px; font-size: 20px; color: var(--ink-soft); }
+  .badges { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 26px; }
+  .badges img { height: 20px; }
+
+  .lede { font-size: 18px; }
+  .lede strong { font-weight: 600; }
+
+  .principle {
+    margin: 26px 0;
+    padding: 16px 20px;
+    border-left: 3px solid var(--accent);
+    background: var(--surface);
+    border-radius: 0 8px 8px 0;
+    color: var(--ink-soft);
+  }
+  .principle b { color: var(--ink); }
+
+  h2 {
+    margin: 52px 0 4px;
+    font-size: 15px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--ink-faint);
+  }
+  h2 + p, h2 + .grid, h2 + pre, h2 + figure, h2 + .links { margin-top: 14px; }
+
+  pre.graph {
+    margin: 0; padding: 20px 22px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-family: var(--mono); font-size: 13px; line-height: 1.55;
+    color: var(--ink-soft);
+    overflow-x: auto;
+  }
+  pre.graph b { color: var(--ink); font-weight: 600; }
+  pre.graph i { color: var(--warn); font-style: normal; }
+
+  .grid { display: grid; gap: 14px; }
+  @media (min-width: 720px) { .grid.three { grid-template-columns: repeat(3, 1fr); } }
+
+  .card {
+    display: block;
+    padding: 18px 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: inherit;
+    transition: border-color .15s ease, transform .15s ease;
+  }
+  a.card:hover { border-color: var(--accent); text-decoration: none; transform: translateY(-1px); }
+  .card .kicker {
+    font-family: var(--mono); font-size: 11px; letter-spacing: .06em;
+    text-transform: uppercase; color: var(--ink-faint);
+  }
+  .card h3 { margin: 6px 0 8px; font-size: 19px; font-weight: 600; }
+  .card p { margin: 0; font-size: 14.5px; line-height: 1.55; color: var(--ink-soft); }
+  .pill {
+    display: inline-block; margin-top: 12px;
+    padding: 2px 9px; border-radius: 999px;
+    font-family: var(--mono); font-size: 11.5px; font-weight: 600;
+  }
+  .pill.ok { background: color-mix(in srgb, var(--ok) 15%, transparent); color: var(--ok); }
+  .pill.held { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
+
+  figure { margin: 0; }
+  figure img {
+    width: 100%; height: auto; display: block;
+    border: 1px solid var(--border); border-radius: 10px;
+  }
+  figcaption { margin-top: 9px; font-size: 14px; color: var(--ink-faint); }
+
+  ul.points { margin: 14px 0 0; padding: 0; list-style: none; }
+  ul.points li { margin-bottom: 13px; padding-left: 17px; position: relative; color: var(--ink-soft); }
+  ul.points li::before {
+    content: ""; position: absolute; left: 0; top: 11px;
+    width: 5px; height: 5px; border-radius: 50%; background: var(--accent);
+  }
+  ul.points b { color: var(--ink); font-weight: 600; }
+
+  .links { display: grid; gap: 10px; }
+  @media (min-width: 620px) { .links { grid-template-columns: 1fr 1fr; } }
+  .links a {
+    display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+    padding: 11px 15px; border: 1px solid var(--border); border-radius: 8px;
+    color: var(--ink); font-size: 15px;
+  }
+  .links a:hover { border-color: var(--accent); text-decoration: none; }
+  .links span { font-size: 13px; color: var(--ink-faint); text-align: right; }
+
+  code {
+    font-family: var(--mono); font-size: .88em;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 5px; padding: 1px 5px;
+  }
+  pre.sh {
+    margin: 0; padding: 15px 18px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    font-family: var(--mono); font-size: 13.5px; color: var(--ink);
+    overflow-x: auto;
+  }
+  pre.sh .c { color: var(--ink-faint); }
+
+  footer {
+    margin: 72px 0 60px; padding-top: 22px;
+    border-top: 1px solid var(--border);
+    font-size: 14px; color: var(--ink-faint);
+  }
+  footer a { color: var(--ink-soft); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Mandate</h1>
+  <p class="tagline">A governed agentic software-engineering system.</p>
+  <div class="badges">
+    <a href="https://github.com/sumyuck/mandate-agentic-sdlc/actions/workflows/ci.yml"><img src="https://github.com/sumyuck/mandate-agentic-sdlc/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
+    <img src="https://img.shields.io/badge/.NET-10.0%20LTS-512BD4" alt=".NET 10 LTS">
+    <img src="https://img.shields.io/badge/tests-868-1a7f37" alt="868 tests">
+    <img src="https://img.shields.io/badge/licence-MIT-blue" alt="MIT licence">
+  </div>
+
+  <p class="lede">
+    Mandate turns a requirement written in plain English into a reviewable engineering
+    outcome. It decomposes the work across an explicit dependency graph, has language models
+    perform each stage, holds their output to gates it cannot skip, stops for a named human
+    at the decisions that matter, and records every step in a log you can verify has not been
+    altered.
+  </p>
+
+  <div class="principle">
+    <b>Principle:</b> agents execute under a mandate; humans grant it, bound it, and revoke it.
+    A <i>mandate</i> is the document stating exactly what an agent may and may not do on
+    someone else's behalf — which is precisely what an autonomy boundary is, and why the
+    system is named for it.
+  </div>
+</header>
+
+<h2>The lifecycle</h2>
+<p>
+  Eleven stages, seventeen edges, three conditional paths, three loop-backs, three human
+  checkpoints. It lives in <code>workflows/sdlc.v1.yaml</code> as data, not code — the engine
+  contains no lifecycle of its own.
+</p>
+<pre class="graph"><b>intake</b>
+  │
+<b>requirements</b>
+  ├── <i>(ambiguity ≥ 0.3)</i> ──▶ <b>clarification</b> ──[on success]──▶ <b>requirements</b>
+  ├── <i>(has existing code)</i> ──▶ <b>impact-analysis</b>
+  │
+<b>architecture</b>                       <i>[human: tech-lead]</i>
+  │
+<b>implement</b>
+  │
+  ├───────▶ <b>test</b> ──────────[on failure]───────▶ <b>implement</b>
+  ├───────▶ <b>code-review</b> ───[on failure]───────▶ <b>implement</b>
+  ├───────▶ <b>security-scan</b>
+  └───────▶ <b>documentation</b>
+  │
+<b>release-readiness</b>                  <i>[human: release-approver]</i></pre>
+
+<h2>Three recorded runs</h2>
+<p>
+  Each ran end to end and has its events, timeline and report committed. Open any report —
+  they are self-contained pages with no scripts and no network calls.
+</p>
+<div class="grid three">
+  <a class="card" href="runs/run_20260917T004505Z_e2258e/report.html">
+    <div class="kicker">S1 · greenfield</div>
+    <h3>Built the service</h3>
+    <p>Decomposition, four stages in parallel behind a synchronising barrier, both human
+      checkpoints, validation measured rather than claimed.</p>
+    <span class="pill ok">succeeded · 171 events</span>
+  </a>
+  <a class="card" href="runs/run_20260917T012835Z_28d1ac/report.html">
+    <div class="kicker">S2 · brownfield</div>
+    <h3>Changed its own code</h3>
+    <p>Codebase reasoning over real code the system had written, conditional routing that
+      adds a stage, compensation on a real git tree.</p>
+    <span class="pill ok">succeeded · 179 events</span>
+  </a>
+  <a class="card" href="runs/run_20260917T020240Z_c6e2f4/report.html">
+    <div class="kicker">S3 · ambiguous</div>
+    <h3>Refused to ship</h3>
+    <p>Ambiguity scored and routed to a human, three re-plans, convergence from 0.35 to 0.1 —
+      then held at the test gate for want of evidence.</p>
+    <span class="pill held">held · 228 events</span>
+  </a>
+</div>
+
+<h2>A run, as the system recorded it</h2>
+<figure>
+  <img src="docs/images/report-hero.png" alt="The greenfield run report: reliability tiles and a per-stage timeline.">
+  <figcaption>
+    Every figure is recomputed from the run's event log on each read. None is stored, so none
+    can be set — only caused.
+  </figcaption>
+</figure>
+
+<h2>Where the humans were</h2>
+<figure>
+  <img src="docs/images/report-humans.png" alt="The approval trail: who was asked, who approved, and the note they left.">
+  <figcaption>
+    Two checkpoints, each requiring a named human who is not the requester. Re-planning
+    revokes an approval that covered work it invalidated.
+  </figcaption>
+</figure>
+
+<h2>What makes it governed rather than a loop</h2>
+<ul class="points">
+  <li><b>The lifecycle is data.</b> Changing how software gets built here is a configuration
+    change under review, not a deployment.</li>
+  <li><b>Agents propose; the engine applies.</b> No agent writes to the workspace. They return
+    files they would like written; the engine validates every path and commits them as that
+    stage's commit.</li>
+  <li><b>Claims are measured.</b> A stage that says the tests pass does not define what passing
+    means. The real toolchain runs and the measured figure replaces the claim. A stage that
+    overstates its results fails, naming both numbers.</li>
+  <li><b>Humans own the irreversible decisions.</b> The design everything is built on, and the
+    release itself.</li>
+  <li><b>The record is the product.</b> Every state change, gate verdict, approval, artifact,
+    decision and model call is an event in a SHA-256 hash chain.</li>
+</ul>
+
+<h2>Verify it yourself</h2>
+<p>No API key required — model exchanges replay from committed recordings.</p>
+<pre class="sh">git clone https://github.com/sumyuck/mandate-agentic-sdlc.git
+cd mandate-agentic-sdlc
+make demo            <span class="c"># the whole tour, offline</span>
+make verify          <span class="c"># build, 868 tests, style</span></pre>
+
+<h2>Read further</h2>
+<div class="links">
+  <a href="https://github.com/sumyuck/mandate-agentic-sdlc">The repository <span>source, 868 tests</span></a>
+  <a href="https://github.com/sumyuck/mandate-agentic-sdlc/blob/main/docs/ARCHITECTURE.md">Architecture <span>components, control flow</span></a>
+  <a href="https://github.com/sumyuck/mandate-agentic-sdlc/tree/main/docs/adr">Decision records <span>17 ADRs</span></a>
+  <a href="https://github.com/sumyuck/mandate-agentic-sdlc/blob/main/docs/RUNBOOK.md">Runbook <span>every command</span></a>
+  <a href="https://github.com/sumyuck/mandate-agentic-sdlc/blob/main/docs/TESTING.md">Testing <span>scope and trade-offs</span></a>
+  <a href="https://github.com/sumyuck/mandate-agentic-sdlc/tree/main/services/url-shortener">The generated service <span>96 tests</span></a>
+</div>
+
+<footer>
+  Built by <a href="https://github.com/sumyuck">Samyak Jain</a> ·
+  <a href="https://github.com/sumyuck/mandate-agentic-sdlc/blob/main/LICENSE">MIT</a> ·
+  The URL shortener under <code>services/</code> was written by Mandate, not by hand.
+</footer>
+
+</div>
+</body>
+</html>
